@@ -10,8 +10,8 @@ Date: 2024.12.12
 [guidelines for markdown](Guidelines%20for%20markdown.md)
 
 ## 更新
-- [犬获得性心脏病](√C01 犬获得性心脏病概述.md)
-- [ARVC 致心律失常性右室心肌病](√C02 ARVC 致心律失常性右室心肌病.md)
+[犬获得性心脏病](√C01 犬获得性心脏病概述.md)
+[ARVC 致心律失常性右室心肌病](√C02 ARVC 致心律失常性右室心肌病.md)
 
 ---
 备忘
