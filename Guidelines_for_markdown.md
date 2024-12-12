@@ -1,4 +1,4 @@
-←[home](README.md)
+←[home](../README.md)
 
 # 语法
 ## 字体
