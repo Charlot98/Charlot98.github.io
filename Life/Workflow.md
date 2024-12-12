@@ -1,4 +1,4 @@
-←[home](README.md)
+←[home](../README.md)
 
 #workflow
 > 持续更新中
