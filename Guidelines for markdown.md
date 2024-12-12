@@ -1,7 +1,4 @@
-# 常用语言示意图
-![alt text](guidelines.png)
-
----
+←[home](READ.md)
 # 语法
 ## 字体
   *talic*
