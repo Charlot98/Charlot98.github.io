@@ -1,4 +1,4 @@
-←[home](README.md)
+←[home](../README.md)
 
 # 致心律失常性右室心肌病 arrhythmogenic right ventricular cardiomyopathy，ARVC
 #canine #cardiology #AcquiredHeartDisease #ARVC
