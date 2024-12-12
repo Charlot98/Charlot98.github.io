@@ -3,7 +3,7 @@
 # 致心律失常性右室心肌病 arrhythmogenic right ventricular cardiomyopathy，ARVC
 #canine #cardiology #AcquiredHeartDisease #ARVC
 *时间: 2024-12-12*
-
+ 
 Harpster在1980s首次描述了一例拳师犬的心肌病（myocardial disease）
 - 组织病理：心肌细胞萎缩和脂肪、纤维浸润 （myocyte atrophy and fatty fibrous infiltration）
 - 临床表现：无症状，晕厥伴室性心律失常，有时可见CHF
