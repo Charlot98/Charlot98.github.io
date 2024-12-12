@@ -3,7 +3,7 @@ From Charlot98
 Date: 2024.12.12
 [Personal website](https://charlot98.github.io/)
 
-[Workflow](workflow.md)
+[Workflow](Workflow.md)
 
 [键盘自定义](键盘自定义.md)
 
