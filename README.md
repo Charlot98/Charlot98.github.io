@@ -9,9 +9,9 @@ Date: 2024.12.12
 [Guidelines for markdown](Life/Guidelines_for_markdown.md)
 
 ## 已更新
-[犬获得性心脏病](VetVault/C01犬获得性心脏病概述.md)
+[犬获得性心脏病](VetVault/犬获得性心脏病概述.md)
 
-[ARVC 致心律失常性右室心肌病](VetVault/C02ARVC致心律失常性右室心肌病.md)
+[ARVC 致心律失常性右室心肌病](VetVault/ARVC致心律失常性右室心肌病.md)
 
 ## 待更新
 |名称 |分类 |与其时间|
