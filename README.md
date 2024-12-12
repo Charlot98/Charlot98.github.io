@@ -8,11 +8,20 @@ Date: 2024.12.12
 
 [Guidelines for markdown](Guidelines_for_markdown.md)
 
-## 更新
+## 已更新
 [犬获得性心脏病](C01犬获得性心脏病概述.md)
 
 [ARVC 致心律失常性右室心肌病](C02ARVC致心律失常性右室心肌病.md)
 
+## 待更新
+- [ ] 犬猫先天性心脏病
+- [ ] 犬猫腹部超声扫查
+- [ ] 犬猫胸部X线的判读模式
+- [ ] 犬猫腹部X线的判读模式
+- [ ] X线基本原理
+- [ ] B超基本原理
+- [ ] CT基本原理
+- [ ] MRI基本原理
 ---
 备忘
 - **[Vetbooks.ir](http://Vetbooks.ir)**
