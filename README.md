@@ -7,7 +7,7 @@ Date: 2024.12.12
 
 [键盘自定义](键盘自定义.md)
 
-[guidelines for markdown](Guidelines%20for%20markdown.md)
+[Guidelines for markdown](Guidelines_for_markdown.md)
 
 ## 更新
 [犬获得性心脏病](√C01 犬获得性心脏病概述.md)
