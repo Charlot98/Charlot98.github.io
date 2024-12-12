@@ -6,7 +6,7 @@ Date: 2024.12.12
 
 [键盘自定义](Life/键盘自定义.md)
 
-[Guidelines for markdown](Life/Guidelines_for_markdown.md)
+[Guidelines for markdown](Life/Guidelines_for_markdown.md) 
 
 ## 已更新
 [犬获得性心脏病](VetVault/犬获得性心脏病概述.md)
