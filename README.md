@@ -1,6 +1,6 @@
 # VetVault
 From Charlot98
-<br>Date: 2024.12.12 </br>
+Date: 2024.12.12
 
 [Workflow](Workflow.md)
 
@@ -9,9 +9,9 @@ From Charlot98
 [Guidelines for markdown](Guidelines_for_markdown.md)
 
 ## 更新
-[犬获得性心脏病](√C01 犬获得性心脏病概述.md)
+[犬获得性心脏病](C01犬获得性心脏病概述.md)
 
-[ARVC 致心律失常性右室心肌病](√C02 ARVC 致心律失常性右室心肌病.md)</br>
+[ARVC 致心律失常性右室心肌病](C02ARVC 致心律失常性右室心肌病.md)
 
 ---
 备忘
