@@ -1,4 +1,5 @@
-←[home](READ.md)
+←[home](README.md)
+
 # 语法
 ## 字体
   *talic*
