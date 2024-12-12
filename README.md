@@ -23,5 +23,3 @@ Date: 2024.12.12
 - [**Digestive System for chelonians**](https://campus.murraystate.edu/faculty/tderting/anatomyatlas/digestiv.htm)
 - [Reddit](https://www.reddit.com/r/VetTech/)-r/VetTech
 
-## 带学清单
-- [ ] 修改github主题
