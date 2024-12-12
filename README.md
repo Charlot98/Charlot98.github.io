@@ -2,11 +2,11 @@
 From Charlot98
 Date: 2024.12.12
 
-[Workflow](Workflow.md)
+[Workflow](Life/Workflow.md)
 
-[键盘自定义](键盘自定义.md)
+[键盘自定义](Life/键盘自定义.md)
 
-[Guidelines for markdown](Guidelines_for_markdown.md)
+[Guidelines for markdown](Life/Guidelines_for_markdown.md)
 
 ## 已更新
 [犬获得性心脏病](C01犬获得性心脏病概述.md)
@@ -14,16 +14,17 @@ Date: 2024.12.12
 [ARVC 致心律失常性右室心肌病](C02ARVC致心律失常性右室心肌病.md)
 
 ## 待更新
-- [ ] 犬猫先天性心脏病
-- [ ] 犬猫腹部超声扫查
-- [ ] 犬猫胸部X线的判读模式
-- [ ] 犬猫腹部X线的判读模式
-- [ ] X线基本原理
-- [ ] B超基本原理
-- [ ] CT基本原理
-- [ ] MRI基本原理
+- [ ] 犬猫先天性心脏病  202501
+- [ ] 犬猫腹部超声扫查  202501
+- [ ] 犬猫胸部X线的判读模式  202501
+- [ ] 犬猫腹部X线的判读模式  202501
+- [ ] X线基本原理  202501
+- [ ] B超基本原理  202501
+- [ ] CT基本原理  202501
+- [ ] MRI基本原理  202501
+
+## 备忘
 ---
-备忘
 - **[Vetbooks.ir](http://Vetbooks.ir)**
 - **[ECG Wave](https://ecgwaves.com/)**-human cardiology course with comprehensive notes
 - **[University of Minnesota](https://pressbooks.umn.edu/largeanimalanatomy/chapter/thorax/)** - large animal anatomy
