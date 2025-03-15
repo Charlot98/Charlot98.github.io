@@ -12,22 +12,7 @@ Date: 2024.12.12
 
 [Veterinarian websites collection](VetVault/Veterinarian_websites_collection.html)
 
-## 已更新
-[犬获得性心脏病](VetVault/犬获得性心脏病概述.md)
 
-[ARVC 致心律失常性右室心肌病](VetVault/ARVC致心律失常性右室心肌病.md)
-
-## 待更新
-|名称 |分类 |预期时间|
-|--- | --- | --- | 
-|犬猫先天性心脏病|#心脏病学  |202501|
-|犬猫腹部超声扫查|#ultrasoud|202501|
-| 犬猫胸部X线的判读模式 |#X-ray |202501|
-| 犬猫腹部X线的判读模式 |#X-ray |202501|
-| X线基本原理 |#X_ray|202501|
-| B超基本原理 |#ultrasound| 202501|
-| CT基本原理  |#CT| 202501|
-| MRI基本原理| #MRI | 202501|
 
 ## 备忘
 ---
