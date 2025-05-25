@@ -7,8 +7,6 @@
 
 - [arXiv](<https://arxiv.org/>)  Pre-print/Mauscript
 
-- [Vetbooks.ir](<http://Vetbooks.ir>)
-
 # Books
 - [Vetbooks.ir](https://vetbooks.ir/)
 
