@@ -1,1 +1,8 @@
+title: My Jekyll Site
+description: A simple description about your site
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "" # the base hostname & protocol for your site, e.g. http://example.com
 theme: jekyll-theme-primer
+
+# Build settings
+markdown: kramdown
