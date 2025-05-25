@@ -1,6 +1,6 @@
 # VetVault
 From Charlot98
-Date: 2024.12.12
+Date: 2025.5.25
 
 [link](https://charlot98.github.io/)
 
@@ -14,7 +14,7 @@ Date: 2024.12.12
 
 
 
-## 备忘
+## Ideas
 ---
 - **[Vetbooks.ir](http://Vetbooks.ir)**
 - **[ECG Wave](https://ecgwaves.com/)**-human cardiology course with comprehensive notes
@@ -23,4 +23,12 @@ Date: 2024.12.12
 - **[DavidXray](https://davidxray.com/dental-x-ray-positioning-guide-canine-incisors-101-103/#)** -dentalXray-**AI Dental Pathology Detection**
 - [**Digestive System for chelonians**](https://campus.murraystate.edu/faculty/tderting/anatomyatlas/digestiv.htm)
 - [Reddit](https://www.reddit.com/r/VetTech/)-r/VetTech
+
+
+# To-Do-List
+- [ ] [ACVIM-Cardiology](https://guides.lib.purdue.edu/c.php?g=798769&p=5710725)
+- [ ] [ECG Wave](https://ecgwaves.com/)
+- [ ] [ABVP - Exotic](https://guides.lib.purdue.edu/c.php?g=798769&p=5710701)
+- [ ] [ABVP - Canine/Feline](https://guides.lib.purdue.edu/c.php?g=798769&p=5710698)
+- [ ] [ABVO](https://guides.lib.purdue.edu/c.php?g=798769&p=5710694)
 
