@@ -1,0 +1,66 @@
+ * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      background-color: rgba(18, 18, 24, 1);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 1.5vw;
+      width: 90vmin;
+      height: 90vmin;
+    }
+
+    .grid-item {
+      background-color: #444;
+      background-size: cover;
+      background-position: center;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    /* 弹出大图遮罩 */
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .overlay.active {
+      display: flex;
+    }
+
+    /* 大图样式 */
+    .overlay img {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(255,255,255,0.5);
+    }
+
+    /* 关闭按钮 */
+    .close-btn {
+      position: fixed;
+      top: 20px;
+      right: 30px;
+      font-size: 30px;
+      color: white;
+      cursor: pointer;
+      user-select: none;
+      z-index: 10000;
+    }

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <title>Album Wall</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+
+<<body>
+  <div class="grid-container">
+    <div class="grid-item" style="background-image: url('./images/v0_4.png');" data-img="./images/v0_4.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_6.png');" data-img="./images/v0_6.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_7.png');" data-img="./images/v0_7.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_5.png');" data-img="./images/v0_5.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_18.png');" data-img="./images/v0_18.png"></div>
+
+    <div class="grid-item" style="background-image: url('./images/v0_8.png');" data-img="./images/v0_8.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_10.png');" data-img="./images/v0_10.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_11.png');" data-img="./images/v0_11.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_9.png');" data-img="./images/v0_9.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_19.png');" data-img="./images/v0_19.png"></div>
+
+    <div class="grid-item" style="background-image: url('./images/v0_12.png');" data-img="./images/v0_12.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_14.png');" data-img="./images/v0_14.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_15.png');" data-img="./images/v0_15.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_13.png');" data-img="./images/v0_13.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_20.png');" data-img="./images/v0_20.png"></div>
+
+    <div class="grid-item" style="background-image: url('./images/v0_16.png');" data-img="./images/v0_16.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_22.png');" data-img="./images/v0_22.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_23.png');" data-img="./images/v0_23.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_17.png');" data-img="./images/v0_17.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_21.png');" data-img="./images/v0_21.png"></div>
+
+    <div class="grid-item" style="background-image: url('./images/v0_24.png');" data-img="./images/v0_24.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_27.png');" data-img="./images/v0_27.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_28.png');" data-img="./images/v0_28.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_25.png');" data-img="./images/v0_25.png"></div>
+    <div class="grid-item" style="background-image: url('./images/v0_26.png');" data-img="./images/v0_26.png"></div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <span class="close-btn" id="closeBtn">&times;</span>
+    <img src="" alt="放大图片" id="overlayImg" />
+  </div>
+
+  <script>
+    const gridItems = document.querySelectorAll('.grid-item');
+    const overlay = document.getElementById('overlay');
+    const overlayImg = document.getElementById('overlayImg');
+    const closeBtn = document.getElementById('closeBtn');
+
+    gridItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const imgSrc = item.getAttribute('data-img');
+        if (!imgSrc) {
+          alert('未找到图片路径，请检查 data-img 属性');
+          return;
+        }
+        overlayImg.src = imgSrc;
+        overlay.classList.add('active');
+      });
+    });
+
+    closeBtn.addEventListener('click', () => {
+      overlay.classList.remove('active');
+      overlayImg.src = '';
+    });
+
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        overlay.classList.remove('active');
+        overlayImg.src = '';
+      }
+    });
+  </script>
+</body>
+</html>
