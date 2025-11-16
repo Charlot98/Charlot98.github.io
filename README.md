@@ -25,7 +25,7 @@ Date: 2025.5.25
 - **[DavidXray](https://davidxray.com/dental-x-ray-positioning-guide-canine-incisors-101-103/#)** -dentalXray-**AI Dental Pathology Detection**
 - [**Digestive System for chelonians**](https://campus.murraystate.edu/faculty/tderting/anatomyatlas/digestiv.htm)
 - [Reddit](https://www.reddit.com/r/VetTech/)-r/VetTech
-- **[ASE Guidelines]**(https://www.asecho.org/practice-clinical-resources/ase-guidelines/) - American society of echocardiography
+- **[ASE Guidelines](https://www.asecho.org/practice-clinical-resources/ase-guidelines/)** - American society of echocardiography
 
 
 # To-Do-List
