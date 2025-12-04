@@ -1,0 +1,46 @@
+<html>
+└── <body>
+    ├── 1. 顶栏 (.top-disease-selector)
+    │   ├── 左侧控制区 (.top-left-controls) - 占65%
+    │   │   ├── 疾病类型按钮组 (.disease-buttons)
+    │   │   │   ├── 正常 (Normal)
+    │   │   │   ├── MMVD
+    │   │   │   └── HCM
+    │   │   └── 更多选择下拉框 (.more-disease-select-wrapper)
+    │   │       └── 更多选择 (PDA, DCM, RCM, TOF)
+    │   └── 右侧控制区 (.top-right-controls) - 占35%
+    │       ├── 参考选择 (.reference-range-select-wrapper)
+    │       ├── 含辛普森测量按钮 (.simpson-button)
+    │       └── 体重输入 (.weight-input-wrapper)
+    │
+    ├── 2. 主容器 (.container) - Flex横向布局
+    │   └── 主内容区 (.main-content)
+    │       ├── 左侧栏（.left-side-content）-占.main-content的左侧50%
+    |       |   ├── 参数输入容器 (.parameters-container)
+    │       |   │   ├── 1. M型参数 (.parameters-section)
+    │       |   │   │   └── 参数内容 (.parameters-content)
+    │       |   │   │       └── M型网格 (.m-type-grid)
+    │       |   │   │           ├── IVSd, LVDd, LVWd
+    │       |   │   │           ├── IVSs, LVDs, LVWs
+    │       |   │   │           ├── EDV (带EDVI显示)
+    │       |   │   │           ├── ESV (带ESVI显示)
+    │       |   │   │           └── FS, EF
+    │       |   │   ├── 2. 左房大小 (.parameters-section)
+    │       |   │   │   └── 其他参数网格 (.other-params-grid)
+    │       |   │   │       ├── LA, Ao, LA/Ao
+    │       |   │   │       └── MMVD特定输入框 (条件显示)
+    │       |   │   └── 3. 彩色多普勒 (.parameters-section)
+    │       |   │       └── 其他参数网格 (.other-params-grid)
+    │       |   │           ├── VPA, VAO, E, A
+    │       |   │           ├── E/A, EA融合, E/E'
+    │       |   │           └── 动态标签页输入框
+    │       |   │
+    │       └── 右侧栏（.right-side-content）-占.main-content的右侧50%
+    │           └── 模板生成区域 (.template-section)
+    │               ├── 所见 (findingsText)
+    │               ├── 结论 (conclusionText)
+    │               └── 复制模板按钮
+    │
+    └── 3. 浮动元素
+        ├── 问题反馈按钮 (.feedback-button) - 右下角固定
+        └── 问题反馈对话框 (.feedback-modal) - 模态框

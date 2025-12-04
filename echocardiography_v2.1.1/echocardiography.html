@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>心超报告生成器</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e74c3c'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>" type="image/svg+xml">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- 页面顶部的控制栏 -->
+    <div class="top-disease-selector">
+        <div class="top-left-controls">
+        <div class="disease-buttons">
+                <button class="disease-button" data-value="Normal">正常</button>
+            <button class="disease-button" data-value="MMVD">MMVD</button>
+            <button class="disease-button" data-value="HCM">HCM</button>
+            </div>
+            <div class="more-disease-select-wrapper">
+                <select id="moreDiseaseSelect" class="more-disease-select">
+                    <option value="">更多选择</option>
+                    <option value="PDA">PDA</option>
+                    <option value="DCM">DCM</option>
+                    <option value="RCM">RCM</option>
+                    <option value="TOF">TOF</option>
+                </select>
+            </div>
+        </div>
+        <div class="top-right-controls">
+            <div class="reference-range-select-wrapper">
+                <label class="reference-range-label">参考：</label>
+                <select id="referenceRangeSelect" class="reference-range-select">
+                    <option value="">请选择</option>
+                    <option value="M型">M型（犬≤3kg）</option>
+                    <option value="非M型">非M型（犬＞3kg）</option>
+                    <option value="金毛">金毛</option>
+                    <option value="猫">猫</option>
+                    <option value="猫心超（含体重）">猫心超（含体重）</option>
+                    <option value="兔子">兔子</option>
+                </select>
+            </div>
+            <button id="simpsonButton" class="simpson-button" title="含辛普森测量">含辛普森测量</button>
+            <div class="weight-input-wrapper" id="weightInputWrapper">
+                <label class="weight-label">体重：</label>
+                <input type="text" id="weightInput" class="weight-input" data-param="体重" placeholder="kg">
+                <span id="weightReferenceDisplay" class="weight-reference-display"></span>
+            </div>
+        </div>
+    </div>
+    <div class="container">
+            <div class="left-sidebar">
+                <div class="parameters-container" id="parametersContainer">
+            <!-- 1. M型参数 -->
+            <div class="parameters-section">
+                <div class="parameters-section-header">
+                </div>
+                <div class="parameters-content" id="parametersContent">
+                    <h3 class="parameters-section-title">1. M型</h3>
+                    <div class="m-type-grid">
+                    <div class="m-type-item">
+                        <label class="m-type-label">
+                            IVSd
+                            <span class="reference-value" data-param="IVSd" data-csv-key="IVSd"></span>
+                        </label>
+                        <input type="text" class="m-type-input" data-param="IVSd" placeholder="请输入数值">
+                    </div>
+                    <div class="m-type-item">
+                        <label class="m-type-label">
+                            LVDd
+                            <span class="reference-value" data-param="LVDd" data-csv-key="LVDd"></span>
+                        </label>
+                        <input type="text" class="m-type-input" data-param="LVDd" placeholder="请输入数值">
+                    </div>
+                    <div class="m-type-item">
+                        <label class="m-type-label">
+                            LVWd
+                            <span class="reference-value" data-param="LVPWd" data-csv-key="LVWd"></span>
+                        </label>
+                        <input type="text" class="m-type-input" data-param="LVPWd" placeholder="请输入数值">
+                    </div>
+                    <div class="m-type-item">
+                        <label class="m-type-label">
+                            IVSs
+                            <span class="reference-value" data-param="IVSs" data-csv-key="IVSs"></span>
+                        </label>
+                        <input type="text" class="m-type-input" data-param="IVSs" placeholder="请输入数值">
+                    </div>
+                    <div class="m-type-item">
+                        <label class="m-type-label">
+                            LVDs
+                            <span class="reference-value" data-param="LVDs" data-csv-key="LVDs"></span>
+                        </label>
+                        <input type="text" class="m-type-input" data-param="LVDs" placeholder="请输入数值">
+                    </div>
+                    <div class="m-type-item">
+                        <label class="m-type-label">
+                            LVWs
+                            <span class="reference-value" data-param="LVPWs" data-csv-key="LVWs"></span>
+                        </label>
+                        <input type="text" class="m-type-input" data-param="LVPWs" placeholder="请输入数值">
+                    </div>
+                    <div class="m-type-item" id="edvItem">
+                        <label class="m-type-label">
+                            EDV
+                            <span class="pressure-gradient-label">EDVI:</span>
+                            <span class="pressure-gradient-display" id="edviDisplay">-</span>
+                        </label>
+                        <div class="combined-input-wrapper">
+                            <input type="text" class="m-type-input" data-param="EDV" placeholder="请输入数值">
+                        </div>
+                        <!-- EDV辛普森输入框 -->
+                        <div id="edvSimpsonInput" style="display: none; margin-top: 8px;">
+                            <div class="combined-input-wrapper">
+                                <input type="text" class="m-type-input" data-param="EDV辛普森" placeholder="请输入数值">
+                                <div class="pressure-gradient-display-wrapper">
+                                    <span class="pressure-gradient-label">辛普森</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="m-type-item" id="esvItem">
+                        <label class="m-type-label">
+                            ESV
+                            <span class="pressure-gradient-label">ESVI:</span>
+                            <span class="pressure-gradient-display" id="esviDisplay">-</span>
+                        </label>
+                        <div class="combined-input-wrapper">
+                            <input type="text" class="m-type-input" data-param="ESV" placeholder="请输入数值">
+                        </div>
+                        <!-- ESV辛普森输入框 -->
+                        <div id="esvSimpsonInputContainer" style="display: none; margin-top: 8px;">
+                            <div class="combined-input-wrapper">
+                                <input type="text" class="m-type-input" data-param="ESV辛普森" placeholder="请输入数值">
+                                <div class="pressure-gradient-display-wrapper">
+                                    <span class="pressure-gradient-label">辛普森</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="m-type-item">
+                        <label class="m-type-label">FS</label>
+                        <input type="text" class="m-type-input" data-param="FS" placeholder="请输入数值">
+                    </div>
+                    <div class="m-type-item">
+                        <label class="m-type-label">EF</label>
+                        <input type="text" class="m-type-input" data-param="EF" placeholder="请输入数值">
+                    </div>
+                </div>
+
+            <!-- 2. 左房大小 -->
+            <div class="parameters-section">
+                <h3 class="parameters-section-title">2. 左房大小</h3>
+                <div class="other-params-grid">
+                    <div class="other-param-item">
+                        <label class="other-param-label">
+                            LA
+                            <span class="reference-value" data-param="LA" data-csv-key="LA"></span>
+                        </label>
+                        <input type="text" class="other-param-input" data-param="LA" placeholder="请输入数值">
+                    </div>
+                    <div class="other-param-item">
+                        <label class="other-param-label">
+                            AO
+                            <span class="reference-value" data-param="AO" data-csv-key="AO"></span>
+                        </label>
+                        <input type="text" class="other-param-input" data-param="AO" placeholder="请输入数值">
+                    </div>
+                    <div class="other-param-item">
+                        <label class="other-param-label">LA/AO</label>
+                        <input type="text" class="other-param-input" data-param="LA/AO" placeholder="请输入数值">
+                    </div>
+                </div>
+                <!-- MMVD特定输入框 -->
+                <div class="other-params-grid" id="mmvdSpecificInputs" style="display: none;">
+                    <div class="other-param-item">
+                        <label class="other-param-label">二尖瓣前叶厚度 (mm)</label>
+                        <input type="text" class="other-param-input" data-param="二尖瓣前叶厚度" placeholder="请输入数值">
+                    </div>
+                    <div class="other-param-item">
+                        <label class="other-param-label">脱垂程度</label>
+                        <select class="other-param-input" data-param="脱垂程度">
+                            <option value="">请选择</option>
+                            <option value="轻度">轻度</option>
+                            <option value="中度">中度</option>
+                            <option value="重度">重度</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 彩色多普勒 -->
+            <div class="parameters-section">
+                <h3 class="parameters-section-title">3. 彩色多普勒</h3>
+                <div class="other-params-grid">
+                    <div class="other-param-item">
+                        <label class="other-param-label">VPA</label>
+                        <input type="text" class="other-param-input" data-param="VPA" placeholder="请输入数值">
+                    </div>
+                    <div class="other-param-item">
+                        <label class="other-param-label">VAO</label>
+                        <input type="text" class="other-param-input" data-param="VAO" placeholder="请输入数值">
+                    </div>
+                    <div class="other-param-item">
+                        <label class="other-param-label">E</label>
+                        <input type="text" class="other-param-input" data-param="E" placeholder="请输入数值">
+                    </div>
+                    <div class="other-param-item">
+                        <label class="other-param-label">A</label>
+                        <input type="text" class="other-param-input" data-param="A" placeholder="请输入数值">
+                    </div>
+                    <div class="other-param-item">
+                        <label class="other-param-label">E/A</label>
+                        <input type="text" class="other-param-input" data-param="E/A" placeholder="请输入数值">
+                    </div>
+                    <div class="other-param-item">
+                        <label class="other-param-label">EA融合</label>
+                        <input type="text" class="other-param-input" data-param="EA融合" placeholder="请输入数值">
+                    </div>
+                    <div class="other-param-item">
+                        <label class="other-param-label">E/E'</label>
+                        <input type="text" class="other-param-input" data-param="E/E'" placeholder="请输入数值">
+                    </div>
+                </div>
+                <!-- 动态添加的标签页输入框 -->
+                <div class="other-params-grid" id="dynamicTagInputs"></div>
+            </div>
+                </div>
+                </div>
+            </div>
+                
+            </div>
+            <div class="right-sidebar">
+                <div class="template-section">
+                    <h4>所见</h4>
+                    <textarea class="template-text" id="findingsText" rows="15" placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
+                    
+                    <h4 class="conclusion-title">结论</h4>
+                    <textarea class="template-text" id="conclusionText" rows="8" placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
+                    
+                    <div style="display: flex; gap: 10px; justify-content: center; margin-top: 10px;">
+                        <button class="copy-button" id="copyButton">复制模板</button>
+                    </div>
+                    </div>
+            </div>
+    </div>
+
+    <script src="script.js"></script>
+    <!-- 问题反馈按钮 -->
+    <button id="feedbackButton" class="feedback-button" title="问题反馈" aria-label="问题反馈">
+        <svg class="feedback-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+    </button>
+
+    <!-- 问题反馈对话框 -->
+    <div id="feedbackModal" class="feedback-modal">
+        <div class="feedback-modal-content">
+            <div class="feedback-modal-header">
+                <h3>问题反馈</h3>
+                <button class="feedback-modal-close" id="feedbackModalClose">&times;</button>
+            </div>
+            <div class="feedback-modal-body">
+                <textarea id="feedbackText" class="feedback-textarea" placeholder="请输入您的问题或建议..."></textarea>
+            </div>
+            <div class="feedback-modal-footer">
+                <button id="feedbackCancel" class="feedback-btn feedback-btn-cancel">取消</button>
+                <button id="feedbackSubmit" class="feedback-btn feedback-btn-submit">提交并保存</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
