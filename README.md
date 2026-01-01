@@ -5,7 +5,6 @@
 主要服务临床医生，能够`即时响应`、快速给出`结果`；
 ## 维护中
 - [心超报告生成器](echocardiography_v3.1/echocardiography.html)
-
 ## 搭建中
 - 影像报告助手
   - 涵盖X线、超声（腹超、心超）、CT、MRI
