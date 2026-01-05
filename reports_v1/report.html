@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报告书写 - 网页3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .case-id {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 80px);
+        }
+
+        .left-panel, .right-panel {
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .left-panel {
+            width: 50%;
+            background: white;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .right-panel {
+            width: 50%;
+            background: #f8f9fa;
+        }
+
+        .panel-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 200px;
+            line-height: 1.6;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .final-version {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+            margin-bottom: 16px;
+        }
+
+        .final-version h4 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .final-content {
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .final-content strong {
+            font-weight: 600;
+            background: #fff3cd;
+            padding: 2px 4px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .info-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .info-item {
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #6c757d;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .image-url {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .image-url a {
+            color: #1976D2;
+            text-decoration: none;
+            word-break: break-all;
+        }
+
+        .image-url a:hover {
+            text-decoration: underline;
+        }
+
+        .comparison-mode .right-panel {
+            background: white;
+        }
+
+        .comparison-content {
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .keyword-missed {
+            background: #ffebee;
+            color: #c62828;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        .keyword-correct {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+
+        .keyword-required {
+            font-weight: 600;
+            background: #fff3cd;
+            padding: 2px 4px;
+        }
+
+        .toggle-mode {
+            margin-bottom: 16px;
+        }
+
+        .toggle-btn {
+            padding: 8px 16px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .toggle-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .image-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .image-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            cursor: pointer;
+            display: block;
+        }
+
+        .image-name {
+            padding: 8px;
+            font-size: 12px;
+            color: #6c757d;
+            text-align: center;
+            word-break: break-all;
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .image-modal.active {
+            display: flex;
+        }
+
+        .image-modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            position: relative;
+        }
+
+        .image-modal-content img {
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .image-modal-close:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .image-modal-title {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📝 报告书写</h1>
+        <div class="case-id" id="caseIdDisplay"></div>
+    </div>
+
+    <div class="main-container" id="mainContainer">
+        <div class="left-panel">
+            <h2 class="panel-title">报告输入</h2>
+            
+            <div class="form-group">
+                <label>所见</label>
+                <textarea id="findings" placeholder="请输入所见内容"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>结论</label>
+                <textarea id="conclusion" placeholder="请输入结论"></textarea>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-secondary" onclick="saveDraft()">💾 暂存</button>
+                <button class="btn btn-primary" onclick="submitReport()">✅ 提交</button>
+                <a href="preview.html" class="btn btn-secondary">← 返回</a>
+            </div>
+        </div>
+
+        <div class="right-panel" id="rightPanel">
+            <!-- 内容将根据模式动态切换 -->
+        </div>
+    </div>
+
+    <!-- 图片查看模态框 -->
+    <div class="image-modal" id="imageModal" onclick="closeImageModal(event)">
+        <div class="image-modal-content" onclick="event.stopPropagation()">
+            <span class="image-modal-close" onclick="closeImageModal(event)">&times;</span>
+            <img id="modalImage" src="" alt="">
+            <div class="image-modal-title" id="modalImageTitle"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentCase = null;
+        let comparisonMode = false;
+
+        // 获取URL参数
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // 加载病例数据
+        function loadCase() {
+            const caseId = getUrlParameter('caseId');
+            if (!caseId) {
+                alert('未指定病例ID');
+                window.location.href = 'preview.html';
+                return;
+            }
+
+            const cases = JSON.parse(localStorage.getItem('cases') || '[]');
+            currentCase = cases.find(c => c.caseId === caseId);
+
+            if (!currentCase) {
+                alert('病例不存在');
+                window.location.href = 'preview.html';
+                return;
+            }
+
+            // 确保最终报告存在（应该在上传时已设置）
+            if (!currentCase.finalReport) {
+                currentCase.finalReport = {
+                    findings: '未设置最终报告所见',
+                    conclusion: '未设置最终报告结论'
+                };
+            }
+
+            // 加载用户输入的所见和结论
+            if (currentCase.userReport) {
+                document.getElementById('findings').value = currentCase.userReport.findings || '';
+                document.getElementById('conclusion').value = currentCase.userReport.conclusion || '';
+            }
+
+            // 显示病例ID
+            document.getElementById('caseIdDisplay').textContent = currentCase.caseId;
+
+            // 显示右侧面板
+            showInfoPanel();
+        }
+
+        // 显示基本信息面板
+        function showInfoPanel() {
+            comparisonMode = false;
+            const panel = document.getElementById('rightPanel');
+            panel.innerHTML = `
+                ${currentCase.userReport ? `
+                    <div class="toggle-mode">
+                        <button class="toggle-btn ${!comparisonMode ? 'active' : ''}" onclick="showInfoPanel();">基本信息</button>
+                        <button class="toggle-btn ${comparisonMode ? 'active' : ''}" onclick="showComparisonPanel();">对比模式</button>
+                    </div>
+                ` : ''}
+                <h2 class="panel-title">基本信息</h2>
+                
+                <div class="image-url">
+                    <div style="font-weight: 500; margin-bottom: 8px; color: #1976D2;">📎 病例影像下载URL</div>
+                    <a href="${currentCase.imageUrl}" target="_blank">${currentCase.imageUrl}</a>
+                </div>
+
+                <div class="info-section">
+                    <div class="info-item">
+                        <div class="info-label">姓名</div>
+                        <div class="info-value">${currentCase.patientName}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">年龄</div>
+                        <div class="info-value">${currentCase.age}${currentCase.ageUnit || '岁'}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">性别</div>
+                        <div class="info-value">${currentCase.gender}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">病史</div>
+                        <div class="info-value">${currentCase.medicalHistory}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">主诉</div>
+                        <div class="info-value">${currentCase.chiefComplaint}</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">病例类型</div>
+                        <div class="info-value">${currentCase.caseType}</div>
+                    </div>
+                </div>
+
+                ${currentCase.labCheckFiles && currentCase.labCheckFiles.length > 0 ? `
+                    <div class="info-section">
+                        <div class="info-label" style="margin-bottom: 12px;">实验室检查</div>
+                        <div class="image-gallery">
+                            ${currentCase.labCheckFiles.map(file => {
+                                // 支持多种格式：新格式（path/url）、Base64格式（data）、旧格式（字符串）
+                                let imageSrc = '';
+                                let fileName = '图片';
+                                
+                                if (typeof file === 'string') {
+                                    // 旧格式：只有文件名
+                                    fileName = file;
+                                    imageSrc = `public/${file}`;
+                                } else if (file.path) {
+                                    // 新格式：有 path 字段
+                                    imageSrc = file.path;
+                                    fileName = file.name || file.path.split('/').pop();
+                                } else if (file.url) {
+                                    // 新格式：有 url 字段
+                                    imageSrc = file.url;
+                                    fileName = file.name || file.url.split('/').pop();
+                                } else if (file.data) {
+                                    // Base64 格式（备用方案）
+                                    imageSrc = file.data;
+                                    fileName = file.name || '图片';
+                                } else {
+                                    fileName = file.name || '图片';
+                                }
+                                
+                                return `<div class="image-item">
+                                    <img src="${imageSrc.replace(/'/g, "\\'")}" alt="${fileName.replace(/'/g, "\\'")}" onclick="openImageModal('${imageSrc.replace(/'/g, "\\'")}', '${fileName.replace(/'/g, "\\'")}')" onerror="this.parentElement.innerHTML='<div style=\\'height: 150px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; color: #999;\\'>📄 无法加载图片</div><div class=\\'image-name\\'>${fileName.replace(/'/g, "\\'")}</div>'">
+                                    <div class="image-name">${fileName}</div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${currentCase.ultrasoundFiles && currentCase.ultrasoundFiles.length > 0 ? `
+                    <div class="info-section">
+                        <div class="info-label" style="margin-bottom: 12px;">B超检查</div>
+                        <div class="image-gallery">
+                            ${currentCase.ultrasoundFiles.map(file => {
+                                // 支持多种格式：新格式（path/url）、Base64格式（data）、旧格式（字符串）
+                                let imageSrc = '';
+                                let fileName = '图片';
+                                
+                                if (typeof file === 'string') {
+                                    fileName = file;
+                                    imageSrc = `public/${file}`;
+                                } else if (file.path) {
+                                    imageSrc = file.path;
+                                    fileName = file.name || file.path.split('/').pop();
+                                } else if (file.url) {
+                                    imageSrc = file.url;
+                                    fileName = file.name || file.url.split('/').pop();
+                                } else if (file.data) {
+                                    imageSrc = file.data;
+                                    fileName = file.name || '图片';
+                                } else {
+                                    fileName = file.name || '图片';
+                                }
+                                
+                                return `<div class="image-item">
+                                    <img src="${imageSrc.replace(/'/g, "\\'")}" alt="${fileName.replace(/'/g, "\\'")}" onclick="openImageModal('${imageSrc.replace(/'/g, "\\'")}', '${fileName.replace(/'/g, "\\'")}')" onerror="this.parentElement.innerHTML='<div style=\\'height: 150px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; color: #999;\\'>📄 无法加载图片</div><div class=\\'image-name\\'>${fileName.replace(/'/g, "\\'")}</div>'">
+                                    <div class="image-name">${fileName}</div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${currentCase.xrayFiles && currentCase.xrayFiles.length > 0 ? `
+                    <div class="info-section">
+                        <div class="info-label" style="margin-bottom: 12px;">X线检查</div>
+                        <div class="image-gallery">
+                            ${currentCase.xrayFiles.map(file => {
+                                // 支持多种格式：新格式（path/url）、Base64格式（data）、旧格式（字符串）
+                                let imageSrc = '';
+                                let fileName = '图片';
+                                
+                                if (typeof file === 'string') {
+                                    fileName = file;
+                                    imageSrc = `public/${file}`;
+                                } else if (file.path) {
+                                    imageSrc = file.path;
+                                    fileName = file.name || file.path.split('/').pop();
+                                } else if (file.url) {
+                                    imageSrc = file.url;
+                                    fileName = file.name || file.url.split('/').pop();
+                                } else if (file.data) {
+                                    imageSrc = file.data;
+                                    fileName = file.name || '图片';
+                                } else {
+                                    fileName = file.name || '图片';
+                                }
+                                
+                                return `<div class="image-item">
+                                    <img src="${imageSrc.replace(/'/g, "\\'")}" alt="${fileName.replace(/'/g, "\\'")}" onclick="openImageModal('${imageSrc.replace(/'/g, "\\'")}', '${fileName.replace(/'/g, "\\'")}')" onerror="this.parentElement.innerHTML='<div style=\\'height: 150px; display: flex; align-items: center; justify-content: center; background: #f0f0f0; color: #999;\\'>📄 无法加载图片</div><div class=\\'image-name\\'>${fileName.replace(/'/g, "\\'")}</div>'">
+                                    <div class="image-name">${fileName}</div>
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        // 显示对比面板
+        function showComparisonPanel() {
+            comparisonMode = true;
+            const panel = document.getElementById('rightPanel');
+            const userFindings = document.getElementById('findings').value;
+            const userConclusion = document.getElementById('conclusion').value;
+            const finalFindings = currentCase.finalReport.findings;
+            const finalConclusion = currentCase.finalReport.conclusion;
+
+            panel.innerHTML = `
+                <div class="toggle-mode">
+                    <button class="toggle-btn ${!comparisonMode ? 'active' : ''}" onclick="showInfoPanel();">基本信息</button>
+                    <button class="toggle-btn ${comparisonMode ? 'active' : ''}" onclick="showComparisonPanel();">对比模式</button>
+                </div>
+
+                <h2 class="panel-title">最终报告对比</h2>
+
+                <div class="final-version">
+                    <h4>所见</h4>
+                    <div class="comparison-content">${highlightKeywords(finalFindings, userFindings)}</div>
+                </div>
+
+                <div class="final-version">
+                    <h4>结论</h4>
+                    <div class="comparison-content">${highlightKeywords(finalConclusion, userConclusion)}</div>
+                </div>
+
+                <div style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 6px; font-size: 13px;">
+                    <div style="margin-bottom: 8px;">📌 图例：</div>
+                    <div style="margin-bottom: 4px;"><span class="keyword-correct">绿色</span> = 已答对的关键词</div>
+                    <div style="margin-bottom: 4px;"><span class="keyword-missed">红色</span> = 未答到的关键词</div>
+                    <div><span class="keyword-required">黄色背景</span> = 必须答到的关键词</div>
+                </div>
+            `;
+
+            comparisonMode = true;
+        }
+
+        // 高亮关键词
+        function highlightKeywords(finalText, userText) {
+            // 提取最终报告中的关键词（被<strong>标签包裹的内容）
+            const keywordRegex = /<strong>(.*?)<\/strong>/g;
+            const keywords = [];
+            let match;
+            while ((match = keywordRegex.exec(finalText)) !== null) {
+                keywords.push(match[1].trim());
+            }
+
+            // 替换strong标签为span
+            let result = finalText.replace(/<strong>(.*?)<\/strong>/g, (match, keyword) => {
+                // 检查用户文本中是否包含此关键词
+                const userLower = userText.toLowerCase();
+                const keywordLower = keyword.toLowerCase();
+                
+                if (userLower.includes(keywordLower)) {
+                    // 已答对，标绿
+                    return `<span class="keyword-correct keyword-required">${keyword}</span>`;
+                } else {
+                    // 未答到，标红
+                    return `<span class="keyword-missed keyword-required">${keyword}</span>`;
+                }
+            });
+
+            return result;
+        }
+
+        // 保存草稿
+        function saveDraft() {
+            if (!currentCase) return;
+
+            currentCase.userReport = {
+                findings: document.getElementById('findings').value,
+                conclusion: document.getElementById('conclusion').value
+            };
+
+            // 更新localStorage
+            const cases = JSON.parse(localStorage.getItem('cases') || '[]');
+            const index = cases.findIndex(c => c.caseId === currentCase.caseId);
+            if (index !== -1) {
+                cases[index] = currentCase;
+                localStorage.setItem('cases', JSON.stringify(cases));
+            }
+
+            alert('已暂存');
+        }
+
+        // 提交报告
+        function submitReport() {
+            if (!currentCase) return;
+
+            const findings = document.getElementById('findings').value.trim();
+            const conclusion = document.getElementById('conclusion').value.trim();
+
+            if (!findings || !conclusion) {
+                alert('请填写所见和结论');
+                return;
+            }
+
+            currentCase.userReport = {
+                findings: findings,
+                conclusion: conclusion
+            };
+
+            // 更新localStorage
+            const cases = JSON.parse(localStorage.getItem('cases') || '[]');
+            const index = cases.findIndex(c => c.caseId === currentCase.caseId);
+            if (index !== -1) {
+                cases[index] = currentCase;
+                localStorage.setItem('cases', JSON.stringify(cases));
+            }
+
+            // 切换到对比模式
+            showComparisonPanel();
+        }
+
+        // 打开图片模态框
+        function openImageModal(imageSrc, fileName) {
+            document.getElementById('modalImage').src = imageSrc;
+            document.getElementById('modalImageTitle').textContent = fileName;
+            document.getElementById('imageModal').classList.add('active');
+        }
+
+        // 关闭图片模态框
+        function closeImageModal(event) {
+            if (event) {
+                event.stopPropagation();
+            }
+            document.getElementById('imageModal').classList.remove('active');
+        }
+
+        // 按ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
+
+        // 页面加载时加载病例
+        window.addEventListener('DOMContentLoaded', loadCase);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>病例预览 - 网页2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .content {
+            padding: 32px;
+        }
+
+        .category-section {
+            margin-bottom: 40px;
+        }
+
+        .category-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid #667eea;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .category-title .icon {
+            font-size: 28px;
+        }
+
+        .case-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .case-item {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+            position: relative;
+        }
+
+        .case-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            background: white;
+        }
+
+        .case-item-actions {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: none;
+            gap: 8px;
+            z-index: 10;
+        }
+
+        .case-item:hover .case-item-actions {
+            display: flex;
+        }
+
+        .case-item-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+            transform: scale(1.05);
+        }
+
+        .case-id {
+            font-size: 18px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .case-info {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 4px;
+        }
+
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .empty-state .icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 病例预览</h1>
+            <p>点击病例编号进入报告书写页面</p>
+        </div>
+
+        <div class="content">
+            <div class="action-bar">
+                <a href="index.html" class="btn btn-primary">➕ 新增病例</a>
+                <button class="btn btn-primary" onclick="loadCases()">🔄 刷新</button>
+            </div>
+
+            <div id="caseContainer">
+                <!-- 病例列表将在这里动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const caseTypes = [
+            { type: 'X线', icon: '📷', prefix: 'DR' },
+            { type: 'B超', icon: '🔊', prefix: 'UL' },
+            { type: 'CT', icon: '🖥️', prefix: 'CT' },
+            { type: 'MRI', icon: '🧲', prefix: 'MRI' }
+        ];
+
+        function loadCases() {
+            const cases = JSON.parse(localStorage.getItem('cases') || '[]');
+            const container = document.getElementById('caseContainer');
+            
+            if (cases.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <div>暂无病例，请先添加病例</div>
+                        <a href="index.html" class="btn btn-primary" style="margin-top: 20px;">➕ 添加病例</a>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            caseTypes.forEach(({ type, icon, prefix }) => {
+                const typeCases = cases.filter(c => c.caseType === type).sort((a, b) => {
+                    return b.createTime.localeCompare(a.createTime);
+                });
+
+                if (typeCases.length > 0) {
+                    html += `
+                        <div class="category-section">
+                            <div class="category-title">
+                                <span class="icon">${icon}</span>
+                                <span>${type}</span>
+                            </div>
+                            <div class="case-list">
+                                ${typeCases.map((c, index) => `
+                                    <div class="case-item" onclick="openReport('${c.caseId}')">
+                                        <div class="case-item-actions" onclick="event.stopPropagation();">
+                                            <button class="btn-delete" onclick="deleteCase('${c.caseId}', '${c.caseId}')" title="删除病例">🗑️ 删除</button>
+                                        </div>
+                                        <div class="case-id">${c.caseId}</div>
+                                        <div class="case-info">年龄：${c.age}${c.ageUnit || '岁'}</div>
+                                        <div class="case-info">性别：${c.gender}</div>
+                                        <div class="case-info">创建时间：${new Date(c.createTime).toLocaleString('zh-CN')}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (!html) {
+                html = `
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <div>暂无病例，请先添加病例</div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function openReport(caseId) {
+            window.location.href = `report.html?caseId=${caseId}`;
+        }
+
+        // 删除病例
+        function deleteCase(caseId, displayName) {
+            if (!confirm(`确定要删除病例 ${displayName} 吗？\n\n此操作无法撤销！`)) {
+                return;
+            }
+
+            const cases = JSON.parse(localStorage.getItem('cases') || '[]');
+            const filteredCases = cases.filter(c => c.caseId !== caseId);
+            
+            if (filteredCases.length === cases.length) {
+                alert('病例不存在');
+                return;
+            }
+
+            localStorage.setItem('cases', JSON.stringify(filteredCases));
+            alert('病例已删除');
+            
+            // 重新加载病例列表
+            loadCases();
+        }
+
+        // 页面加载时加载病例
+        window.addEventListener('DOMContentLoaded', loadCases);
+    </script>
+</body>
+</html>
+

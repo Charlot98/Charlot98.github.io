@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>病例信息上传 - 网页1</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .content {
+            padding: 32px;
+        }
+
+        .section {
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .form-group label .required {
+            color: #dc3545;
+            margin-left: 4px;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-group.readonly {
+            background: #f8f9fa;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-area:hover {
+            border-color: #667eea;
+            background: #e7f3ff;
+        }
+
+        .file-upload-area input[type="file"] {
+            display: none;
+        }
+
+        .file-list {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .file-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #e7f3ff;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+
+        .file-item button {
+            background: none;
+            border: none;
+            color: #dc3545;
+            cursor: pointer;
+            padding: 0;
+            font-size: 16px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .format-btn {
+            padding: 8px 16px;
+            border: 1px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .format-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .info-note {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 病例信息上传</h1>
+            <p>请填写病例基本信息</p>
+        </div>
+
+        <div class="content">
+            <form id="caseForm">
+                <!-- 基本信息 -->
+                <div class="section">
+                    <h2 class="section-title">基本信息</h2>
+                    
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>病例影像下载URL <span class="required">*</span></label>
+                            <input type="url" id="imageUrl" required placeholder="请输入影像下载URL">
+                        </div>
+
+
+                        <div class="form-group">
+                            <label>年龄 <span class="required">*</span></label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="number" id="age" required min="0" placeholder="请输入年龄" style="flex: 1;">
+                                <select id="ageUnit" required style="width: 100px;">
+                                    <option value="岁">岁</option>
+                                    <option value="月龄">月龄</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>性别 <span class="required">*</span></label>
+                            <select id="gender" required>
+                                <option value="">请选择</option>
+                                <option value="雄性">雄性</option>
+                                <option value="雄性去势">雄性去势</option>
+                                <option value="雌性">雌性</option>
+                                <option value="雌性绝育">雌性绝育</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>病史 <span class="required">*</span></label>
+                            <textarea id="medicalHistory" required placeholder="请输入病史"></textarea>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>主诉 <span class="required">*</span></label>
+                            <textarea id="chiefComplaint" required placeholder="请输入主诉"></textarea>
+                        </div>
+
+                        <div class="form-group">
+                            <label>病例类型 <span class="required">*</span></label>
+                            <select id="caseType" required>
+                                <option value="">请选择</option>
+                                <option value="X线">X线</option>
+                                <option value="B超">B超</option>
+                                <option value="CT">CT</option>
+                                <option value="MRI">MRI</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最终版报告 -->
+                <div class="section">
+                    <h2 class="section-title">最终版报告（关键词标注）</h2>
+                    <div class="info-note">
+                        💡 提示：选中文本后点击"加粗选中文本"按钮来标注必须答到的关键词。标注的关键词将在对比时高亮显示。
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>最终版报告所见</label>
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                                <button type="button" class="format-btn" onclick="formatText('findingsFinal', 'bold')">📝 加粗选中文本</button>
+                            </div>
+                            <textarea id="findingsFinal" placeholder="请输入最终版报告所见。选中文本后点击按钮来标注关键词。" style="min-height: 150px;">此处是<strong>最终报告所见</strong>的示例内容。关键词会被<strong>加粗标注</strong>。</textarea>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>最终版报告结论</label>
+                            <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                                <button type="button" class="format-btn" onclick="formatText('conclusionFinal', 'bold')">📝 加粗选中文本</button>
+                            </div>
+                            <textarea id="conclusionFinal" placeholder="请输入最终版报告结论。选中文本后点击按钮来标注关键词。" style="min-height: 150px;">此处是<strong>最终报告结论</strong>的示例内容。重要<strong>关键词</strong>会被标注。</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 辅助信息 -->
+                <div class="section">
+                    <h2 class="section-title">辅助信息（非必填）</h2>
+                    
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label>实验室检查</label>
+                            <div class="file-upload-area" id="labCheckArea">
+                                <input type="file" id="labCheckFiles" multiple accept="image/*">
+                                <div>📎 点击或拖拽上传图片（可多选）</div>
+                            </div>
+                            <div class="file-list" id="labCheckFileList"></div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>B超检查</label>
+                            <div class="file-upload-area" id="ultrasoundArea">
+                                <input type="file" id="ultrasoundFiles" multiple accept="image/*">
+                                <div>📎 点击或拖拽上传图片（可多选）</div>
+                            </div>
+                            <div class="file-list" id="ultrasoundFileList"></div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label>X线检查</label>
+                            <div class="file-upload-area" id="xrayArea">
+                                <input type="file" id="xrayFiles" multiple accept="image/*">
+                                <div>📎 点击或拖拽上传图片（可多选）</div>
+                            </div>
+                            <div class="file-list" id="xrayFileList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">✅ 提交并生成病例编号</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearForm()">🔄 清空表单</button>
+                    <a href="preview.html" class="btn btn-secondary">📋 查看病例列表</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 随机生成姓名
+        function generateRandomName() {
+            const surnames = ['张', '王', '李', '赵', '刘', '陈', '杨', '黄', '周', '吴'];
+            const names = ['伟', '芳', '娜', '秀英', '敏', '静', '丽', '强', '磊', '军', '洋', '勇', '艳', '杰', '娟', '涛', '明', '超', '秀兰'];
+            const surname = surnames[Math.floor(Math.random() * surnames.length)];
+            const name = names[Math.floor(Math.random() * names.length)] + (Math.random() > 0.5 ? '' : names[Math.floor(Math.random() * names.length)]);
+            return surname + name;
+        }
+
+        // 存储生成的姓名（不显示给用户）
+        let generatedName = '';
+        
+        // 页面加载时生成随机姓名（但不显示）
+        window.addEventListener('DOMContentLoaded', function() {
+            generatedName = generateRandomName();
+        });
+        
+        // 上传文件到服务器
+        async function uploadFileToServer(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('http://localhost:5000/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`上传失败: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                if (result.success) {
+                    return {
+                        name: file.name,
+                        path: result.path,
+                        url: result.url
+                    };
+                } else {
+                    throw new Error(result.error || '上传失败');
+                }
+            } catch (error) {
+                console.error('文件上传错误:', error);
+                // 如果服务器不可用，回退到 Base64
+                return convertFileToBase64(file);
+            }
+        }
+
+        // 将文件转换为base64（作为备用方案）
+        function convertFileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve({
+                    name: file.name,
+                    data: reader.result // base64数据
+                });
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // 格式化文本功能
+        function formatText(textareaId, type) {
+            const textarea = document.getElementById(textareaId);
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            if (!selectedText) {
+                alert('请先选中要标注的文本');
+                return;
+            }
+            
+            let replacement;
+            if (type === 'bold' || type === 'keyword') {
+                replacement = `<strong>${selectedText}</strong>`;
+            }
+            
+            const newText = textarea.value.substring(0, start) + replacement + textarea.value.substring(end);
+            textarea.value = newText;
+            
+            // 恢复焦点和光标位置
+            textarea.focus();
+            const newPos = start + replacement.length;
+            textarea.setSelectionRange(newPos, newPos);
+        }
+
+        // 文件上传处理
+        function setupFileUpload(inputId, listId) {
+            const input = document.getElementById(inputId);
+            const list = document.getElementById(listId);
+            const area = input.closest('.file-upload-area');
+
+            area.addEventListener('click', () => input.click());
+            area.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                area.style.borderColor = '#667eea';
+            });
+            area.addEventListener('dragleave', () => {
+                area.style.borderColor = '#dee2e6';
+            });
+            area.addEventListener('drop', (e) => {
+                e.preventDefault();
+                area.style.borderColor = '#dee2e6';
+                input.files = e.dataTransfer.files;
+                updateFileList(input, list);
+            });
+
+            input.addEventListener('change', () => updateFileList(input, list));
+        }
+
+        function updateFileList(input, list) {
+            list.innerHTML = '';
+            Array.from(input.files).forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span>📄 ${file.name}</span>
+                    <button type="button" onclick="removeFile('${input.id}', ${index})">×</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function removeFile(inputId, index) {
+            const input = document.getElementById(inputId);
+            const dt = new DataTransfer();
+            Array.from(input.files).forEach((file, i) => {
+                if (i !== index) dt.items.add(file);
+            });
+            input.files = dt.files;
+            const listId = inputId.replace('Files', 'FileList');
+            updateFileList(input, document.getElementById(listId));
+        }
+
+        // 初始化文件上传
+        setupFileUpload('labCheckFiles', 'labCheckFileList');
+        setupFileUpload('ultrasoundFiles', 'ultrasoundFileList');
+        setupFileUpload('xrayFiles', 'xrayFileList');
+
+        // 表单提交
+        document.getElementById('caseForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // 上传图片文件到服务器
+            const labCheckFiles = Array.from(document.getElementById('labCheckFiles').files);
+            const ultrasoundFiles = Array.from(document.getElementById('ultrasoundFiles').files);
+            const xrayFiles = Array.from(document.getElementById('xrayFiles').files);
+
+            // 显示上传进度
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '⏳ 正在上传图片...';
+            submitBtn.disabled = true;
+
+            try {
+                const formData = {
+                    imageUrl: document.getElementById('imageUrl').value,
+                    patientName: generatedName || generateRandomName(),
+                    age: document.getElementById('age').value,
+                    ageUnit: document.getElementById('ageUnit').value,
+                    gender: document.getElementById('gender').value,
+                    medicalHistory: document.getElementById('medicalHistory').value,
+                    chiefComplaint: document.getElementById('chiefComplaint').value,
+                    caseType: document.getElementById('caseType').value,
+                    finalReport: {
+                        findings: document.getElementById('findingsFinal').value,
+                        conclusion: document.getElementById('conclusionFinal').value
+                    },
+                    labCheckFiles: await Promise.all(labCheckFiles.map(uploadFileToServer)).catch(() => []),
+                    ultrasoundFiles: await Promise.all(ultrasoundFiles.map(uploadFileToServer)).catch(() => []),
+                    xrayFiles: await Promise.all(xrayFiles.map(uploadFileToServer)).catch(() => [])
+                };
+
+                // 保存到localStorage并生成病例编号
+                saveCaseAndGenerateId(formData);
+            } catch (error) {
+                alert('上传图片时出错: ' + error.message);
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+
+            // 保存到localStorage并生成病例编号
+            saveCaseAndGenerateId(formData);
+        });
+
+        // 保存病例并生成编号
+        function saveCaseAndGenerateId(caseData) {
+            // 获取已有病例
+            let cases = JSON.parse(localStorage.getItem('cases') || '[]');
+            
+            // 生成病例编号
+            const prefix = {
+                'X线': 'DR',
+                'B超': 'UL',
+                'CT': 'CT',
+                'MRI': 'MRI'
+            }[caseData.caseType];
+
+            // 获取该类型的最新编号
+            const sameTypeCases = cases.filter(c => c.caseId && c.caseId.startsWith(prefix));
+            let maxNum = 0;
+            sameTypeCases.forEach(c => {
+                const num = parseInt(c.caseId.replace(prefix, ''));
+                if (num > maxNum) maxNum = num;
+            });
+            
+            const caseId = prefix + String(maxNum + 1).padStart(6, '0');
+            
+            // 添加病例ID和时间戳
+            caseData.caseId = caseId;
+            caseData.createTime = new Date().toISOString();
+            
+            // 保存
+            cases.push(caseData);
+            localStorage.setItem('cases', JSON.stringify(cases));
+
+            alert(`病例已提交！\n病例编号：${caseId}`);
+            
+            // 跳转到预览页面
+            window.location.href = 'preview.html';
+        }
+
+        // 清空表单
+        function clearForm() {
+            if (confirm('确定要清空所有内容吗？')) {
+                document.getElementById('caseForm').reset();
+                generatedName = generateRandomName();
+                document.getElementById('labCheckFileList').innerHTML = '';
+                document.getElementById('ultrasoundFileList').innerHTML = '';
+                document.getElementById('xrayFileList').innerHTML = '';
+            }
+        }
+    </script>
+</body>
+</html>
+
