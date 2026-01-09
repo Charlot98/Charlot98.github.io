@@ -6,6 +6,7 @@
 ## 维护中
 - [心超报告生成器](echocardiography_v3.1/echocardiography.html)
 - [报告训练](reports_v1/preview.html)
+- [牙表](dental_chart_v1/dental_chart_pub.html)
 ## 搭建中
 - 影像报告助手
   - 涵盖X线、超声（腹超、心超）、CT、MRI
