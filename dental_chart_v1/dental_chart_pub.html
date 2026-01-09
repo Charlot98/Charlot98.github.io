@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>牙表</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 15 C45 15, 40 18, 38 23 L35 30 C33 35, 30 40, 28 45 C25 50, 25 55, 27 58 C29 60, 32 61, 35 60 L40 58 C45 56, 50 55, 55 56 L60 58 C65 60, 68 60, 70 58 C72 55, 72 50, 69 45 C67 40, 64 35, 62 30 L59 23 C57 18, 52 15, 50 15 Z' fill='%234CAF50'/%3E%3Cpath d='M35 40 C35 42, 37 43, 39 43 C41 43, 43 42, 43 40 C43 38, 41 37, 39 37 C37 37, 35 38, 35 40 Z' fill='white'/%3E%3Cpath d='M57 40 C57 42, 59 43, 61 43 C63 43, 65 42, 65 40 C65 38, 63 37, 61 37 C59 37, 57 38, 57 40 Z' fill='white'/%3E%3Cpath d='M42 48 C42 50, 44 51, 46 51 C48 51, 50 50, 50 48 C50 46, 48 45, 46 45 C44 45, 42 46, 42 48 Z' fill='white'/%3E%3Cpath d='M50 48 C50 50, 52 51, 54 51 C56 51, 58 50, 58 48 C58 46, 56 45, 54 45 C52 45, 50 46, 50 48 Z' fill='white'/%3E%3Cpath d='M45 55 L55 55' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="css/pub.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title-section">
+                <h1>牙表</h1>
+                <input type="text" id="ownerNameInput" class="owner-name-input" placeholder="动物家长名" autocomplete="off">
+            </div>
+            <div class="controls">
+                <div class="chart-type-selector">
+                    <button id="btn-dog" class="active" onclick="switchChart('dog')">犬牙表</button>
+                    <button id="btn-cat" onclick="switchChart('cat')">猫牙表</button>
+                </div>
+                <div class="save-load-buttons">
+                    <button class="btn-clear" onclick="clearAll()">清空</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container" id="chartContainer">
+            <img id="chartImage" src="image/犬牙表HD.png" alt="牙表" class="chart-image" onload="initInputs()">
+            <div id="inputsContainer"></div>
+        </div>
+
+        <div class="legend">
+            <h3>术语缩写说明</h3>
+            <div class="legend-grid" id="legendGrid"></div>
+        </div>
+
+        <div class="disclaimer">
+            <p>术语解释可能有误，酌情参考</p>
+        </div>
+    </div>
+
+    <!-- 自定义确认对话框 -->
+    <div id="confirmDialog" class="confirm-dialog">
+        <div class="confirm-dialog-content">
+            <div class="confirm-dialog-message">确定要清空所有数据吗？</div>
+            <div class="confirm-dialog-buttons">
+                <button class="confirm-btn-cancel" onclick="closeConfirmDialog()">取消</button>
+                <button class="confirm-btn-ok" onclick="executeClear()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 术语列表（按备注.md顺序）
+        const terms = [
+            'AL', 'AT', 'CA', 'CWD', 'ED', 'EP', 'FE', 'FX', 'GH', 'GV', 'GP', 
+            'LPS', 'M', 'O', 'OP', 'OM', 'ONF', 'PE', 'PP', 'RD', 'RE', 'RL', 
+            'ROT', 'RPC', 'RPO', 'RTR', 'X', 'XS', 'XSS'
+        ];
+
+        // 犬牙表牙齿编号和位置配置
+        const dogTeethConfig = {
+            maxillaRight: [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
+            maxillaLeft: [201, 202, 203, 204, 205, 206, 207, 208, 209, 210],
+            mandibleRight: [401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411],
+            mandibleLeft: [301, 302, 303, 304, 305, 306, 307, 308, 309, 310, 311],
+            positions:  {
+                maxillaRight: { top: '44%', rows: [
+                    { left: '42.9883%', width: '5%' },  // 101
+                    { left: '40.0668%', width: '5%' },  // 102
+                    { left: '36.394%', width: '5%' },  // 103
+                    { left: '32.8881%', width: '5%' },  // 104
+                    { left: '29.4658%', width: '5%' },  // 105
+                    { left: '26.1269%', width: '5%' },  // 106
+                    { left: '22.4541%', width: '5%' },  // 107
+                    { left: '19.1987%', width: '5%' },  // 108
+                    { left: '15.7763%', width: '5%' },  // 109
+                    { left: '12.187%', width: '5%' },  // 110
+                ]},
+                maxillaLeft: { top: '44%', rows: [
+                    { left: '46.5776%', width: '5%' },  // 201
+                    { left: '49.8331%', width: '5%' },  // 202
+                    { left: '53.7563%', width: '5%' },  // 203
+                    { left: '57.3456%', width: '5%' },  // 204
+                    { left: '60.2671%', width: '5%' },  // 205
+                    { left: '63.773%', width: '5%' },  // 206
+                    { left: '67.0284%', width: '5%' },  // 207
+                    { left: '70.0334%', width: '5%' },  // 208
+                    { left: '73.7062%', width: '5%' },  // 209
+                    { left: '77.5459%', width: '5%' },  // 210
+                ]},
+                mandibleRight: { top: '50%', rows: [
+                    { left: '42.9883%', width: '5%' },  // 401
+                    { left: '40.0668%', width: '5%' },  // 402
+                    { left: '36.394%', width: '5%' },  // 403
+                    { left: '32.8881%', width: '5%' },  // 404
+                    { left: '29.4658%', width: '5%' },  // 405
+                    { left: '26.1269%', width: '5%' },  // 406
+                    { left: '22.4541%', width: '5%' },  // 407
+                    { left: '19.1987%', width: '5%' },  // 408
+                    { left: '15.7763%', width: '5%' },  // 409
+                    { left: '12.187%', width: '5%' },  // 410
+                    { left: '8.76461%', width: '5%' },  // 411
+                ]},
+                mandibleLeft: { top: '50%', rows: [
+                    { left: '46.5776%', width: '5%' },  // 301
+                    { left: '49.8331%', width: '5%' },  // 302
+                    { left: '53.7563%', width: '5%' },  // 303
+                    { left: '57.3456%', width: '5%' },  // 304
+                    { left: '60.2671%', width: '5%' },  // 305
+                    { left: '63.773%', width: '5%' },  // 306
+                    { left: '67.0284%', width: '5%' },  // 307
+                    { left: '70.0334%', width: '5%' },  // 308
+                    { left: '73.7062%', width: '5%' },  // 309
+                    { left: '77.5459%', width: '5%' },  // 310
+                    { left: '80.7179%', width: '5%' },  // 311
+                ]},
+            }
+        };
+
+        // 猫牙表牙齿编号和位置配置
+        const catTeethConfig = {
+            maxillaRight: [101, 102, 103, 104, 106, 107, 108, 109],
+            maxillaLeft: [201, 202, 203, 204, 206, 207, 208, 209],
+            mandibleRight: [401, 402, 403, 404, 407, 408, 409],
+            mandibleLeft: [301, 302, 303, 304, 307, 308, 309],
+            positions:  {
+                maxillaRight: { top: '47%', rows: [
+                    { left: '43.4891%', width: '5%' },  // 101
+                    { left: '39.9833%', width: '5%' },  // 102
+                    { left: '36.7279%', width: '5%' },  // 103
+                    { left: '33.222%', width: '5%' },  // 104
+                    { left: '26.5442%', width: '5%' },  // 106
+                    { left: '23.1219%', width: '5%' },  // 107
+                    { left: '19.783%', width: '5%' },  // 108
+                    { left: '16.1937%', width: '5%' },  // 109
+                ]},
+                maxillaLeft: { top: '46.2279%', rows: [
+                    { left: '46.995%', width: '5%' },  // 201
+                    { left: '50.4174%', width: '5%' },  // 202
+                    { left: '53.8397%', width: '5%' },  // 203
+                    { left: '57.0117%', width: '5%' },  // 204
+                    { left: '64.1068%', width: '5%' },  // 206
+                    { left: '67.5292%', width: '5%' },  // 207
+                    { left: '70.8681%', width: '5%' },  // 208
+                    { left: '74.6244%', width: '5%' },  // 209
+                ]},
+                mandibleRight: { top: '52.9276%', rows: [
+                    { left: '43.4891%', width: '5%' },  // 401
+                    { left: '39.9833%', width: '5%' },  // 402
+                    { left: '36.7279%', width: '5%' },  // 403
+                    { left: '33.222%', width: '5%' },  // 404
+                    { left: '23.1219%', width: '5%' },  // 407
+                    { left: '19.783%', width: '5%' },  // 408
+                    { left: '16.1937%', width: '5%' },  // 409
+                ]},
+                mandibleLeft: { top: '52.481%', rows: [
+                    { left: '46.995%', width: '5%' },  // 301
+                    { left: '50.4174%', width: '5%' },  // 302
+                    { left: '53.8397%', width: '5%' },  // 303
+                    { left: '57.0117%', width: '5%' },  // 304
+                    { left: '67.5292%', width: '5%' },  // 307
+                    { left: '70.8681%', width: '5%' },  // 308
+                    { left: '74.6244%', width: '5%' },  // 309
+                ]},
+            }
+        };
+
+        let currentChartType = 'dog';
+        let inputData = {};
+        let adjustMode = false;
+        let draggedInput = null;
+
+        // 初始化输入框
+        function initInputs() {
+            const container = document.getElementById('inputsContainer');
+            container.innerHTML = '';
+            const config = currentChartType === 'dog' ? dogTeethConfig : catTeethConfig;
+            
+            // 为每个象限创建输入框
+            ['maxillaRight', 'maxillaLeft', 'mandibleRight', 'mandibleLeft'].forEach(quadrant => {
+                const teeth = config[quadrant];
+                const posConfig = config.positions[quadrant];
+                
+                teeth.forEach((toothNum, index) => {
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'tooth-input';
+                    input.id = `tooth-${toothNum}`;
+                    input.placeholder = toothNum;
+                    input.list = 'terms-list';
+                    input.autocomplete = 'off';
+                    input.maxLength = 50; // 允许输入多个术语（用逗号分隔）
+                    
+                    const pos = posConfig.rows[index];
+                    input.style.top = posConfig.top;
+                    input.style.left = pos.left;
+                    input.style.width = pos.width;
+                    
+                    input.value = inputData[toothNum] || '';
+                    input.addEventListener('input', (e) => {
+                        // 自动转换为大写，去除空格
+                        const value = e.target.value.toUpperCase().replace(/\s+/g, '');
+                        e.target.value = value;
+                        inputData[toothNum] = value;
+                    });
+                    
+                    // 添加焦点时自动选中
+                    input.addEventListener('focus', (e) => {
+                        e.target.select();
+                    });
+                    
+                    container.appendChild(input);
+                });
+            });
+
+            // 创建数据列表
+            const datalist = document.createElement('datalist');
+            datalist.id = 'terms-list';
+            terms.forEach(term => {
+                const option = document.createElement('option');
+                option.value = term;
+                datalist.appendChild(option);
+            });
+            document.body.appendChild(datalist);
+        }
+
+        // 切换牙表类型
+        function switchChart(type) {
+            currentChartType = type;
+            const image = document.getElementById('chartImage');
+            image.src = type === 'dog' ? 'image/犬牙表HD.png' : 'image/猫牙表HD.png';
+            
+            document.getElementById('btn-dog').classList.toggle('active', type === 'dog');
+            document.getElementById('btn-cat').classList.toggle('active', type === 'cat');
+            
+            // 保存当前数据
+            const currentData = {};
+            document.querySelectorAll('.tooth-input').forEach(input => {
+                const toothNum = input.id.replace('tooth-', '');
+                if (input.value) {
+                    currentData[toothNum] = input.value;
+                }
+            });
+            
+            // 图片加载后重新初始化
+            image.onload = () => {
+                initInputs();
+                // 加载保存的位置
+                loadPositions();
+                // 恢复数据
+                Object.keys(currentData).forEach(toothNum => {
+                    const input = document.getElementById(`tooth-${toothNum}`);
+                    if (input) {
+                        input.value = currentData[toothNum];
+                        inputData[toothNum] = currentData[toothNum];
+                    }
+                });
+            };
+        }
+
+
+        let clearConfirmMode = false;
+        let clearConfirmTimeout = null;
+
+        // 清空所有（二次确认）
+        function clearAll() {
+            const btn = document.querySelector('.btn-clear');
+            
+            if (!clearConfirmMode) {
+                // 第一次点击：进入确认模式
+                clearConfirmMode = true;
+                btn.textContent = '确认？';
+                btn.classList.add('confirm-mode');
+                
+                // 2.5秒后自动退出确认模式
+                clearConfirmTimeout = setTimeout(function() {
+                    resetClearButton();
+                }, 2500);
+            } else {
+                // 第二次点击：执行清空
+                if (clearConfirmTimeout) {
+                    clearTimeout(clearConfirmTimeout);
+                    clearConfirmTimeout = null;
+                }
+                
+                inputData = {};
+                document.querySelectorAll('.tooth-input').forEach(input => {
+                    input.value = '';
+                });
+                
+                // 重置按钮状态
+                resetClearButton();
+            }
+        }
+
+        // 重置清空按钮状态
+        function resetClearButton() {
+            const btn = document.querySelector('.btn-clear');
+            if (!clearConfirmMode) return; // 如果已经重置，直接返回
+            
+            clearConfirmMode = false;
+            btn.classList.remove('confirm-mode');
+            btn.textContent = '清空';
+            
+            if (clearConfirmTimeout) {
+                clearTimeout(clearConfirmTimeout);
+                clearConfirmTimeout = null;
+            }
+        }
+
+        // 切换调整模式
+        function toggleAdjustMode() {
+            adjustMode = !adjustMode;
+            const container = document.getElementById('chartContainer');
+            const btn = document.getElementById('btn-adjust');
+            
+            if (adjustMode) {
+                container.classList.add('adjust-mode');
+                btn.textContent = '完成调整';
+                btn.style.background = '#4CAF50';
+                
+                // 添加拖拽功能
+                document.querySelectorAll('.tooth-input').forEach(input => {
+                    input.addEventListener('mousedown', startDrag);
+                    input.setAttribute('draggable', 'false');
+                });
+            } else {
+                container.classList.remove('adjust-mode');
+                btn.textContent = '调整位置';
+                btn.style.background = '#9C27B0';
+                
+                // 移除拖拽功能
+                document.querySelectorAll('.tooth-input').forEach(input => {
+                    input.removeEventListener('mousedown', startDrag);
+                });
+                
+                // 保存位置
+                savePositions();
+            }
+        }
+
+        // 拖拽功能
+        function startDrag(e) {
+            if (!adjustMode) return;
+            e.preventDefault();
+            draggedInput = e.target;
+            
+            const container = document.getElementById('chartContainer');
+            const rect = container.getBoundingClientRect();
+            
+            function onMouseMove(e) {
+                if (!draggedInput) return;
+                const x = e.clientX-rect.left;
+                const y = e.clientY-rect.top;
+                
+                draggedInput.style.left = (x / rect.width * 100) + '%';
+                draggedInput.style.top = (y / rect.height * 100) + '%';
+            }
+            
+            function onMouseUp() {
+                draggedInput = null;
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            }
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        }
+
+        // 保存位置配置
+        function savePositions() {
+            const positions = {};
+            document.querySelectorAll('.tooth-input').forEach(input => {
+                const toothNum = input.id.replace('tooth-', '');
+                positions[toothNum] = {
+                    left: input.style.left,
+                    top: input.style.top,
+                    width: input.style.width
+                };
+            });
+            
+            const config = {
+                chartType: currentChartType,
+                positions: positions,
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem(`toothPositions_${currentChartType}`, JSON.stringify(config));
+        }
+
+        // 加载位置配置
+        function loadPositions() {
+            const saved = localStorage.getItem(`toothPositions_${currentChartType}`);
+            if (saved) {
+                try {
+                    const config = JSON.parse(saved);
+                    if (config.positions) {
+                        Object.keys(config.positions).forEach(toothNum => {
+                            const input = document.getElementById(`tooth-${toothNum}`);
+                            if (input && config.positions[toothNum]) {
+                                input.style.left = config.positions[toothNum].left;
+                                input.style.top = config.positions[toothNum].top;
+                                if (config.positions[toothNum].width) {
+                                    input.style.width = config.positions[toothNum].width;
+                                }
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error('加载位置配置失败:', e);
+                }
+            }
+        }
+
+        // 初始化图例
+        function initLegend() {
+            const legendGrid = document.getElementById('legendGrid');
+            
+            // 按照备注.md的顺序定义术语（注意：GV/GP合并为一个条目）
+            const termsOrder = ['AL', 'AT', 'CA', 'CWD', 'ED', 'EP', 'FE', 'FX', 'GH', 'GV', 'GP', 'LPS', 'M', 'O', 'OP', 'OM', 'ONF', 'PE', 'PP', 'RD', 'RE', 'RL', 'ROT', 'RPC', 'RPO', 'RTR', 'X', 'XS', 'XSS'];
+            
+            // 术语完整信息（英文全称和解释）
+            const termInfo = {
+                'AL': {
+                    chinese: '牙周附着物丢失',
+                    english: 'Attachment Loss',
+                    description: '牙周附着物丢失是指牙齿周围支持组织的丧失，包括牙龈附着和牙槽骨的破坏。这是牙周病的主要特征之一，通常由牙菌斑和牙结石引起，导致牙龈从牙根表面剥离，形成牙周袋。'
+                },
+                'AT': {
+                    chinese: '磨损',
+                    english: 'Attrition',
+                    description: '牙齿磨损是指由于牙齿与牙齿之间的接触摩擦导致的牙体硬组织逐渐丧失。常见于咬合异常、磨牙症或年龄相关的正常生理性磨损。'
+                },
+                'CA': {
+                    chinese: '龋齿',
+                    english: 'Caries',
+                    description: '龋齿是由细菌产生的酸腐蚀牙齿硬组织而导致的疾病。主要影响牙釉质、牙本质和牙骨质，如果不及时治疗，可能进展到牙髓腔引起牙髓炎。'
+                },
+                'CWD': {
+                    chinese: '拥挤',
+                    english: 'Crowding',
+                    description: '牙齿拥挤是指牙弓内空间不足导致牙齿排列不齐、重叠或扭转的错颌畸形。可能由遗传因素、乳牙过早脱落或牙弓发育不足引起。'
+                },
+                'ED': {
+                    chinese: '釉质发育不良',
+                    english: 'Enamel Defect',
+                    description: '釉质发育不良是指牙釉质在形成过程中出现的结构异常或缺陷，表现为釉质厚度不足、表面不光滑或有颜色改变。可能由遗传、营养缺乏、感染或药物等因素引起。'
+                },
+                'EP': {
+                    chinese: '齿龈瘤',
+                    english: 'Epulis',
+                    description: '齿龈瘤是发生在牙龈上的良性肿瘤性病变，通常表现为牙龈上的结节或肿块。在兽医牙科中常见，可能由慢性刺激、炎症或激素因素引起，需要组织病理学检查确诊。'
+                },
+                'FE': {
+                    chinese: '根分叉暴露',
+                    english: 'Furcation Exposure',
+                    description: '根分叉暴露是指多根牙（如臼齿）的根分叉区域因牙周组织破坏而暴露在外。这是牙周病进展的标志，根据暴露程度分为不同的等级，影响牙齿预后和治疗方案选择。'
+                },
+                'FX': {
+                    chinese: '齿折',
+                    english: 'Fracture',
+                    description: '齿折是指牙齿硬组织（牙釉质、牙本质或牙根）的断裂。根据折裂位置和程度可分为牙冠折、牙根折或复杂折裂。常见于外伤、咬硬物或已有病变的牙齿。'
+                },
+                'GH': {
+                    chinese: '牙龈增生',
+                    english: 'Gingival Hyperplasia',
+                    description: '牙龈增生是指牙龈组织的过度生长，表现为牙龈体积增大、质地变厚。可能由药物（如某些抗癫痫药）、慢性炎症、遗传因素或激素变化引起。'
+                },
+                'GV': {
+                    chinese: '牙龈切除术',
+                    english: 'Gingivectomy',
+                    description: '牙龈切除术是切除多余牙龈组织的手术，用于治疗牙龈增生或深牙周袋。牙龈整形术是修整牙龈外形的手术，改善牙龈的形态和美观。'
+                },
+                'GP': {
+                    chinese: '牙龈整形术',
+                    english: 'Gingivoplasty',
+                    description: '牙龈整形术是修整牙龈外形的手术，改善牙龈的形态和美观。牙龈切除术是切除多余牙龈组织的手术，用于治疗牙龈增生或深牙周袋。'
+                },
+                'LPS': {
+                    chinese: '淋巴细胞浆细胞性口炎',
+                    english: 'Lymphocytic Plasmacytic Stomatitis',
+                    description: '淋巴细胞浆细胞性口炎是一种慢性炎症性疾病，常见于猫，表现为口腔黏膜和牙龈的严重炎症，主要由淋巴细胞和浆细胞浸润引起。可能由免疫介导反应、病毒感染或过敏引起，需要综合治疗。'
+                },
+                'M': {
+                    chinese: '活动性',
+                    english: 'Mobility',
+                    description: '牙齿活动度是指牙齿在牙槽窝中的松动程度，是评估牙周支持组织健康状况的重要指标。通常分为0-3级，0级为正常，3级为严重松动，可能需要拔除。'
+                },
+                'O': {
+                    chinese: '缺失',
+                    english: 'Missing',
+                    description: '牙齿缺失是指该牙位没有牙齿。可能是先天性缺失、已拔除或因外伤脱落。在牙科记录中用于标记缺失的牙位，有助于制定治疗计划和修复方案。'
+                },
+                'OP': {
+                    chinese: '牙体修复术',
+                    english: 'Operative',
+                    description: '牙体修复术是指修复受损牙齿结构的手术，包括充填、嵌体、全冠等修复方式。用于治疗龋齿、牙齿缺损、骨折等情况，恢复牙齿的功能和形态。'
+                },
+                'OM': {
+                    chinese: '口腔肿瘤',
+                    english: 'Oral Mass',
+                    description: '口腔肿瘤是指发生在口腔内的任何异常肿块或肿瘤，可能是良性或恶性。包括牙龈瘤、鳞状细胞癌、纤维肉瘤等，需要影像学检查和组织活检来确诊和制定治疗方案。'
+                },
+                'ONF': {
+                    chinese: '口鼻瘘',
+                    english: 'Oronasal Fistula',
+                    description: '口鼻瘘是指口腔和鼻腔之间形成的异常通道，最常见于上颌犬齿或前臼齿的根尖区域。通常由严重的牙周病、根尖周炎或拔牙后愈合不良引起，需要手术修复。'
+                },
+                'PE': {
+                    chinese: '牙髓暴露',
+                    english: 'Pulp Exposure',
+                    description: '牙髓暴露是指牙髓腔由于龋齿、外伤或磨损而暴露在口腔环境中。暴露的牙髓容易感染，通常会引起疼痛和炎症，需要及时进行根管治疗或拔除。'
+                },
+                'PP': {
+                    chinese: '牙周袋',
+                    english: 'Periodontal Pocket',
+                    description: '牙周袋是指牙龈与牙根表面之间形成的病理性深沟，深度超过正常的龈沟（通常>3mm）。是牙周病的重要表现，由牙龈附着丧失和牙槽骨吸收形成，需要专业清洁和治疗。'
+                },
+                'RD': {
+                    chinese: '乳齿未脱',
+                    english: 'Retained Deciduous',
+                    description: '乳齿未脱是指乳牙在其正常脱落时间之后仍然保留在口腔内，而恒牙已经开始萌出。常见于小型犬，可能导致恒牙错位、咬合问题或牙周疾病，通常需要拔除滞留的乳牙。'
+                },
+                'RE': {
+                    chinese: '齿根暴露',
+                    english: 'Root Exposure',
+                    description: '齿根暴露是指牙根表面因牙龈退缩而暴露在口腔中。可能由牙周病、刷牙方式不当、咬合创伤或年龄因素引起，暴露的牙根对冷热刺激敏感，容易发生龋齿。'
+                },
+                'RL': {
+                    chinese: '再吸收损伤',
+                    english: 'Resorptive Lesion',
+                    description: '再吸收损伤是指牙齿硬组织（通常是牙根或牙颈部）被破骨细胞逐渐吸收的病变。在猫中特别常见，也可见于犬，病因尚不完全清楚，可能与炎症、免疫反应或代谢因素有关。'
+                },
+                'ROT': {
+                    chinese: '牙齿旋转',
+                    english: 'Rotation',
+                    description: '牙齿旋转是指牙齿沿其长轴发生旋转，偏离正常位置。可能由牙齿拥挤、乳牙滞留、外伤或遗传因素引起，影响咬合功能和美观。'
+                },
+                'RPC': {
+                    chinese: '牙根整平术，闭合式',
+                    english: 'Root Planing, Closed',
+                    description: '闭合式牙根整平术是通过龈下刮治去除牙根表面的牙结石和病变牙骨质，而不需要切开牙龈的手术方式。适用于中度牙周病，可以清除牙周袋内的细菌和沉积物。'
+                },
+                'RPO': {
+                    chinese: '牙根整平术，开放式',
+                    english: 'Root Planing, Open',
+                    description: '开放式牙根整平术是在切开并翻开牙龈瓣后进行的牙根表面清洁和整平手术。适用于深牙周袋或闭合式治疗无法充分清洁的情况，可以更彻底地清除病变组织。'
+                },
+                'RTR': {
+                    chinese: '齿根残留',
+                    english: 'Retained Tooth Root',
+                    description: '齿根残留是指牙齿冠部已缺失但牙根仍留在牙槽骨中的情况。可能由不完全拔牙、外伤折断或自然脱落不完整引起，残留的根尖可能引起感染或疼痛，通常需要手术取出。'
+                },
+                'X': {
+                    chinese: '拔牙',
+                    english: 'Extraction',
+                    description: '拔牙是指将牙齿从牙槽骨中完整移除的手术。通常用于治疗无法修复的严重龋齿、牙周病、骨折或感染的牙齿，是牙科治疗中的常见手术操作。'
+                },
+                'XS': {
+                    chinese: '拔牙，切开齿龈瓣',
+                    english: 'Extraction with Sectioning',
+                    description: '切开齿龈瓣拔牙是指通过切开并翻开牙龈组织来暴露牙齿和牙根，然后进行拔除的手术方法。适用于复杂拔牙、根分叉暴露的多根牙或需要充分视野的手术。'
+                },
+                'XSS': {
+                    chinese: '拔牙，手术',
+                    english: 'Extraction, Surgical',
+                    description: '外科拔牙是指需要额外外科操作（如骨切除、牙齿分片、根尖切除等）的复杂拔牙手术。适用于阻生牙、严重弯曲的牙根、根尖病变或需要完全取出所有牙体组织的复杂情况。'
+                }
+            };
+
+            // 按照备注.md的顺序创建图例项
+            termsOrder.forEach(term => {
+                if (termInfo[term]) {
+                    const item = document.createElement('div');
+                    item.className = 'legend-item';
+                    
+                    const info = termInfo[term];
+                    item.innerHTML = term + '-' + info.chinese;
+                    
+                    // 创建提示框
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'tooltip';
+                    tooltip.innerHTML = '<div class="tooltip-title">' + info.english + '</div>' +
+                                      '<div class="tooltip-content">' + info.description + '</div>';
+                    item.appendChild(tooltip);
+                    
+                    legendGrid.appendChild(item);
+                }
+            });
+        }
+
+        // 导出位置为代码
+        function exportPositionsAsCode(showOnly) {
+            const config = currentChartType === 'dog' ? dogTeethConfig : catTeethConfig;
+            const positions = {};
+            
+            document.querySelectorAll('.tooth-input').forEach(input => {
+                const toothNum = input.id.replace('tooth-', '');
+                positions[toothNum] = {
+                    left: input.style.left,
+                    top: input.style.top,
+                    width: input.style.width
+                };
+            });
+            
+            // 按象限组织位置数据
+            const organized = {
+                maxillaRight: { top: '', rows: [] },
+                maxillaLeft: { top: '', rows: [] },
+                mandibleRight: { top: '', rows: [] },
+                mandibleLeft: { top: '', rows: [] }
+            };
+            
+            ['maxillaRight', 'maxillaLeft', 'mandibleRight', 'mandibleLeft'].forEach(quadrant => {
+                const teeth = config[quadrant];
+                let firstTop = null;
+                teeth.forEach((toothNum, index) => {
+                    if (positions[toothNum]) {
+                        const pos = positions[toothNum];
+                        if (!firstTop) firstTop = pos.top;
+                        organized[quadrant].top = firstTop;
+                        organized[quadrant].rows.push({
+                            left: pos.left,
+                            width: pos.width,
+                            toothNum: toothNum
+                        });
+                    }
+                });
+            });
+            
+            // 生成代码字符串-使用字符串拼接避免模板字符串问题
+            let code = '// ' + (currentChartType === 'dog' ? '犬' : '猫') + '牙表位置配置（从用户调整的位置导出）\n';
+            code += 'const ' + currentChartType + 'TeethConfig = {\n';
+            code += '    maxillaRight: [' + config.maxillaRight.join(', ') + '],\n';
+            code += '    maxillaLeft: [' + config.maxillaLeft.join(', ') + '],\n';
+            code += '    mandibleRight: [' + config.mandibleRight.join(', ') + '],\n';
+            code += '    mandibleLeft: [' + config.mandibleLeft.join(', ') + '],\n';
+            code += '    positions: {\n';
+            
+            Object.keys(organized).forEach(quadrant => {
+                const quadData = organized[quadrant];
+                if (quadData.rows.length > 0) {
+                    code += '        ' + quadrant + ': { top: \'' + quadData.top + '\', rows: [\n';
+                    quadData.rows.forEach((row, idx) => {
+                        const toothNum = config[quadrant][idx];
+                        code += '            { left: \'' + row.left + '\', width: \'' + row.width + '\' },  // ' + toothNum + '\n';
+                    });
+                    code += '        ]},\n';
+                }
+            });
+            
+            code += '    }\n};';
+            
+            if (showOnly) {
+                // 直接下载代码文件供用户查看和复制
+                const blob = new Blob([code], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = (currentChartType === 'dog' ? '犬' : '猫') + '牙表位置配置代码.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+                alert('位置配置代码已下载！请打开文件查看代码，然后复制到程序中替换默认配置。');
+            } else {
+                // 下载为文本文件
+                const blob = new Blob([code], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = (currentChartType === 'dog' ? '犬' : '猫') + '牙表位置配置.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
+
+        // 页面加载完成后初始化
+        window.onload = function() {
+            initLegend();
+            initInputs();
+            // 加载保存的位置
+            setTimeout(() => {
+                loadPositions();
+            }, 100);
+            
+            // 点击页面其他地方时取消清空确认状态
+            document.addEventListener('click', function(e) {
+                if (clearConfirmMode && !e.target.closest('.btn-clear')) {
+                    resetClearButton();
+                }
+            });
+        };
+    </script>
+</body>
+</html>
