@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排队系统 - 客户显示</title>
+    <link rel="stylesheet" href="screen2.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 右上角Logo -->
+        <div class="logo-container">
+            <img src="image.png" alt="Logo" class="logo">
+        </div>
+        
+        <div class="queue-display">
+            <div class="sections-wrapper">
+                <!-- 左侧：心超区域 -->
+                <div class="section-left">
+                    <div class="section-title">心超</div>
+                    <div class="columns-container heart-container">
+                        <div class="column heart-echo" data-type="heart">
+                            <div class="cells-container"></div>
+                        </div>
+                        <div class="column heart-echo" data-type="heart">
+                            <div class="cells-container"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 右侧：腹超/其它区域 -->
+                <div class="section-right">
+                    <div class="section-title">腹超/其它</div>
+                    <div class="columns-container abdomen-container">
+                        <div class="column abdomen-echo" data-type="abdomen">
+                            <div class="cells-container"></div>
+                        </div>
+                        <div class="column abdomen-echo" data-type="abdomen">
+                            <div class="cells-container"></div>
+                        </div>
+                        <div class="column abdomen-echo" data-type="abdomen">
+                            <div class="cells-container"></div>
+                        </div>
+                        <div class="column abdomen-echo" data-type="abdomen">
+                            <div class="cells-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部提示栏 -->
+        <div class="bottom-notification">
+            <div class="notification-content">
+                <div class="notification-row">
+                    <span class="notification-label"><strong>剃毛</strong>：</span>
+                    <span id="notification-shaved">请___、____、____至超声室附近等待剃毛</span>
+                </div>
+                <div class="notification-row">
+                    <span class="notification-label"><strong>检查</strong>：</span>
+                    <span id="notification-check">请___、___、___、____在超声室附近等待检查。</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右下角二维码区域 -->
+        <div class="qr-code-container">
+            <div class="qr-code-placeholder">
+                <p>扫码查看</p>
+                <div id="qrcode"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="screen2.js"></script>
+</body>
+</html>
