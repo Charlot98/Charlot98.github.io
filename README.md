@@ -4,4 +4,4 @@
 - [牙表](dental_chart_v1/dental_chart_pub.html)
 - [排队系统-工作人员操作](queue_demo/screen1.html)
 - [排队系统-对外显示](queue_demo/screen2.html)
-- [paperpile科学上网](https://wwbbx.lanzouw.com/iONYT3gx6pti)
+- [clash-paperpile定制](https://wwbbx.lanzouw.com/iONYT3gx6pti)
