@@ -6,3 +6,9 @@
 - [排队系统-对外显示](queue_demo/screen2.html)
 - [clash-paperpile定制](https://wwbbx.lanzouw.com/iONYT3gx6pti)
 - [test_index](Personal/index.md)
+
+
+合图
+- [python](https://wwbbx.lanzouw.com/iCVyn3hy7n6b)
+- [ffmpeg](https://wwbbx.lanzouw.com/i2Mz73hy82qb)
+- [合图](https://wwbbx.lanzouw.com/iMiFd3hy83pg)
