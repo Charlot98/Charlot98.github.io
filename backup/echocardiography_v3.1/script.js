@@ -22,12 +22,6 @@ let csvReferenceData = {
     '猫心超（含体重）': null
 };
 
-// 跟踪spherical是否处于激活状态
-let sphericalActivated = false;
-
-// 跟踪选中的参考体重（用于参考范围查找，不影响输入框）
-let selectedReferenceWeight = null;
-
 // 读取CSV文件（心超数据.csv - 非M型）
 async function loadCSVData() {
     try {
@@ -669,7 +663,7 @@ loadRegurgitationTemplate('3.PV');
 loadRegurgitationTemplate('4.AV');
 loadAllMDTemplates();
 
-// 更新体重引用值显示 - 显示多个体重选择范围
+// 更新体重引用值显示
 function updateWeightReferenceDisplay() {
     const weightReferenceDisplay = document.getElementById('weightReferenceDisplay');
     if (!weightReferenceDisplay) return;
@@ -679,182 +673,14 @@ function updateWeightReferenceDisplay() {
     
     // 在M型、非M型或猫心超（含体重）参考范围，且输入了体重时才显示引用体重值
     if ((referenceRange === 'M型' || referenceRange === '非M型' || referenceRange === '猫心超（含体重）') && weight) {
-        const dataArray = csvReferenceData[referenceRange];
-        if (!dataArray || dataArray.length === 0) {
-            weightReferenceDisplay.textContent = '';
-            return;
-        }
-        
-        const weightValue = parseFloat(weight);
-        if (isNaN(weightValue)) {
-            weightReferenceDisplay.textContent = '';
-            return;
-        }
-        
-        // 找到当前体重所在的位置和相邻的体重值
-        let currentIndex = -1;
-        let prevWeight = null;
-        let currentWeight = null;
-        let nextWeight = null;
-        let foundExact = false;
-        
-        // 查找等于或最接近的体重值
-        for (let i = 0; i < dataArray.length; i++) {
-            const rowWeight = parseFloat(dataArray[i]['kg']);
-            if (!isNaN(rowWeight)) {
-                if (rowWeight === weightValue) {
-                    // 找到完全匹配的体重值
-                    currentIndex = i;
-                    currentWeight = rowWeight;
-                    foundExact = true;
-                    // 获取前一个和后一个体重值
-                    if (i > 0) {
-                        prevWeight = parseFloat(dataArray[i - 1]['kg']);
-                    }
-                    if (i < dataArray.length - 1) {
-                        nextWeight = parseFloat(dataArray[i + 1]['kg']);
-                    }
-                    break;
-                } else if (rowWeight > weightValue) {
-                    // 找到第一个大于输入体重的值
-                    currentIndex = i;
-                    currentWeight = rowWeight;
-                    // 获取前一个体重值
-                    if (i > 0) {
-                        prevWeight = parseFloat(dataArray[i - 1]['kg']);
-                    }
-                    // 获取下一个体重值（如果存在且不同）
-                    if (i < dataArray.length - 1) {
-                        const nextRowWeight = parseFloat(dataArray[i + 1]['kg']);
-                        if (!isNaN(nextRowWeight) && nextRowWeight !== rowWeight) {
-                            nextWeight = nextRowWeight;
-                        }
-                    }
-                    break;
-                }
+        const referenceData = findReferenceDataByWeight(weight, referenceRange);
+        if (referenceData && referenceData['kg']) {
+            const referenceWeight = parseFloat(referenceData['kg']);
+            if (!isNaN(referenceWeight)) {
+                weightReferenceDisplay.textContent = `(${referenceWeight}kg)`;
+                return;
             }
         }
-        
-        // 如果没有找到大于的值，使用最后一个值
-        if (currentIndex === -1 && dataArray.length > 0) {
-            for (let i = dataArray.length - 1; i >= 0; i--) {
-                const rowWeight = parseFloat(dataArray[i]['kg']);
-                if (!isNaN(rowWeight)) {
-                    currentIndex = i;
-                    currentWeight = rowWeight;
-                    if (i > 0) {
-                        prevWeight = parseFloat(dataArray[i - 1]['kg']);
-                    }
-                    break;
-                }
-            }
-        }
-        
-        // 构建显示内容：显示多个可点击的体重选择范围
-        weightReferenceDisplay.innerHTML = '';
-        if (currentIndex >= 0 && currentWeight !== null) {
-            const weightOptions = [];
-            const addedWeights = new Set(); // 用于去重
-            
-            // 如果有前一个体重值，添加前一个选项
-            if (prevWeight !== null && !isNaN(prevWeight) && !addedWeights.has(prevWeight)) {
-                weightOptions.push({ weight: prevWeight, isCurrent: false });
-                addedWeights.add(prevWeight);
-            }
-            
-            // 显示当前体重值
-            if (!addedWeights.has(currentWeight)) {
-                weightOptions.push({ weight: currentWeight, isCurrent: foundExact });
-                addedWeights.add(currentWeight);
-            }
-            
-            // 如果有下一个体重值，添加下一个选项（确保不重复）
-            if (nextWeight !== null && !isNaN(nextWeight) && !addedWeights.has(nextWeight)) {
-                weightOptions.push({ weight: nextWeight, isCurrent: false });
-                addedWeights.add(nextWeight);
-            }
-            
-            if (weightOptions.length > 0) {
-                // 创建容器
-                const container = document.createElement('span');
-                container.style.display = 'inline-flex';
-                container.style.gap = '4px';
-                container.style.alignItems = 'center';
-                
-                // 确定应该激活哪个按钮：优先使用选中的参考体重，如果没有则使用最接近输入体重的值（中间的选项）
-                let weightToActivate = null;
-                if (selectedReferenceWeight !== null) {
-                    weightToActivate = selectedReferenceWeight;
-                } else {
-                    // 如果没有选中的参考体重，需要找到最接近输入体重的值
-                    // 遍历weightOptions，找到与输入体重差值最小的选项
-                    let minDiff = Infinity;
-                    let closestOptionWeight = null;
-                    
-                    for (let i = 0; i < weightOptions.length; i++) {
-                        const diff = Math.abs(weightOptions[i].weight - weightValue);
-                        if (diff < minDiff) {
-                            minDiff = diff;
-                            closestOptionWeight = weightOptions[i].weight;
-                        }
-                    }
-                    
-                    // 使用最接近的选项（通常是中间的选项）
-                    weightToActivate = closestOptionWeight !== null ? closestOptionWeight : currentWeight;
-                }
-                
-                // #region agent log
-                fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:785',message:'Determining weight to activate',data:{selectedReferenceWeight,currentWeight,weightValue,weightToActivate,weightOptionsCount:weightOptions.length,weightOptions:weightOptions.map(o=>o.weight)},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                // #endregion
-                
-                weightOptions.forEach((option, index) => {
-                    // 创建可点击的体重按钮
-                    const weightBtn = document.createElement('button');
-                    weightBtn.type = 'button';
-                    weightBtn.className = 'weight-option-btn';
-                    weightBtn.textContent = `${option.weight}kg`;
-                    weightBtn.dataset.weight = option.weight;
-                    
-                    // #region agent log
-                    fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:818',message:'Weight button activation check',data:{optionWeight:option.weight,weightToActivate,isMatch:Math.abs(option.weight - weightToActivate) < 0.001,optionIndex:index,buttonPosition:index === 0 ? 'left' : index === 1 ? 'middle' : index === 2 ? 'right' : 'unknown'},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                    // #endregion
-                    
-                    // 只激活与weightToActivate完全匹配的按钮（确保只有一个被激活）
-                    // 使用严格相等比较，避免浮点数精度问题
-                    if (weightToActivate !== null && Math.abs(option.weight - weightToActivate) < 0.001) {
-                        weightBtn.classList.add('active');
-                    }
-                    
-                    // 添加点击事件
-                    weightBtn.addEventListener('click', function() {
-                        // 设置选中的参考体重值（不修改输入框）
-                        const selectedWeight = parseFloat(this.dataset.weight);
-                        selectedReferenceWeight = selectedWeight;
-                        
-                        // 更新参考值显示和体重显示框
-                        updateReferenceValues();
-                        updateWeightReferenceDisplay();
-                        
-                        // 更新模板
-                        generateTemplate();
-                    });
-                    
-                    container.appendChild(weightBtn);
-                    
-                    // 添加分隔符（最后一个不添加）
-                    if (index < weightOptions.length - 1) {
-                        const separator = document.createElement('span');
-                        separator.textContent = '/';
-                        separator.style.margin = '0 2px';
-                        separator.style.color = '#999';
-                        container.appendChild(separator);
-                    }
-                });
-                
-                weightReferenceDisplay.appendChild(container);
-            }
-        }
-        return;
     }
     
     // 如果没有引用体重值，清空显示
@@ -864,8 +690,7 @@ function updateWeightReferenceDisplay() {
 // 更新参数标签旁的参考值显示
 function updateReferenceValues() {
     const referenceRange = selectedReferenceRange;
-    // 优先使用选中的参考体重，如果没有则使用输入的体重
-    const weight = selectedReferenceWeight !== null ? selectedReferenceWeight.toString() : parameters['体重'];
+    const weight = parameters['体重'];
 
     let referenceData = null;
 
@@ -975,8 +800,7 @@ function parseReferenceValue(refValueStr) {
 // 获取参考数据
 function getReferenceData() {
     const referenceRange = selectedReferenceRange;
-    // 优先使用选中的参考体重，如果没有则使用输入的体重
-    const weight = selectedReferenceWeight !== null ? selectedReferenceWeight.toString() : parameters['体重'];
+    const weight = parameters['体重'];
     
     let referenceData = null;
     
@@ -1234,359 +1058,6 @@ function calculateESVI() {
     parameters['ESVI'] = esviRounded;
 }
 
-// 计算并显示 EDV Spherical 值
-// EDV = LVDd^3 (Spherical)
-function calculateEDVSpherical() {
-    const lvddInput = document.querySelector('input[data-param="LVDd"]');
-    const edvSphericalDisplay = document.getElementById('edvSphericalDisplay');
-    
-    if (lvddInput && edvSphericalDisplay) {
-        const lvddValue = parseFloat(lvddInput.value.trim());
-        
-        if (!isNaN(lvddValue) && lvddValue > 0) {
-            // LVDd单位是mm，需要转换为cm
-            const lvddCm = lvddValue / 10;
-            // Spherical公式: EDV = LVDd^3
-            const edvSpherical = Math.pow(lvddCm, 3);
-            // 保存原始值用于模板生成
-            parameters['EDV_spherical'] = edvSpherical;
-            // 当值在0.1到1之间时，保留1位小数，否则保留整数
-            const edvSphericalRounded = (edvSpherical > 0.1 && edvSpherical < 1) ? edvSpherical.toFixed(1) : edvSpherical.toFixed(0);
-            
-            edvSphericalDisplay.value = edvSphericalRounded;
-        } else {
-            // 没有输入值时，显示为空
-            edvSphericalDisplay.value = '';
-            delete parameters['EDV_spherical'];
-        }
-        // 更新EF spherical
-        calculateEFSpherical();
-    }
-}
-
-// 计算并显示 ESV Spherical 值
-// ESV = LVDs^3 (Spherical)
-function calculateESVSpherical() {
-    const lvdsInput = document.querySelector('input[data-param="LVDs"]');
-    const esvSphericalDisplay = document.getElementById('esvSphericalDisplay');
-    
-    if (lvdsInput && esvSphericalDisplay) {
-        const lvdsValue = parseFloat(lvdsInput.value.trim());
-        
-        if (!isNaN(lvdsValue) && lvdsValue > 0) {
-            // LVDs单位是mm，需要转换为cm
-            const lvdsCm = lvdsValue / 10;
-            // Spherical公式: ESV = LVDs^3
-            const esvSpherical = Math.pow(lvdsCm, 3);
-            // 保存原始值用于模板生成
-            parameters['ESV_spherical'] = esvSpherical;
-            // 当值在0.1到1之间时，保留1位小数，否则保留整数
-            const esvSphericalRounded = (esvSpherical > 0.1 && esvSpherical < 1) ? esvSpherical.toFixed(1) : esvSpherical.toFixed(0);
-            
-            esvSphericalDisplay.value = esvSphericalRounded;
-        } else {
-            // 没有输入值时，显示为空
-            esvSphericalDisplay.value = '';
-            delete parameters['ESV_spherical'];
-        }
-        // 更新EF spherical
-        calculateEFSpherical();
-    }
-}
-
-// 计算并显示 LVDDN 值
-// LVDDn = LVDd（cm）/[体重（kg）^0.294]
-function calculateLVDDN() {
-    const lvddInput = document.querySelector('input[data-param="LVDd"]');
-    const weightInput = document.getElementById('weightInput');
-    const lvddnDisplay = document.getElementById('lvddnDisplay');
-    
-    if (lvddInput && weightInput && lvddnDisplay) {
-        const lvddValue = parseFloat(lvddInput.value.trim());
-        const weightValue = parseFloat(weightInput.value.trim());
-        
-        // 计算LVDDN
-        if (!isNaN(lvddValue) && lvddValue > 0 && !isNaN(weightValue) && weightValue > 0) {
-            // LVDd单位是mm，需要转换为cm
-            const lvddCm = lvddValue / 10;
-            // 计算公式: LVDDn = LVDd（cm）/[体重（kg）^0.294]
-            const weightPower = Math.pow(weightValue, 0.294);
-            const lvddn = lvddCm / weightPower;
-            
-            // 保留适当的小数位数（通常保留2位小数）
-            const lvddnRounded = lvddn.toFixed(2);
-            
-            lvddnDisplay.textContent = `LVDDN ${lvddnRounded}`;
-            
-            // 当LVDDN≥1.7时，数值文本显示为红色，否则显示为黑色
-            if (lvddn >= 1.7) {
-                lvddnDisplay.style.color = '#e74c3c'; // 红色
-            } else {
-                lvddnDisplay.style.color = '#000000'; // 黑色
-            }
-        } else {
-            // 即使没有输入值，也显示默认文本
-            lvddnDisplay.textContent = 'LVDDN -';
-            lvddnDisplay.style.color = '#666'; // 灰色，表示暂无数据
-        }
-    }
-}
-
-// 计算并显示 EF Spherical 值
-// EF spherical = ((EDV spherical - ESV spherical) / EDV spherical) * 100
-function calculateEFSpherical() {
-    const lvddInput = document.querySelector('input[data-param="LVDd"]');
-    const lvdsInput = document.querySelector('input[data-param="LVDs"]');
-    const efSphericalDisplay = document.getElementById('efSphericalDisplay');
-    
-    if (lvddInput && lvdsInput && efSphericalDisplay) {
-        const lvddValue = parseFloat(lvddInput.value.trim());
-        const lvdsValue = parseFloat(lvdsInput.value.trim());
-        
-        // 计算EDV spherical和ESV spherical
-        if (!isNaN(lvddValue) && lvddValue > 0 && !isNaN(lvdsValue) && lvdsValue > 0) {
-            // LVDd和LVDs单位是mm，需要转换为cm
-            const lvddCm = lvddValue / 10;
-            const lvdsCm = lvdsValue / 10;
-            
-            // Spherical公式: EDV = LVDd^3, ESV = LVDs^3
-            const edvSpherical = Math.pow(lvddCm, 3);
-            const esvSpherical = Math.pow(lvdsCm, 3);
-            
-            // 计算EF spherical: EF = ((EDV - ESV) / EDV) * 100
-            if (edvSpherical > 0) {
-                const efSpherical = ((edvSpherical - esvSpherical) / edvSpherical) * 100;
-                // 保存原始值用于模板生成
-                parameters['EF_spherical'] = efSpherical;
-                const efSphericalRounded = efSpherical.toFixed(0);
-                
-                efSphericalDisplay.textContent = `${efSphericalRounded}% Spherical`;
-            } else {
-                efSphericalDisplay.textContent = '-% Spherical';
-                delete parameters['EF_spherical'];
-            }
-        } else {
-            // 即使没有输入值，也显示占位符
-            efSphericalDisplay.textContent = '-% Spherical';
-        }
-    }
-}
-
-// 自动计算 EDV 函数（Teicholz公式）
-// EDV = [7/(2.4+LVDd)] * (LVDd^3)
-function calculateEDV() {
-    const lvddInput = document.querySelector('input[data-param="LVDd"]');
-    const edvInput = document.querySelector('input[data-param="EDV"]');
-    
-    if (lvddInput && edvInput) {
-        const lvddValueStr = lvddInput.value.trim();
-        const lvddValue = parseFloat(lvddValueStr);
-        
-        // 如果LVDd为空或无效，清空EDV
-        if (isNaN(lvddValue) || lvddValue <= 0) {
-            edvInput.value = '';
-            delete parameters['EDV'];
-            delete parameters['EDV_raw'];
-            const edviDisplay = document.getElementById('edviDisplay');
-            if (edviDisplay) {
-                edviDisplay.textContent = '-';
-                edviDisplay.style.color = '';
-            }
-            delete parameters['EDVI'];
-            calculateEF();
-            calculateEDVSpherical();
-            return;
-        }
-        
-        // 计算应该得到的EDV值
-        const lvddCm = lvddValue / 10;
-        const expectedEdv = (7 / (2.4 + lvddCm)) * Math.pow(lvddCm, 3);
-        const expectedEdvRounded = (expectedEdv > 0.1 && expectedEdv < 1) ? expectedEdv.toFixed(1) : expectedEdv.toFixed(0);
-        
-        // 获取当前EDV值
-        const edvCurrentValue = edvInput.value.trim();
-        
-        // 如果EDV输入框为空，或者是自动计算的值（与当前LVDd计算出的值匹配），则更新
-        // 如果EDV输入框有值且与计算值不匹配，可能是用户手动输入的，不覆盖
-        // 但如果EDV的值与计算值相差很大（超过50%），认为LVDd变化了，需要重新计算
-        const shouldUpdate = !edvCurrentValue || 
-                            edvCurrentValue === expectedEdvRounded ||
-                            (Math.abs(parseFloat(edvCurrentValue) - expectedEdv) / Math.max(expectedEdv, 1) > 0.5);
-        
-        if (shouldUpdate) {
-            // 重置颜色
-            edvInput.style.color = '';
-            
-            // 使用已计算的EDV值
-            const edv = expectedEdv;
-            const edvRounded = expectedEdvRounded;
-            
-            edvInput.value = edvRounded;
-            parameters['EDV'] = edvRounded;
-            // 保存完整小数值用于后续计算
-            parameters['EDV_raw'] = edv;
-            
-            // 如果EDV变化，自动计算EDVI和EF
-            calculateEDVI();
-            calculateEF();
-            // 同时计算并更新Spherical值
-            calculateEDVSpherical();
-        }
-    }
-}
-
-// 自动计算 ESV 函数（Teicholz公式）
-// ESV = [7/(2.4+LVDs)] * (LVDs^3)
-function calculateESV() {
-    const lvdsInput = document.querySelector('input[data-param="LVDs"]');
-    const esvInput = document.querySelector('input[data-param="ESV"]');
-    
-    if (lvdsInput && esvInput) {
-        const lvdsValueStr = lvdsInput.value.trim();
-        const lvdsValue = parseFloat(lvdsValueStr);
-        
-        // 如果LVDs为空或无效，清空ESV
-        if (isNaN(lvdsValue) || lvdsValue <= 0) {
-            esvInput.value = '';
-            delete parameters['ESV'];
-            delete parameters['ESV_raw'];
-            const esviDisplay = document.getElementById('esviDisplay');
-            if (esviDisplay) {
-                esviDisplay.textContent = '-';
-                esviDisplay.style.color = '';
-            }
-            delete parameters['ESVI'];
-            calculateEF();
-            calculateESVSpherical();
-            return;
-        }
-        
-        // 计算应该得到的ESV值
-        const lvdsCm = lvdsValue / 10;
-        const expectedEsv = (7 / (2.4 + lvdsCm)) * Math.pow(lvdsCm, 3);
-        const expectedEsvRounded = (expectedEsv > 0.1 && expectedEsv < 1) ? expectedEsv.toFixed(1) : expectedEsv.toFixed(0);
-        
-        // 获取当前ESV值
-        const esvCurrentValue = esvInput.value.trim();
-        
-        // 如果ESV输入框为空，或者是自动计算的值（与当前LVDs计算出的值匹配），则更新
-        // 如果ESV输入框有值且与计算值不匹配，可能是用户手动输入的，不覆盖
-        // 但如果ESV的值与计算值相差很大（超过50%），认为LVDs变化了，需要重新计算
-        const shouldUpdate = !esvCurrentValue || 
-                            esvCurrentValue === expectedEsvRounded ||
-                            (Math.abs(parseFloat(esvCurrentValue) - expectedEsv) / Math.max(expectedEsv, 1) > 0.5);
-        
-        if (shouldUpdate) {
-            // 重置颜色
-            esvInput.style.color = '';
-            
-            // 使用已计算的ESV值
-            const esv = expectedEsv;
-            const esvRounded = expectedEsvRounded;
-            
-            esvInput.value = esvRounded;
-            parameters['ESV'] = esvRounded;
-            // 保存完整小数值用于后续计算
-            parameters['ESV_raw'] = esv;
-            
-            // 保持输入框可编辑，不禁用
-            
-            // 如果ESV变化，自动计算ESVI和EF
-            calculateESVI();
-            calculateEF();
-            // 同时计算并更新Spherical值
-            calculateESVSpherical();
-        }
-    }
-}
-
-// 自动计算 FS 函数
-// FS = (LVDd - LVDs) / LVDd * 100
-function calculateFS() {
-    const lvddInput = document.querySelector('input[data-param="LVDd"]');
-    const lvdsInput = document.querySelector('input[data-param="LVDs"]');
-    const fsInput = document.querySelector('input[data-param="FS"]');
-    
-    if (lvddInput && lvdsInput && fsInput) {
-        // 如果FS输入框被禁用，说明是自动计算的，应该重新计算
-        // 如果FS输入框没有被禁用，说明用户可能手动输入了，不覆盖
-        if (!fsInput.disabled && fsInput.value.trim()) {
-            return; // 用户手动输入了值，不自动计算
-        }
-        
-        const lvddValue = parseFloat(lvddInput.value.trim());
-        const lvdsValue = parseFloat(lvdsInput.value.trim());
-        
-        // 重置颜色
-        fsInput.style.color = '';
-        
-        if (!isNaN(lvddValue) && !isNaN(lvdsValue) && lvddValue > 0) {
-            // FS = (LVDd - LVDs) / LVDd * 100
-            const fs = ((lvddValue - lvdsValue) / lvddValue) * 100;
-            const fsRounded = fs.toFixed(0);
-            
-            fsInput.value = fsRounded;
-            parameters['FS'] = fsRounded;
-            
-            // 禁用输入框（自动计算）
-            fsInput.disabled = true;
-        } else {
-            // 如果LVDd或LVDs为空或无效，清空FS并启用输入框
-            fsInput.value = '';
-            fsInput.disabled = false;
-            delete parameters['FS'];
-        }
-    }
-}
-
-// 自动计算 EF 函数
-// EF = (EDV - ESV) / EDV * 100
-function calculateEF() {
-    const edvInput = document.querySelector('input[data-param="EDV"]');
-    const esvInput = document.querySelector('input[data-param="ESV"]');
-    const efInput = document.querySelector('input[data-param="EF"]');
-    
-    if (edvInput && esvInput && efInput) {
-        // 如果EF输入框被禁用，说明是自动计算的，应该重新计算
-        // 如果EF输入框没有被禁用，但EDV和ESV都有值，也应该计算（用户可能手动输入了EDV和ESV，希望自动计算EF）
-        // 只有当EF输入框没有被禁用且EF有值，同时EDV或ESV为空时，才不计算
-        const edvValue = parseFloat(edvInput.value.trim());
-        const esvValue = parseFloat(esvInput.value.trim());
-        const efValue = efInput.value.trim();
-        
-        // 如果EF输入框没有被禁用且有值，且EDV和ESV都有值，说明用户可能想手动输入EF，不覆盖
-        // 但如果EF输入框被禁用，或者EF为空，就应该计算
-        if (!efInput.disabled && efValue && !isNaN(edvValue) && !isNaN(esvValue)) {
-            // 用户手动输入了EF，且EDV和ESV都有值，不自动计算
-            return;
-        }
-        
-        // 重置颜色
-        efInput.style.color = '';
-        
-        // 优先使用完整小数值（如果存在），否则使用输入框的值
-        const edvForCalc = parameters['EDV_raw'] !== undefined ? parameters['EDV_raw'] : edvValue;
-        const esvForCalc = parameters['ESV_raw'] !== undefined ? parameters['ESV_raw'] : esvValue;
-        
-        if (!isNaN(edvForCalc) && !isNaN(esvForCalc) && edvForCalc > 0) {
-            // EF = (EDV - ESV) / EDV * 100，使用完整小数值进行计算
-            const ef = ((edvForCalc - esvForCalc) / edvForCalc) * 100;
-            const efRounded = ef.toFixed(0);
-            
-            efInput.value = efRounded;
-            parameters['EF'] = efRounded;
-            
-            // 禁用输入框（自动计算）
-            efInput.disabled = true;
-        } else {
-            // 如果EDV或ESV为空或无效，清空EF并启用输入框
-            efInput.value = '';
-            efInput.disabled = false;
-            delete parameters['EF'];
-        }
-    }
-}
-
 // 更新LA/AO输入框的颜色
 function updateLAOverAOColor() {
     const laAoInput = document.querySelector('input[data-param="LA/AO"]');
@@ -1810,454 +1281,84 @@ function calculateEOverA() {
 }
 
 // 输入框值变化时更新参数（支持所有类型的输入框和选择框）
-// 使用事件委托，确保在DOM加载后也能正常工作
-function setupInputListeners() {
-    document.querySelectorAll('.m-type-input, .other-param-input, .weight-input').forEach(input => {
-        input.addEventListener('input', function() {
-            const paramName = this.getAttribute('data-param');
-            const value = this.value.trim();
-            
-            if (value) {
-                parameters[paramName] = value;
-            } else {
-                delete parameters[paramName];
-            }
-            
-            // 如果体重变化，自动计算LVDDN
-            if (paramName === '体重') {
-                calculateLVDDN();
-            }
-            
-            // 如果LVDd变化，自动计算EDV和FS
-            if (paramName === 'LVDd') {
-                calculateEDV();
-                calculateFS();
-                calculateEDVSpherical();
-                calculateLVDDN();
-            }
-            
-            // 如果LVDs变化，自动计算ESV和FS
-            if (paramName === 'LVDs') {
-                calculateESV();
-                calculateFS();
-                calculateESVSpherical();
-            }
-            
-        // 如果EDV或ESV变化（手动输入的情况），自动计算EF
-        if (paramName === 'EDV' || paramName === 'ESV') {
-            // 用户手动输入了EDV或ESV，清除对应的_raw值，使用输入框的值进行计算
-            if (paramName === 'EDV') {
-                delete parameters['EDV_raw'];
-            }
-            if (paramName === 'ESV') {
-                delete parameters['ESV_raw'];
-            }
-            calculateEF();
-        }
-            
-            // 如果EDV或体重变化，自动计算EDVI
-            if (paramName === 'EDV' || paramName === '体重') {
-                calculateEDVI();
-            }
-            
-            // 如果ESV或体重变化，自动计算ESVI
-            if (paramName === 'ESV' || paramName === '体重') {
-                calculateESVI();
-            }
-            
-            // 如果LA或AO变化，自动计算LA/AO
-            if (paramName === 'LA' || paramName === 'AO') {
-                calculateLAOverAO();
-            }
-            
-            // 如果LA Volume或体重变化，自动计算LAVi
-            if (paramName === 'LA Volume' || paramName === '体重') {
-                calculateLAVi();
-            }
-            
-            // 如果EA融合变化，更新E、A、E/A输入框的状态
-            if (paramName === 'EA融合') {
-                updateEAInputsState();
-            }
-            
-            // 如果E或A变化，自动计算E/A
-            if (paramName === 'E' || paramName === 'A') {
-                calculateEOverA();
-            }
-            
-            // 如果E值变化，更新颜色显示
-            if (paramName === 'E') {
-                updateEColor();
-            }
-            
-            // 如果参考值相关的参数变化，更新颜色显示
-            if (['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'AO', 'LA'].includes(paramName)) {
-                updateReferenceBasedInputColors();
-            }
-            
-            // 如果特殊逻辑参数变化，更新颜色显示
-            if (['FS', 'EF', 'VPA', 'VAO', 'E'].includes(paramName)) {
-                updateSpecialLogicInputColors();
-            }
-            
-            // 如果LA/AO变化，检查并更新颜色显示
-            if (paramName === 'LA/AO') {
-                updateLAOverAOColor();
-            }
-            
-            // 如果反流速变化，计算压力差并更新颜色
-            if (['二尖瓣反流速', '三尖瓣反流速', '肺动脉瓣反流速', '主动脉瓣反流速'].includes(paramName)) {
-                updateRegurgitationPressure(paramName, value);
-                updateRegurgitationVelocityColor();
-            }
-            
-            // 如果体重变化，自动选择最接近的体重值（中间的选项），更新参考值显示和引用体重值，并自动更新模板
-            if (paramName === '体重') {
-                // 用户手动输入体重时，自动选择最接近的体重值
-                const referenceRange = selectedReferenceRange;
-                const weight = parameters['体重'];
-                
-                // #region agent log
-                fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1915',message:'Weight input changed',data:{referenceRange,weight,selectedReferenceWeightBefore:selectedReferenceWeight},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                // #endregion
-                
-                if ((referenceRange === 'M型' || referenceRange === '非M型' || referenceRange === '猫心超（含体重）') && weight) {
-                    const dataArray = csvReferenceData[referenceRange];
-                    if (dataArray && dataArray.length > 0) {
-                        const weightValue = parseFloat(weight);
-                        if (!isNaN(weightValue)) {
-                            // 查找最接近的体重值
-                            let closestWeight = null;
-                            let minDiff = Infinity;
-                            
-                            for (let i = 0; i < dataArray.length; i++) {
-                                const rowWeight = parseFloat(dataArray[i]['kg']);
-                                if (!isNaN(rowWeight)) {
-                                    const diff = Math.abs(rowWeight - weightValue);
-                                    if (diff < minDiff) {
-                                        minDiff = diff;
-                                        closestWeight = rowWeight;
-                                    }
-                                    // 如果找到完全匹配的，直接使用
-                                    if (rowWeight === weightValue) {
-                                        closestWeight = rowWeight;
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            // #region agent log
-                            fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1945',message:'Found closest weight',data:{weightValue,closestWeight,minDiff},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                            // #endregion
-                            
-                            // 自动选择最接近的体重值（中间的选项）
-                            if (closestWeight !== null) {
-                                selectedReferenceWeight = closestWeight;
-                            }
-                        }
-                    }
-                } else {
-                    // 如果不是基于体重的参考范围，重置选中的参考体重
-                    selectedReferenceWeight = null;
-                }
-                
-                // #region agent log
-                fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1955',message:'Selected reference weight set',data:{selectedReferenceWeightAfter:selectedReferenceWeight},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                // #endregion
-                
-                updateReferenceValues();
-                updateWeightReferenceDisplay();
-                // 体重变化时自动更新"所见"模板
-                generateTemplate();
-            } else {
-                generateTemplate();
-            }
-        });
-    });
-}
-
-// 处理 spherical 显示元素的点击事件
-function setupSphericalClickHandlers() {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1755',message:'setupSphericalClickHandlers called',data:{readyState:document.readyState},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    const edvSphericalDisplay = document.getElementById('edvSphericalDisplay');
-    const esvSphericalDisplay = document.getElementById('esvSphericalDisplay');
-    const efSphericalDisplay = document.getElementById('efSphericalDisplay');
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1759',message:'Elements found',data:{edvFound:!!edvSphericalDisplay,esvFound:!!esvSphericalDisplay,efFound:!!efSphericalDisplay,edvTag:edvSphericalDisplay?.tagName,esvTag:esvSphericalDisplay?.tagName,efTag:efSphericalDisplay?.tagName},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
-    // 切换所有spherical文本的边框样式
-    function toggleSphericalBorders() {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1761',message:'toggleSphericalBorders called',data:{sphericalActivated,edvExists:!!edvSphericalDisplay,esvExists:!!esvSphericalDisplay,efExists:!!efSphericalDisplay},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        if (sphericalActivated) {
-            // 激活状态：所有三个都添加边框
-            if (edvSphericalDisplay) {
-                edvSphericalDisplay.classList.add('spherical-activated');
-            }
-            if (esvSphericalDisplay) {
-                esvSphericalDisplay.classList.add('spherical-activated');
-            }
-            if (efSphericalDisplay) {
-                efSphericalDisplay.classList.add('spherical-activated');
-            }
+document.querySelectorAll('.m-type-input, .other-param-input, .weight-input').forEach(input => {
+    input.addEventListener('input', function() {
+        const paramName = this.getAttribute('data-param');
+        const value = this.value.trim();
+        
+        if (value) {
+            parameters[paramName] = value;
         } else {
-            // 非激活状态：移除所有边框
-            if (edvSphericalDisplay) {
-                edvSphericalDisplay.classList.remove('spherical-activated');
-            }
-            if (esvSphericalDisplay) {
-                esvSphericalDisplay.classList.remove('spherical-activated');
-            }
-            if (efSphericalDisplay) {
-                efSphericalDisplay.classList.remove('spherical-activated');
-            }
+            delete parameters[paramName];
         }
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1784',message:'Borders toggled',data:{edvHasClass:edvSphericalDisplay?.classList.contains('spherical-activated'),esvHasClass:esvSphericalDisplay?.classList.contains('spherical-activated'),efHasClass:efSphericalDisplay?.classList.contains('spherical-activated')},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-    }
-    
-    // 显示提示词（在鼠标位置）
-    function showSphericalNotification(message, event) {
-        const notification = document.getElementById('sphericalNotification');
-        if (notification && event) {
-            notification.textContent = message;
-            notification.style.display = 'block';
-            
-            // 根据消息内容设置颜色：激活时红色，取消激活时蓝色
-            if (message === '已引用spherical计算结果') {
-                notification.style.backgroundColor = '#e74c3c'; // 红色
-            } else if (message === '已取消引用spherical计算结果') {
-                notification.style.backgroundColor = '#4a90e2'; // 蓝色
-            }
-            
-            // 获取鼠标位置
-            const x = event.clientX;
-            const y = event.clientY;
-            
-            // 设置提示词位置（稍微偏移，避免遮挡鼠标）
-            notification.style.left = (x + 10) + 'px';
-            notification.style.top = (y - 40) + 'px';
-            notification.style.transform = 'none'; // 移除居中transform
-            
-            // 3秒后自动隐藏
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 3000);
-        }
-    }
-    
-    // 统一的点击处理函数
-    function handleSphericalClick(event) {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1811',message:'handleSphericalClick called',data:{hasEvent:!!event,clientX:event?.clientX,clientY:event?.clientY,currentState:sphericalActivated},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        // 切换激活状态
-        const wasActivated = sphericalActivated;
-        sphericalActivated = !sphericalActivated;
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1815',message:'State toggled',data:{wasActivated,nowActivated:sphericalActivated},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
         
-        // 显示提示词（传递事件对象以获取鼠标位置）
-        if (sphericalActivated) {
-            showSphericalNotification('已引用spherical计算结果', event);
+        // 如果EDV或体重变化，自动计算EDVI
+        if (paramName === 'EDV' || paramName === '体重') {
+            calculateEDVI();
+        }
+        
+        // 如果ESV或体重变化，自动计算ESVI
+        if (paramName === 'ESV' || paramName === '体重') {
+            calculateESVI();
+        }
+        
+        // 如果LA或AO变化，自动计算LA/AO
+        if (paramName === 'LA' || paramName === 'AO') {
+            calculateLAOverAO();
+        }
+        
+        // 如果LA Volume或体重变化，自动计算LAVi
+        if (paramName === 'LA Volume' || paramName === '体重') {
+            calculateLAVi();
+        }
+        
+        // 如果EA融合变化，更新E、A、E/A输入框的状态
+        if (paramName === 'EA融合') {
+            updateEAInputsState();
+        }
+        
+        // 如果E或A变化，自动计算E/A
+        if (paramName === 'E' || paramName === 'A') {
+            calculateEOverA();
+        }
+        
+        // 如果E值变化，更新颜色显示
+        if (paramName === 'E') {
+            updateEColor();
+        }
+        
+        // 如果参考值相关的参数变化，更新颜色显示
+        if (['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'AO', 'LA'].includes(paramName)) {
+            updateReferenceBasedInputColors();
+        }
+        
+        // 如果特殊逻辑参数变化，更新颜色显示
+        if (['FS', 'EF', 'VPA', 'VAO', 'E'].includes(paramName)) {
+            updateSpecialLogicInputColors();
+        }
+        
+        // 如果LA/AO变化，检查并更新颜色显示
+        if (paramName === 'LA/AO') {
+            updateLAOverAOColor();
+        }
+        
+        // 如果反流速变化，计算压力差并更新颜色
+        if (['二尖瓣反流速', '三尖瓣反流速', '肺动脉瓣反流速', '主动脉瓣反流速'].includes(paramName)) {
+            updateRegurgitationPressure(paramName, value);
+            updateRegurgitationVelocityColor();
+        }
+        
+        // 如果体重变化，更新参考值显示和引用体重值，并自动更新模板
+        if (paramName === '体重') {
+            updateReferenceValues();
+            updateWeightReferenceDisplay();
+            // 体重变化时自动更新"所见"模板
+            generateTemplate();
         } else {
-            showSphericalNotification('已取消引用spherical计算结果', event);
+            generateTemplate();
         }
-        
-        // 更新边框样式
-        toggleSphericalBorders();
-        // 重新生成模板
-        generateTemplate();
-    }
-    
-    // EDV spherical 点击事件
-    if (edvSphericalDisplay) {
-        edvSphericalDisplay.style.cursor = 'pointer';
-        edvSphericalDisplay.addEventListener('click', function(event) {
-            handleSphericalClick(event);
-        });
-    }
-    
-    // ESV spherical 点击事件
-    if (esvSphericalDisplay) {
-        esvSphericalDisplay.style.cursor = 'pointer';
-        esvSphericalDisplay.addEventListener('click', function(event) {
-            handleSphericalClick(event);
-        });
-    }
-    
-    // EF spherical 点击事件
-    if (efSphericalDisplay) {
-        efSphericalDisplay.style.cursor = 'pointer';
-        efSphericalDisplay.addEventListener('click', function(event) {
-            handleSphericalClick(event);
-        });
-    }
-}
-
-// 设置 tooltip 提示功能
-function setupTooltips() {
-    const tooltip = document.getElementById('infoTooltip');
-    if (!tooltip) return;
-    
-    // Tooltip 内容定义
-    const tooltipContent = {
-        'teich': {
-            html: 'LV Volume = [7/(2.4 + LVID)] × LVID³<br><br>含修正系数，适用于常规心超中心室呈<strong>非球形</strong>的心脏。<br><br><a href="https://www.e-echocardiography.com/calculators/volume/left-ventricular-stroke-volume-from-left-ventricular-area" target="_blank">参考网址</a>'
-        },
-        'spherical': {
-            html: 'LV Volume = LVID³<br><br>适用于心室近似<strong>球形</strong>的心脏，例如心衰动物。<br><br><a href="https://www.e-echocardiography.com/calculators/volume/left-ventricular-stroke-volume-from-left-ventricular-area" target="_blank">参考网址</a>'
-        },
-        'lvddn': {
-            html: 'LVDDn = <span style="font-family: serif;">LVDd（cm）</span> / <span style="font-family: serif;">体重（kg）<sup>0.294</sup></span><br><br>当LVDDN≥1.7，可能提示左心室容量过载'
-        },
-        'spherical-click': {
-            html: '单击引用此内容'
-        }
-    };
-    
-    // 获取所有 tooltip 触发器
-    const triggers = document.querySelectorAll('.tooltip-trigger');
-    
-    // 用于跟踪 tooltip 是否应该显示
-    let tooltipTimeout = null;
-    let tooltipShowTimeout = null;
-    
-    // 显示 tooltip 的函数
-    function showTooltip(event, content, triggerElement, tooltipType) {
-        // 清除之前的隐藏定时器
-        if (tooltipTimeout) {
-            clearTimeout(tooltipTimeout);
-            tooltipTimeout = null;
-        }
-        
-        // 清除之前的显示定时器
-        if (tooltipShowTimeout) {
-            clearTimeout(tooltipShowTimeout);
-            tooltipShowTimeout = null;
-        }
-        
-        // 延迟显示tooltip（copy-text类型0.4秒，其他0.2秒）
-        const delay = tooltipType === 'copy-text' ? 400 : 200;
-        tooltipShowTimeout = setTimeout(() => {
-            tooltip.innerHTML = content.html;
-            tooltip.style.display = 'block';
-            
-            // 简单的位置设置：显示在鼠标位置附近
-            const x = event.clientX + 15;
-            const y = event.clientY + 15;
-            
-            tooltip.style.left = x + 'px';
-            tooltip.style.top = y + 'px';
-            tooltip.style.transform = 'none';
-            
-            // 清除所有特殊类名
-            tooltip.classList.remove('tooltip-left', 'tooltip-subtle', 'tooltip-bottom', 'tooltip-top');
-            
-            tooltipShowTimeout = null;
-        }, delay);
-    }
-    
-    // 隐藏 tooltip 的函数（带延迟，允许鼠标移动到 tooltip 上）
-    function hideTooltip() {
-        // 清除显示定时器（如果还在等待显示）
-        if (tooltipShowTimeout) {
-            clearTimeout(tooltipShowTimeout);
-            tooltipShowTimeout = null;
-        }
-        
-        tooltipTimeout = setTimeout(() => {
-            tooltip.style.display = 'none';
-            tooltip.style.visibility = '';
-            tooltip.classList.remove('tooltip-left'); // 移除左侧显示类
-            tooltip.classList.remove('tooltip-subtle'); // 移除不醒目样式类
-            tooltip.classList.remove('tooltip-bottom'); // 移除下方显示类
-            tooltip.classList.remove('tooltip-top'); // 移除上方显示类
-            tooltipTimeout = null;
-        }, 100); // 100ms 延迟，给鼠标移动到 tooltip 的时间
-    }
-    
-    // 取消隐藏 tooltip
-    function cancelHideTooltip() {
-        if (tooltipTimeout) {
-            clearTimeout(tooltipTimeout);
-            tooltipTimeout = null;
-        }
-    }
-    
-    triggers.forEach(trigger => {
-        const tooltipType = trigger.getAttribute('data-tooltip');
-        if (!tooltipType || !tooltipContent[tooltipType]) return;
-        
-        const content = tooltipContent[tooltipType];
-        
-        // 鼠标进入触发器时显示 tooltip
-        trigger.addEventListener('mouseenter', function(event) {
-            showTooltip(event, content, trigger, tooltipType);
-        });
-        
-        // 鼠标离开触发器时，延迟隐藏 tooltip（允许鼠标移动到 tooltip 上）
-        trigger.addEventListener('mouseleave', function() {
-            hideTooltip();
-        });
     });
-    
-    // tooltip 本身的鼠标事件：鼠标进入 tooltip 时取消隐藏
-    tooltip.addEventListener('mouseenter', function() {
-        cancelHideTooltip();
-    });
-    
-    // 鼠标离开 tooltip 时隐藏
-    tooltip.addEventListener('mouseleave', function() {
-        tooltip.style.display = 'none';
-        tooltip.style.visibility = '';
-        tooltip.classList.remove('tooltip-left'); // 移除左侧显示类
-        tooltip.classList.remove('tooltip-subtle'); // 移除不醒目样式类
-        tooltip.classList.remove('tooltip-bottom'); // 移除下方显示类
-        tooltip.classList.remove('tooltip-top'); // 移除上方显示类
-    });
-}
-
-// 设置刷新按钮
-function setupRefreshButton() {
-    const refreshButton = document.getElementById('refreshButton');
-    if (refreshButton) {
-        refreshButton.addEventListener('click', function() {
-            window.location.reload();
-        });
-    }
-}
-
-// 立即尝试绑定（如果DOM已加载）
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        setupInputListeners();
-        setupSphericalClickHandlers();
-        setupTooltips();
-        setupRefreshButton();
-        // 初始化时显示 spherical 值（即使没有输入值也显示占位符）
-        calculateEDVSpherical();
-        calculateESVSpherical();
-        calculateEFSpherical();
-        calculateLVDDN();
-    });
-} else {
-    setupInputListeners();
-    setupSphericalClickHandlers();
-    setupTooltips();
-    setupRefreshButton();
-    // 初始化时显示 spherical 值（即使没有输入值也显示占位符）
-    calculateEDVSpherical();
-    calculateESVSpherical();
-    calculateEFSpherical();
-    calculateLVDDN();
-}
+});
 
 // 为select元素添加change事件监听器
 document.addEventListener('change', function(e) {
@@ -2470,8 +1571,6 @@ const referenceRangeSelect = document.getElementById('referenceRangeSelect');
 if (referenceRangeSelect) {
     referenceRangeSelect.addEventListener('change', function() {
         selectedReferenceRange = this.value;
-        // 重置选中的参考体重（当参考范围改变时）
-        selectedReferenceWeight = null;
         
         // 根据动物类型设置心率默认值
         setHeartRateDefault();
@@ -2597,30 +1696,24 @@ function setHeartRateDefault() {
 
 // 根据含辛普森测量按钮状态显示/隐藏辛普森输入框
 function toggleSimpsonInputs() {
-    const edvSimpsonItem = document.getElementById('edvSimpsonItem');
-    const esvSimpsonItem = document.getElementById('esvSimpsonItem');
     const edvSimpsonInput = document.getElementById('edvSimpsonInput');
     const esvSimpsonInput = document.getElementById('esvSimpsonInput');
     const efSimpsonInput = document.getElementById('efSimpsonInput');
     
     if (simpsonEnabled) {
         // 显示辛普森输入框
-        if (edvSimpsonItem) edvSimpsonItem.style.display = 'flex';
-        if (esvSimpsonItem) esvSimpsonItem.style.display = 'flex';
+        if (edvSimpsonInput) edvSimpsonInput.style.display = 'block';
+        if (esvSimpsonInput) esvSimpsonInput.style.display = 'block';
         if (efSimpsonInput) efSimpsonInput.style.display = 'block';
     } else {
         // 隐藏辛普森输入框并清空值
-        if (edvSimpsonItem) {
-            edvSimpsonItem.style.display = 'none';
-        }
         if (edvSimpsonInput) {
+            edvSimpsonInput.style.display = 'none';
             edvSimpsonInput.value = '';
             delete parameters['EDV辛普森'];
         }
-        if (esvSimpsonItem) {
-            esvSimpsonItem.style.display = 'none';
-        }
         if (esvSimpsonInput) {
+            esvSimpsonInput.style.display = 'none';
             esvSimpsonInput.value = '';
             delete parameters['ESV辛普森'];
         }
@@ -3075,14 +2168,6 @@ const templateConfig = {
             return isInteger ? num.toFixed(0) : num.toFixed(2);
         };
         
-        // EDV和ESV格式化：当值在0.1到1之间时，保留1位小数，否则保留整数
-        const formatEDVESV = (value) => {
-            if (!value) return '';
-            const num = parseFloat(value);
-            if (isNaN(num)) return value; // 如果不是数字，返回原值
-            return (num > 0.1 && num < 1) ? num.toFixed(1) : num.toFixed(0);
-        };
-        
         // 从参考数据中获取参考值的辅助函数
         const standardToCsvMap = {
             'IVSd': ['IVSd', 'IVSd '],
@@ -3144,11 +2229,6 @@ const templateConfig = {
         };
         
         paramNames.forEach(paramName => {
-            // EDV、ESV、EF需要特殊处理，跳过它们（在后面单独处理）
-            if (paramName === 'EDV' || paramName === 'ESV' || paramName === 'EF') {
-                return;
-            }
-            
             // 使用映射后的参数名（如果存在映射）
             const mappedParamName = paramNameMap[paramName] || paramName;
             // 使用原始参数名获取值（因为参数存储在HTML参数名下）
@@ -3173,12 +2253,8 @@ const templateConfig = {
                     }
                 }
             } else {
-                // 其他参数：EDVI、ESVI、FS保留0位小数（整数），其他参数保留2位小数
-                if (paramName === 'EDVI' || paramName === 'ESVI' || paramName === 'FS') {
-                    formattedValue = formatValue(value, true);
-                } else {
-                    formattedValue = formatValue(value);
-                }
+                // 其他参数：EDV、ESV、EDVI、ESVI、FS、EF保留0位小数（整数），其他参数保留2位小数
+                formattedValue = (paramName === 'EDV' || paramName === 'ESV' || paramName === 'EDVI' || paramName === 'ESVI' || paramName === 'FS' || paramName === 'EF') ? formatValue(value, true) : formatValue(value);
             }
             
             // 替换模版中的占位符（使用映射后的参数名）
@@ -3206,58 +2282,23 @@ const templateConfig = {
         });
         
         // 处理EDV/ESV格式：不显示辛普森部分
-        // 根据spherical激活状态使用不同的数值
-        let edv, esv;
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2778',message:'Template generation - selecting values',data:{sphericalActivated,hasEDVSpherical:parameters['EDV_spherical']!==undefined,hasESVSpherical:parameters['ESV_spherical']!==undefined,edvSpherical:parameters['EDV_spherical'],esvSpherical:parameters['ESV_spherical'],edvTeich:get('EDV',''),esvTeich:get('ESV','')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-        if (sphericalActivated) {
-            // 激活状态：EDV、ESV都使用spherical值
-            edv = parameters['EDV_spherical'] !== undefined ? parameters['EDV_spherical'] : get('EDV', '');
-            esv = parameters['ESV_spherical'] !== undefined ? parameters['ESV_spherical'] : get('ESV', '');
-        } else {
-            // 非激活状态：使用默认的Teich值
-            edv = get('EDV', '');
-            esv = get('ESV', '');
-        }
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2786',message:'Values selected for template',data:{edv,esv},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-        const edvFormatted = edv ? formatEDVESV(edv) : '';
-        const esvFormatted = esv ? formatEDVESV(esv) : '';
+        const edv = get('EDV', '');
+        const esv = get('ESV', '');
+        const edvFormatted = edv ? formatValue(edv, true) : '';
+        const esvFormatted = esv ? formatValue(esv, true) : '';
         // 处理EDV辛普森和ESV辛普森
         const edvSimpson = get('EDV辛普森', '');
         const esvSimpson = get('ESV辛普森', '');
-        const edvSimpsonFormatted = edvSimpson ? formatEDVESV(edvSimpson) : '';
-        const esvSimpsonFormatted = esvSimpson ? formatEDVESV(esvSimpson) : '';
+        const edvSimpsonFormatted = edvSimpson ? formatValue(edvSimpson, true) : '';
+        const esvSimpsonFormatted = esvSimpson ? formatValue(esvSimpson, true) : '';
         // 替换EDV辛普森和ESV辛普森占位符
-        if (simpsonEnabled) {
-            // 含辛普森测量激活时，显示辛普森值（如果有值），如果没有值则替换为空字符串
-            // 这样模板格式 {EDV}ml/{EDV辛普森}ml（辛普森）会显示为 {EDV}ml/ml（辛普森）
-            result = result.replace(/{EDV辛普森}/g, edvSimpsonFormatted || '');
-            result = result.replace(/{ESV辛普森}/g, esvSimpsonFormatted || '');
-        } else {
-            // 含辛普森测量未激活时，移除辛普森占位符
-            result = result.replace(/{EDV辛普森}/g, '');
-            result = result.replace(/{ESV辛普森}/g, '');
-        }
-        // 替换EDV和ESV占位符（包括辛普森格式）
-        // 注意：如果simpsonEnabled为true，需要保留辛普森格式
-        if (simpsonEnabled) {
-            // 含辛普森测量激活时，保留辛普森格式
-            // 格式：{EDV}ml/{EDV辛普森}ml（辛普森） 或 {EDV}ml/ml（辛普森）
-            // 先处理包含辛普森的格式
-            result = result.replace(/{EDV}ml\/ml（辛普森）/g, edvFormatted ? `${edvFormatted}ml/ml（辛普森）` : 'ml/ml（辛普森）');
-            result = result.replace(/{ESV}ml\/ml（辛普森）/g, esvFormatted ? `${esvFormatted}ml/ml（辛普森）` : 'ml/ml（辛普森）');
-            result = result.replace(/{EDV}\/（辛普森）/g, edvFormatted ? `${edvFormatted}ml/（辛普森）` : 'ml/（辛普森）');
-            result = result.replace(/{ESV}\/（辛普森）/g, esvFormatted ? `${esvFormatted}ml/（辛普森）` : 'ml/（辛普森）');
-        } else {
-            // 不含辛普森测量时，统一转换为不显示辛普森
-            result = result.replace(/{EDV}ml\/ml（辛普森）/g, edvFormatted ? `${edvFormatted}ml` : 'ml');
-            result = result.replace(/{ESV}ml\/ml（辛普森）/g, esvFormatted ? `${esvFormatted}ml` : 'ml');
-            result = result.replace(/{EDV}\/（辛普森）/g, edvFormatted ? `${edvFormatted}ml` : 'ml');
-            result = result.replace(/{ESV}\/（辛普森）/g, esvFormatted ? `${esvFormatted}ml` : 'ml');
-        }
+        result = result.replace(/{EDV辛普森}/g, edvSimpsonFormatted || '');
+        result = result.replace(/{ESV辛普森}/g, esvSimpsonFormatted || '');
+        // 替换EDV和ESV占位符（包括辛普森格式，统一转换为不显示辛普森）
+        result = result.replace(/{EDV}ml\/ml（辛普森）/g, edvFormatted ? `${edvFormatted}ml` : 'ml');
+        result = result.replace(/{ESV}ml\/ml（辛普森）/g, esvFormatted ? `${esvFormatted}ml` : 'ml');
+        result = result.replace(/{EDV}\/（辛普森）/g, edvFormatted ? `${edvFormatted}ml` : 'ml');
+        result = result.replace(/{ESV}\/（辛普森）/g, esvFormatted ? `${esvFormatted}ml` : 'ml');
         // 替换单独的EDV和ESV占位符
         result = result.replace(/{EDV}/g, edvFormatted || '');
         result = result.replace(/{ESV}/g, esvFormatted || '');
@@ -3267,21 +2308,7 @@ const templateConfig = {
         result = result.replace(/{ESVI}/g, '');
         
         // 处理EF格式：不显示辛普森部分，保留整数
-        // 根据spherical激活状态使用不同的数值
-        let ef;
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2810',message:'EF value selection',data:{sphericalActivated,hasEFSpherical:parameters['EF_spherical']!==undefined,efSpherical:parameters['EF_spherical'],efTeich:get('EF','')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-        if (sphericalActivated) {
-            // 激活状态：EF使用spherical值
-            ef = parameters['EF_spherical'] !== undefined ? parameters['EF_spherical'] : get('EF', '');
-        } else {
-            // 非激活状态：使用默认的Teich值
-            ef = get('EF', '');
-        }
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2817',message:'EF value selected',data:{ef},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
+        const ef = get('EF', '');
         const efFormatted = ef ? formatValue(ef, true) : '';
         // 处理EF辛普森
         const efSimpson = get('EF辛普森', '');
@@ -3580,8 +2607,8 @@ const templateConfig = {
         const animalType = templateConfig.getAnimalType(referenceRange);
         const get = (key, defaultValue = '') => templateConfig.getParam(key, defaultValue);
         
-        // 获取体重：优先使用选中的参考体重，如果没有则使用输入的体重
-        const weight = selectedReferenceWeight !== null ? selectedReferenceWeight.toString() : get('体重', '');
+        // 获取体重（如果有的话，可以从参数中获取，这里先留空）
+        const weight = get('体重', '');
         
         // 获取参考数据（支持所有参考范围类型）
         let referenceData = null;
@@ -4035,8 +3062,7 @@ const templateConfig = {
         const get = (key, defaultValue = '') => templateConfig.getParam(key, defaultValue);
         
         // 获取参考数据（与generateFindings中相同的逻辑）
-        // 优先使用选中的参考体重，如果没有则使用输入的体重
-        const weight = selectedReferenceWeight !== null ? selectedReferenceWeight.toString() : get('体重', '');
+        const weight = get('体重', '');
         let referenceData = null;
         let referenceWeight = null;
         
@@ -4184,9 +3210,6 @@ async function generateTemplate() {
 
 // 参数输入区域始终显示（已移除折叠功能）
 document.addEventListener('DOMContentLoaded', function() {
-    // 确保输入框事件监听器已绑定
-    setupInputListeners();
-    
     // 确保参数内容区域始终显示
     const parametersContent = document.getElementById('parametersContent');
     if (parametersContent) {
@@ -4231,47 +3254,170 @@ document.addEventListener('DOMContentLoaded', function() {
         handleDiseaseTypeChange('Normal');
     }
     
-    // 复制功能
-    // 为每个按钮保存原始内容和定时器
-    const buttonTimers = new Map();
-    const buttonOriginalContent = new Map();
+    // 问题反馈功能
+    const feedbackButton = document.getElementById('feedbackButton');
+    const feedbackModal = document.getElementById('feedbackModal');
+    const feedbackModalClose = document.getElementById('feedbackModalClose');
+    const feedbackCancel = document.getElementById('feedbackCancel');
+    const feedbackSubmit = document.getElementById('feedbackSubmit');
+    const feedbackText = document.getElementById('feedbackText');
     
-    function copyToClipboard(text, button) {
-        if (!text || text.trim() === '') {
+    // 打开反馈对话框
+    if (feedbackButton && feedbackModal) {
+        feedbackButton.addEventListener('click', function() {
+            feedbackModal.classList.add('show');
+            feedbackText.focus();
+        });
+    }
+    
+    // 关闭反馈对话框
+    function closeFeedbackModal() {
+        if (feedbackModal) {
+            feedbackModal.classList.remove('show');
+            if (feedbackText) {
+                feedbackText.value = '';
+            }
+        }
+    }
+    
+    if (feedbackModalClose) {
+        feedbackModalClose.addEventListener('click', closeFeedbackModal);
+    }
+    
+    if (feedbackCancel) {
+        feedbackCancel.addEventListener('click', closeFeedbackModal);
+    }
+    
+    // 点击对话框外部关闭
+    if (feedbackModal) {
+        feedbackModal.addEventListener('click', function(e) {
+            if (e.target === feedbackModal) {
+                closeFeedbackModal();
+            }
+        });
+    }
+    
+    // 保存反馈到服务器logs文件夹
+    async function saveFeedbackToFile(content) {
+        if (!content || content.trim() === '') {
+            alert('请输入反馈内容！');
             return;
         }
         
-        // 如果按钮还没有保存原始内容，先保存
-        if (!buttonOriginalContent.has(button)) {
-            buttonOriginalContent.set(button, button.innerHTML);
-        }
+        // 获取当前选择的疾病类型和参考范围
+        const currentDiseaseType = selectedDiseaseType || '未选择';
+        const currentReferenceRange = selectedReferenceRange || '未选择';
+        const simpsonStatus = simpsonEnabled ? '已激活' : '未激活';
         
-        // 清除之前的定时器（如果存在）
-        if (buttonTimers.has(button)) {
-            clearTimeout(buttonTimers.get(button));
-            buttonTimers.delete(button);
-        }
+        // 准备发送到服务器的数据
+        const feedbackData = {
+            content: content,
+            diseaseType: currentDiseaseType,
+            referenceRange: currentReferenceRange,
+            simpsonStatus: simpsonStatus
+        };
         
-        // 恢复按钮的原始状态（如果当前是"已复制"状态）
-        if (button.classList.contains('copied')) {
-            button.classList.remove('copied');
-            button.innerHTML = buttonOriginalContent.get(button);
+        try {
+            // 发送POST请求到服务器
+            const response = await fetch('/save_feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8'
+                },
+                body: JSON.stringify(feedbackData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // 关闭对话框并显示提示
+                closeFeedbackModal();
+                alert(`反馈已保存到 logs 文件夹！\n文件名: ${result.filename}`);
+            } else {
+                alert('保存失败：' + result.message);
+            }
+        } catch (error) {
+            console.error('保存反馈时出错:', error);
+            // 如果服务器不可用，回退到下载方式
+            alert('无法连接到服务器，将使用下载方式保存反馈。');
+            saveFeedbackAsDownload(content, currentDiseaseType, currentReferenceRange, simpsonStatus);
+    }
+    }
+    
+    // 备用方案：如果服务器不可用，使用下载方式
+    function saveFeedbackAsDownload(content, diseaseType, referenceRange, simpsonStatus) {
+        const now = new Date();
+        const timestamp = now.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
+        const feedbackContent = `=== 问题反馈 ===
+时间: ${timestamp}
+疾病类型: ${diseaseType}
+参考范围: ${referenceRange}
+含辛普森测量: ${simpsonStatus}
+---
+反馈内容:
+${content}
+---
+${'='.repeat(50)}
+
+`;
+        
+        const blob = new Blob([feedbackContent], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `问题反馈_${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}.txt`;
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        closeFeedbackModal();
+        alert('反馈已下载，请手动保存到 logs 文件夹！');
+    }
+    
+    // 提交反馈
+    if (feedbackSubmit && feedbackText) {
+        feedbackSubmit.addEventListener('click', function() {
+            const content = feedbackText.value.trim();
+            saveFeedbackToFile(content);
+        });
+        
+        // 支持Ctrl+Enter快捷键提交
+        feedbackText.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                const content = feedbackText.value.trim();
+                saveFeedbackToFile(content);
+            }
+        });
+    }
+
+    // 复制功能
+    function copyToClipboard(text, button) {
+        if (!text || text.trim() === '') {
+            return;
         }
         
         // 使用现代 Clipboard API
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(function() {
                 // 复制成功，显示反馈
+                const originalText = button.innerHTML;
                 button.classList.add('copied');
-                button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 已复制';
                 
-                // 设置定时器恢复按钮
-                const timer = setTimeout(function() {
+                setTimeout(function() {
                     button.classList.remove('copied');
-                    button.innerHTML = buttonOriginalContent.get(button);
-                    buttonTimers.delete(button);
+                    button.innerHTML = originalText;
                 }, 2000);
-                buttonTimers.set(button, timer);
             }).catch(function(err) {
                 console.error('复制失败:', err);
                 alert('复制失败，请手动选择文本复制');
@@ -4286,16 +3432,14 @@ document.addEventListener('DOMContentLoaded', function() {
             textArea.select();
             try {
                 document.execCommand('copy');
+                const originalText = button.innerHTML;
                 button.classList.add('copied');
-                button.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                button.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> 已复制';
                 
-                // 设置定时器恢复按钮
-                const timer = setTimeout(function() {
+                setTimeout(function() {
                     button.classList.remove('copied');
-                    button.innerHTML = buttonOriginalContent.get(button);
-                    buttonTimers.delete(button);
+                    button.innerHTML = originalText;
                 }, 2000);
-                buttonTimers.set(button, timer);
             } catch (err) {
                 console.error('复制失败:', err);
                 alert('复制失败，请手动选择文本复制');
