@@ -1527,9 +1527,6 @@ function calculateFS() {
             
             fsInput.value = fsRounded;
             parameters['FS'] = fsRounded;
-            
-            // 禁用输入框（自动计算）
-            fsInput.disabled = true;
         } else {
             // 如果LVDd或LVDs为空或无效，清空FS并启用输入框
             fsInput.value = '';
@@ -1575,9 +1572,6 @@ function calculateEF() {
             
             efInput.value = efRounded;
             parameters['EF'] = efRounded;
-            
-            // 禁用输入框（自动计算）
-            efInput.disabled = true;
         } else {
             // 如果EDV或ESV为空或无效，清空EF并启用输入框
             efInput.value = '';
