@@ -486,7 +486,7 @@ body {
     flex: 1 1 0;
     min-width: 0;
     border: 1px solid #81818100;
-    border-radius: 2px;
+    border-radius: 4px;
     padding: 7px 10px;
     font-size: 13px;
     background-color: transparent;
@@ -709,6 +709,10 @@ body {
     border: 1px dashed #818181;
 }
 
+.template-section:hover {
+    border: 1px dashed #4a90e2;
+}
+
 .template-content {
     margin-bottom: 20px;
 }
@@ -731,7 +735,7 @@ body {
     width: 4px;
     height: 18px;
     background-color: #4a90e2;
-    border-radius: 2px;
+    border-radius: 4px;
 }
 
 .template-text {

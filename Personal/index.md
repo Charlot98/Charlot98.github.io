@@ -11,3 +11,5 @@
 - [键盘自定义](Life/键盘自定义.md)
 - [Album Wall](AlbumWall/index.html)
 
+- [clash-paperpile定制](https://wwbbx.lanzouw.com/iONYT3gx6pti)
+- [牙表](dental_chart_v1/dental_chart_pub.html)
