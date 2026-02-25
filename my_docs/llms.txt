@@ -1,0 +1,16 @@
+# my-docs
+
+## Documentation Sets
+
+- [my-docs](http://localhost:3000/llms-full.txt)
+
+## Docs
+
+- [使用手册](http://localhost:3000/raw/getting-started/structure.md)
+- [超声基础](http://localhost:3000/raw/imaging/echo_basic.md)
+- [超声进阶](http://localhost:3000/raw/imaging/echo.md)
+- [术语](http://localhost:3000/raw/tools/terminology.md)
+
+## Landing
+
+- [兽医知识库](http://localhost:3000/raw/index.md): Ship fast, flexible, and SEO-optimized documentation with beautiful design out of the box. Docus brings together the best of the Nuxt ecosystem. Powered by Nuxt UI.

@@ -1,0 +1,1 @@
+.star[data-v-d73313ac]{animation:twinkle-d73313ac var(--twinkle-duration) ease-in-out infinite;animation-delay:var(--twinkle-delay);background-color:var(--star-color);border-radius:50%;height:var(--star-size);width:var(--star-size);will-change:opacity}@keyframes twinkle-d73313ac{0%,to{opacity:.2}50%{opacity:1}}

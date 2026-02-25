@@ -1,0 +1,301 @@
+# 使用手册
+
+## 文献更新
+
+## 病例库
+
+部分功能：**答案显示**{.strong-highlight}
+
+## 文档框架
+
+```bash
+使用手册
+├── 文档框架             # 页面内查看最新内容
+├── 文献库更新           # 文献库更新列表
+└── 最新内容             # 跳转主页，快速查看最新更新内容
+影像诊断
+├── 腹部超声             # 腹部超声速查，包括鉴别诊断、参考范围等
+├── 心脏超声             # 心脏超声速查，包括基础超声、进阶超声测量及参考范围
+├── CT                  # 心脏超声速查，包括基础超声、进阶超声测量及参考范围
+└── X线                 # 各类疾病X线的图像、描述、结论
+心脏病  
+├── 获得性心脏病 
+│   ├── MMVD   
+│   ├── HCM        
+│   ├── DCM
+│   └──...
+├── 先天性心脏病  
+│   ├── PS 
+│   ├── SAS
+│   ├── ASD
+│   ├── VSD
+│   └── TOF
+├── 心杂音              # 心杂音音频
+├── MMVD指南总结        # 重点内容提炼
+└── 肺动脉高压指南       # 重点内容提炼
+异宠
+├── 龟 
+├── 兔  
+├── 松鼠              
+└── ... 
+
+```
+
+
+# 超声基础
+
+## 左房大小
+
+### Max LAD
+
+[](https://www.imv-imaging.com/en/2025/06/news-measuring-the-left-atrium-what-where-when-and-why/){rel="&#x22;nofollow&#x22;"}
+
+参考值：
+
+- 正常＜16mm（包括缅因）
+- 轻度增大 16-20mm
+- 中度增大 20-25mm
+- 重度增大 ＞25mm
+
+> 部分学者认为 LAD＜15mm（＜3.5kg）
+
+
+# 超声进阶
+
+## 超声进阶
+
+
+# 术语
+
+::note
+本对照表主要收录兽医 
+
+`影像`
+
+ 中的专业词汇，以便大语言模型（LLM）翻译时参考、修订。
+::
+
+## 基础术语
+
+| 英文（缩写）                                                   | 中文                           |
+| :------------------------------------------------------- | :--------------------------- |
+| Mediastinum                                              | 纵隔                           |
+| rotation                                                 | 旋转                           |
+| sternum                                                  | 胸骨（复数）                       |
+| sternebra                                                | 胸骨（单数）                       |
+| manubrium                                                | 胸骨柄                          |
+| craniocaudally                                           | 由前到后地                        |
+| xiphoid cartilage                                        | 剑状软骨                         |
+| xiphoid proces                                           | 剑突                           |
+| fascia                                                   | 筋膜                           |
+| Pectus excavatum                                         | 漏斗胸（凹胸）                      |
+| Pectus carinatum                                         | 鸡胸                           |
+| Osteomyelitis                                            | 骨髓炎                          |
+| plica venae cavae                                        | 后腔静脉裂孔（偏膈右侧）                 |
+| right phrenic nerve                                      | 右膈神经                         |
+| transient                                                | 短暂的                          |
+| Supraglenoid tubercle                                    | 盂上结节                         |
+| Megaesophagus                                            | 巨食道症                         |
+| Falciform fat                                            | 镰状脂肪                         |
+| Emaciated animals                                        | 消瘦的动物                        |
+| dialysis                                                 | 肾透析                          |
+| feline asthma                                            | 猫哮喘                          |
+| Chronic bronchitis                                       | 慢性支气管炎                       |
+| Bronchoalveolar lavage                                   | 支气管肺泡灌洗                      |
+| even                                                     | 均一                           |
+| Overlaps                                                 | 重叠                           |
+| intussusception                                          | 肠套叠                          |
+| Peritoneum                                               | 腹膜                           |
+| peritoneal space                                         | 腹膜间隙                         |
+| mesentery                                                | 肠系膜                          |
+| viscera                                                  | 脏器/内脏                        |
+| omental fat                                              | 大网膜脂肪                        |
+| peritoneal fat                                           | 腹膜脂肪                         |
+| serosal margins                                          | 浆膜边缘                         |
+| summation                                                | 叠加                           |
+| mucosal margins                                          | 黏膜边缘                         |
+| ingesta                                                  | 摄取的营养物                       |
+| motility                                                 | 运动性、蠕动性                      |
+| xylazine                                                 | 赛拉嗪、甲苯噻嗪                     |
+| slow GI peristalsis                                      | 减少胃肠蠕动                       |
+| Cleansing enemas                                         | 清洁灌肠                         |
+| Periosteal response                                      | 骨膜反应                         |
+| tipsy                                                    | 微醺的                          |
+| synonymously                                             | 同义词地                         |
+| asymptomatic                                             | 无症状的                         |
+| prerequisites                                            | 先决条件                         |
+| in situ cancer                                           | 原位癌                          |
+| tamponade                                                | 填塞 eg.心包填塞 cardiac tamponade |
+| pulsus alternans                                         | 脉搏交替                         |
+| suppurative infection                                    | 化脓性感染                        |
+| leucocytosis                                             | 白细胞增多征                       |
+| lymphopenia                                              | 淋巴细胞减少                       |
+| neutrophilia                                             | 中性粒细胞增多                      |
+| blood cellularity                                        | 血液细胞量                        |
+| abscess                                                  | 脓肿                           |
+| Alveoli                                                  | 肺泡                           |
+| calibration                                              | 准直                           |
+| asymmetrically                                           | 不对称地                         |
+| malignant                                                | 恶性                           |
+| overt                                                    | 明显的                          |
+| occult                                                   | 隐匿的，神秘的                      |
+| Resting Energy Requirement (RER)                         | 静息能量需求                       |
+| Respiratory Rate (RR)                                    | 呼吸频率                         |
+| Second (s)                                               | 秒                            |
+| Serumamyloid A (SAA)                                     | 血清淀粉样蛋白A                     |
+| Arterial Oxygen Saturation (SaO2)                        | 动脉血氧饱和度                      |
+| Systolic Arterial Pressure (SAP)                         | 收缩压                          |
+| Subcutaneous Injection (SC)                              | 皮下注射                         |
+| Semel In Die (SID)                                       | 每日一次                         |
+| Blood Oxygen Saturation (SPO2)                           | 血氧饱和度                        |
+| Ter In Die (TID)                                         | 每日三次                         |
+| Total Protein (TP)                                       | 总蛋白                          |
+| Tibial Plateau Leveling Osteotomy (TPLO)                 | 胫骨平台矫形术                      |
+| Total Solids (TS)                                        | 总固体                          |
+| Tibial Tuberosity Advancement (TTA)                      | 胫骨粗隆前移手术                     |
+| Urine Specific Gravity (USG)                             | 尿比重                          |
+| Degree Celsius (℃)                                       | 摄氏度                          |
+| Mircogram (μg)                                           | 微克                           |
+| Microliter (μl)                                          | 微升                           |
+| Pathological Ovariohysterectomy (病OHE)                   | 病理性子宫卵巢摘除术                   |
+| Atrial Fibrillation (AF)                                 | 房颤                           |
+| Acute Kidney Injury (AKI)                                | 急性肾损伤                        |
+| Acute Pancreatitis (AP)                                  | 急性胰腺炎                        |
+| Cranial Cruciate Ligament Rupture (CCLR)                 | 前十字韧带断裂                      |
+| Cranial Closed Wedge Osteotomy (CCWO)                    | 头侧闭合性楔型截骨术                   |
+| Continuous renal replacement therapy (CRRT)              | 连续肾脏替代疗法                     |
+| Chronic Kidney Disease (CKD)                             | 慢性肾病                         |
+| Cardiogenic Pulmonary Edema (CPE)                        | 心源性肺水肿                       |
+| Dilated Cardiomyopathy (DCM)                             | 扩张型心肌病                       |
+| Diabetic Ketoacidosis (DK/DKA)                           | 糖尿病酮症/糖尿病酮症酸中毒               |
+| Diabetes Mellitus (DM)                                   | 糖尿病                          |
+| Feline Hepatic Lipidosis (FHL)                           | 猫肝脏脂质沉积                      |
+| Femoral Head Excision (FHO)                              | 股骨头切除术                       |
+| Feline Idiopathic Cystitis (FIC)                         | 猫特发性膀胱炎                      |
+| Feline Lower Urinary Tract Disease (FLUTD)               | 猫下泌尿道疾病                      |
+| Gallbladder Mucocele (GBM)                               | 胆囊黏液囊肿                       |
+| Gastrointestinal Foreign Body (GIFB)                     | 胃肠道异物                        |
+| Hyperadrenocorticism (Cushing's Syndrome) (HAC)          | 肾上腺皮质功能亢进                    |
+| Hypertrophic Cardiomyopathy (HCM)                        | 肥厚型心肌病                       |
+| Hyperglycemic Hyperosmolar State (HHS)                   | 高血糖高渗透综合征                    |
+| Angiosarcoma (HSA)                                       | 血管肉瘤                         |
+| Inflammatory Bowel Disease (IBD)                         | 炎性肠病                         |
+| Immune-Mediated Hemolytic Anemia (IMHA)                  | 免疫介导性溶血性贫血                   |
+| Immune-Mediated Thrombocytopenia (IMT)                   | 免疫介导性血小板减少症                  |
+| Intervertebral Disc Disease (IVDD)                       | 椎间盘病                         |
+| Keratoconjunctivitis Sicca (KCS)                         | 干性角膜结膜炎（干眼症）                 |
+| Lymphosarcoma/Lymphoma (LSA)                             | 淋巴瘤                          |
+| Mast Cell Tumor (MCT)                                    | 肥大细胞瘤                        |
+| Mammary Gland Tumor (MGT)                                | 乳腺肿瘤                         |
+| myxomatous mitral valve disease (MMVD)                   | 黏液瘤样二尖瓣疾病                    |
+| Medial Patellar Luxation (MPL)                           | 髌骨内侧脱位                       |
+| Ovariohysterectomy (OHE)                                 | 卵巢子宫切除术                      |
+| Oral Melanoma (OMM)                                      | 口腔黑色素瘤                       |
+| prolonged intermittent renal replacement therapy (PIRRT) | 延长型间歇性肾脏替代疗法                 |
+| Protein-Losing Enteropathy (PLE)                         | 蛋白丢失性肠病                      |
+| Protein-Losing Nephropathy (PLN)                         | 蛋白丢失性肾病                      |
+| Restrictive Cardiomyopathy (RCM)                         | 限制型心肌病                       |
+| Squamous Cell Carcinoma (SCC)                            | 鳞状细胞癌                        |
+| Systemic Hypertension (SHT)                              | 全身性高血压                       |
+| Urinary Tract Infection (UTI)                            | 尿路感染                         |
+| Ventricular Tachycardia (VT)                             | 室性心动过速                       |
+| Polycystic Kidney Disease (PKD)                          | 多囊肾                          |
+| Total Hip Replacement (THR)                              | 全髋关节置换                       |
+| portosystemic shunts (PSS)                               | 肝门静脉短路                       |
+| Hypertrophic osteodystrophy (HOD)                        | 肥大性骨营养不良                     |
+| soft tissue sarcoma (STS)                                | 软组织肉瘤                        |
+| aneurysmal bone cysts (ABC)                              | 动脉瘤样骨囊肿                      |
+| Neonatal Isoerythrolysis (NI)                            | 新生儿同质异型红血球溶血症                |
+| Flail chest                                              | 连枷胸 / 浮动胸壁                   |
+| Fused sternebrae                                         | 融合的胸骨节                       |
+| Sternal lysis                                            | 胸骨溶解                         |
+| metatarsal/metacarpal bone                               | 掌骨                           |
+| Phalanx                                                  | 趾骨 或 指骨                      |
+| physis                                                   | 生长板                          |
+| mammary gland (MG)                                       | 乳腺                           |
+| squirrel                                                 | 松鼠                           |
+| telemedicine                                             | 电子医疗                         |
+| Fluoroscopy (angiography)                                | 透视（血管造影）                     |
+| urine bladder                                            | 膀胱                           |
+| urine bladder vertex                                     | 膀胱顶                          |
+| urine bladder body                                       | 膀胱体                          |
+| urine bladder neck                                       | 膀胱颈                          |
+| anechoic cavity                                          | 无回声腔体                        |
+| uterine remnant (UR)                                     | 子宫残端                         |
+| residual ovary syndrome                                  | 卵巢残留综合征                      |
+| pericardiodiaphragmatic ligament                         | 膈心包韧带                        |
+| **skyline view**                                         | **天际线位**（待确认）                |
+| sunrise view                                             | 日升位                          |
+| Obliqued view                                            | 斜位                           |
+| flexed view                                              | 屈曲位                          |
+| extended view                                            | 伸展位                          |
+| tangential view                                          | 切线位                          |
+| rotated view                                             | 旋转位                          |
+| sprains                                                  | 扭伤                           |
+| strains (muscle injuries)                                | 拉伤（肌肉损伤）                     |
+| **bruises**                                              | **挫伤**                       |
+| inflammation                                             | 炎症                           |
+| os penis                                                 | 阴茎骨                          |
+
+## 心血管系统
+
+| 英文（缩写）                                                                | 中文                  | 定义                                        |
+| :-------------------------------------------------------------------- | :------------------ | :---------------------------------------- |
+| eccentric hypertrophy                                                 | 离心性肥大（偏心肥大）         | 心室增大，后负荷                                  |
+| concentric hypertrophy                                                | 向心性肥厚（同心肥大）         | 心肌增厚，前负荷                                  |
+| cardiac tamponade                                                     | 心包填塞                |                                           |
+| hemopericardium                                                       | 心包积血                |                                           |
+| ventricular wall stress                                               | 心室壁应力               |                                           |
+| relative wall thickness (RWT)                                         | 相对室壁厚度              |                                           |
+| bigeminy                                                              | 二联律                 | 每一个正常心跳配一个VPC                             |
+| trigeminy                                                             | 三联律                 | 每两个正常心跳配一个VPC                             |
+| quadrigeminy                                                          | 四联律                 | 每三个正常心跳配一个VPC                             |
+| couplet                                                               | 连续2个VPC             |                                           |
+| triplet                                                               | 连续3个及以上VPC          |                                           |
+| proarrhythmic effects                                                 | 促发性心律失常效应 / 致心律失常效应 | 是某些药物、治疗或病理状态引起的新的或加重的心律失常（arrhythmia）的现象 |
+| ventricular dyssynchrony from intraventricular conduction disturbance | 心室内传导障碍引起的心室不同步     |                                           |
+| tachyarrhythmia                                                       | 心动过速                |                                           |
+| epicardium                                                            | 心外膜                 |                                           |
+| myocardium                                                            | 心肌                  |                                           |
+| endocardium                                                           | 心内膜                 |                                           |
+| Taurine                                                               | 牛磺酸                 |                                           |
+| L-carnitine                                                           | 左旋肉碱                |                                           |
+| Pulseless Electrical Activity，PEA                                     | 无脉性电活动              |                                           |
+
+## 肿瘤相关
+
+| 英文（缩写）                            | 中文    | 定义                                              |
+| :-------------------------------- | :---- | :---------------------------------------------- |
+| tumor                             | 肿物    | 所有团块，肿瘤/非肿瘤，目前更多用来描述肿瘤                          |
+| Neoplasia                         | 肿瘤    | 不受体内生长调节信号调控的组织团块，可能是良性或恶性，当刺激生长的因素移除后，异常生长仍在继续 |
+| cancer                            | 癌症    | 恶性肿瘤                                            |
+| carcinoma                         | 癌     | 上皮类恶性肿瘤                                         |
+| adenoma                           | 腺瘤    | 腺上皮构成的良性肿瘤                                      |
+| adenocarcinoma                    | 腺癌    | 腺上皮构成的恶性肿瘤                                      |
+| sarcoma                           | 肉瘤    | 间质类恶性肿瘤                                         |
+| hyperplasia                       | 增生    | 非肿瘤型细胞数量增多                                      |
+| metaplasia                        | 化生    |                                                 |
+| transitional cell carcinoma (TCC) | 移行细胞癌 |                                                 |
+
+
+# 兽医知识库
+
+::div{.relative.overflow-hidden}
+:sky-bg
+
+  :::u-page-hero
+  #title
+  兽医影像知识库
+
+  #links
+    ::::u-button
+    ---
+    color: neutral
+    size: xl
+    to: http://localhost:3000/getting-started/structure
+    trailing-icon: i-lucide-arrow-right
+    ---
+    查阅
+    ::::
+  :::
+::
