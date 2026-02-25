@@ -1,0 +1,1 @@
+import{S as r,o as c,c as n,M as p,O as m,m as u,Z as s}from"./DQMrfDb8.js";const i={base:"list-decimal ps-6 my-5 marker:text-muted"},_={__name:"ProseOl",props:{class:{type:null,required:!1}},setup(e){const a=e,t=r(),o=u(()=>s({extend:s(i),...t.ui?.prose?.ol||{}}));return(l,d)=>(c(),n("ol",{class:m(o.value({class:a.class}))},[p(l.$slots,"default")],2))}};export{_ as default};
