@@ -520,8 +520,8 @@ date: 2026-02-25
 ---
 
 ### 新增
-[更新日志](https://charlot98.github.io/vetvault_changelog/)
-- [x] 手动部署更新日志至[charlot98.github.io/changelog](https://charlot98.github.io/vetvault_changelog/)
+[更新日志](https://charlot98.github.io/changelog/)
+- [x] 手动部署更新日志至[charlot98.github.io/changelog](https://charlot98.github.io/changelog/)
 - [x] 添加项目[进度条]()
 - [x] 界面客制化[nuxt changelog](https://changelog-template.nuxt.dev/) 
 
