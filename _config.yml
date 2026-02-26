@@ -1,0 +1,9 @@
+title: Vet Imaging Vault
+
+description: Team knowledge Management System，specifically for vet imaging
+
+baseurl: "" # the subpath of your site, e.g. /blog
+
+url: "" # the base hostname & protocol for your site, e.g. example.com...
+
+remote_theme: pages-themes/cayman@v0.2.0
