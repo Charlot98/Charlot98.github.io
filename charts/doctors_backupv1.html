@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>医生每日检查量（上午/下午/晚上/总量）点状图</title>
+  <script>
+    (function () {
+      var KEY = 'dash_auth_token';
+      // 刷新本页时，强制回到登录
+      try {
+        var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+        var isReload = nav ? nav.type === 'reload' : (performance.navigation && performance.navigation.type === 1);
+        if (isReload) {
+          try { localStorage.removeItem(KEY); } catch (e) {}
+          window.location.replace('login.html');
+          return;
+        }
+      } catch (e) {}
+      // 未登录则跳转登录页
+      try {
+        if (localStorage.getItem(KEY) !== 'logged_in') {
+          window.location.replace('login.html');
+        }
+      } catch (e) {
+        window.location.replace('login.html');
+      }
+    })();
+  </script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <style>
+    .nav-top a { text-decoration: none; color: #6b7280; transition: color 0.15s ease; }
+    .nav-top a:hover { color: #374151; }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <div class="nav-top" style="padding: 8px 16px 0; font-size: 14px;">
+    <a href="dashboard.html">首页</a> 
+    <a href="cases_lines.html">折线图</a> 
+    <a href="cases_scatter.html">散点图</a>
+    <a href="doctors.html">测试</a> 
+  </div>
+
+  <!-- 等级筛选 -->
+  <div style="margin-bottom: 8px;">
+    <span style="margin-right: 8px;">医生等级筛选：</span>
+    <label style="margin-right: 8px;">
+      <input type="checkbox" class="level-filter" value="预备" checked> 预备
+    </label>
+    <label style="margin-right: 8px;">
+      <input type="checkbox" class="level-filter" value="初级" checked> 初级
+    </label>
+    <label style="margin-right: 8px;">
+      <input type="checkbox" class="level-filter" value="中级" checked> 中级
+    </label>
+    <label style="margin-right: 8px;">
+      <input type="checkbox" class="level-filter" value="高级" checked> 高级
+    </label>
+  </div>
+
+  <!-- 医生筛选 -->
+  <div style="margin-bottom: 12px;">
+    <span style="margin-right: 8px;">医生筛选：</span>
+    <button id="doctor-select-all" type="button" style="margin-right: 6px;">全选</button>
+    <button id="doctor-select-clear" type="button">全不选</button>
+    <div id="doctor-checkboxes" style="margin-top: 4px; max-height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 4px;"></div>
+  </div>
+
+  <!-- 分时段视图 -->
+  <div id="container" style="width: 100%; height: 650px; margin-bottom: 40px;"></div>
+  <!-- 总量视图 -->
+  <div id="container-total" style="width: 100%; height: 450px;"></div>
+
+  <script>
+    // 简单读取本地 CSV 的工具函数
+    function loadCSV(path, callback) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', path, true);
+      xhr.onload = function () {
+        if (xhr.status === 200 || xhr.status === 0) {
+          callback(xhr.responseText);
+        } else {
+          alert('加载 CSV 失败: ' + xhr.status);
+        }
+      };
+      xhr.send();
+    }
+
+    loadCSV('03 医生检查量.csv', function (csv) {
+      var lines = csv.trim().split('\n');
+      if (lines.length <= 1) {
+        alert('03 医生检查量.csv 内容为空或只有表头');
+        return;
+      }
+
+      var header = lines[0].split(',');
+      var idxDoctor = header.indexOf('医生');
+      var idxDate   = header.indexOf('日期');
+      var idxMorn   = header.indexOf('上午');
+      var idxAfter  = header.indexOf('下午');
+      var idxEven   = header.indexOf('晚上');
+      var idxLevel  = header.indexOf('医生等级');
+
+      if (idxDoctor === -1 || idxDate === -1 || idxMorn === -1 || idxAfter === -1 || idxEven === -1) {
+        alert('CSV 表头中缺少 必要列：医生 / 日期 / 上午 / 下午 / 晚上');
+        return;
+      }
+
+      var allMorningData = [];
+      var allAfternoonData = [];
+      var allEveningData = [];
+      var allTotalData = [];      // 总量视图用
+      var doctorSet = {};         // 用于生成医生筛选列表
+
+      for (var i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        var cols = lines[i].split(',');
+
+        var doctor = cols[idxDoctor];
+        var dateStr = cols[idxDate];
+        var morn = parseFloat(cols[idxMorn] || '0');
+        var after = parseFloat(cols[idxAfter] || '0');
+        var even = parseFloat(cols[idxEven] || '0');
+        var level = idxLevel >= 0 ? cols[idxLevel] : '';
+
+        if (!doctor || !dateStr) continue;
+
+        var parts = dateStr.split('-');
+        if (parts.length < 3) continue;
+        var year = parseInt(parts[0], 10);
+        var month = parseInt(parts[1], 10) - 1; // JS 月份从 0 开始
+        var day = parseInt(parts[2], 10);
+        if (isNaN(year) || isNaN(month) || isNaN(day)) continue;
+        var xVal = Date.UTC(year, month, day);
+
+        // 先计算总量
+        var total = 0;
+        if (!isNaN(morn)) total += morn;
+        if (!isNaN(after)) total += after;
+        if (!isNaN(even)) total += even;
+
+        // 对于超声医师：完全不在图表中展示
+        if (doctor === '超声医师') {
+          continue;
+        }
+
+        // 记录医生姓名（不包含超声医师）
+        if (doctor) {
+          doctorSet[doctor] = true;
+        }
+
+        // 上午
+        if (!isNaN(morn) && morn > 0) {
+          allMorningData.push({
+            x: xVal,
+            y: morn,
+            name: doctor,
+            level: level,
+            period: '上午'
+          });
+        }
+
+        // 下午
+        if (!isNaN(after) && after > 0) {
+          allAfternoonData.push({
+            x: xVal,
+            y: after,
+            name: doctor,
+            level: level,
+            period: '下午'
+          });
+        }
+
+        // 晚上
+        if (!isNaN(even) && even > 0) {
+          allEveningData.push({
+            x: xVal,
+            y: even,
+            name: doctor,
+            level: level,
+            period: '晚上'
+          });
+        }
+
+        if (total > 0) {
+          allTotalData.push({
+            x: xVal,
+            y: total,
+            name: doctor,
+            level: level
+          });
+        }
+      }
+
+      // 当前图表实例（用于筛选后更新）
+      var scatterChart, totalChart;
+
+      // 所有医生名称（用于“全选”时回退）
+      var doctorNames = Object.keys(doctorSet).sort();
+
+      // 动态生成医生多选框
+      var doctorContainer = document.getElementById('doctor-checkboxes');
+      doctorNames.forEach(function (name) {
+        var label = document.createElement('label');
+        label.style.display = 'inline-block';
+        label.style.marginRight = '8px';
+        label.style.whiteSpace = 'nowrap';
+
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'doctor-filter';
+        cb.value = name;
+        cb.checked = true;
+
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(' ' + name));
+        doctorContainer.appendChild(label);
+      });
+
+      // 医生全选 / 全不选
+      var btnAll = document.getElementById('doctor-select-all');
+      var btnClear = document.getElementById('doctor-select-clear');
+      btnAll.onclick = function () {
+        document.querySelectorAll('.doctor-filter').forEach(function (cb) {
+          cb.checked = true;
+        });
+        renderCharts();
+      };
+      btnClear.onclick = function () {
+        document.querySelectorAll('.doctor-filter').forEach(function (cb) {
+          cb.checked = false;
+        });
+        renderCharts();
+      };
+
+      function getSelectedLevels() {
+        var checkboxes = document.querySelectorAll('.level-filter');
+        var levels = [];
+        checkboxes.forEach(function (cb) {
+          if (cb.checked) levels.push(cb.value);
+        });
+        // 如果一个都没选，就返回所有等级，避免空图
+        if (levels.length === 0) {
+          levels = ['预备', '初级', '中级', '高级'];
+        }
+        return levels;
+      }
+
+      function getSelectedDoctors() {
+        var checkboxes = document.querySelectorAll('.doctor-filter');
+        var docs = [];
+        checkboxes.forEach(function (cb) {
+          if (cb.checked) docs.push(cb.value);
+        });
+        // 若一个都没选，则默认视为全选（显示全部医生）
+        if (docs.length === 0) {
+          return doctorNames;
+        }
+        return docs;
+      }
+
+      function filterData(data, selectedLevels, selectedDoctors) {
+        return data.filter(function (point) {
+          // 医生筛选
+          if (point.name && selectedDoctors.indexOf(point.name) === -1) {
+            return false;
+          }
+          // 没有等级信息时，默认也显示
+          if (!point.level) return true;
+          return selectedLevels.indexOf(point.level) !== -1;
+        });
+      }
+
+      function renderCharts() {
+        var selectedLevels = getSelectedLevels();
+        var selectedDoctors = getSelectedDoctors();
+
+        var morningData = filterData(allMorningData, selectedLevels, selectedDoctors);
+        var afternoonData = filterData(allAfternoonData, selectedLevels, selectedDoctors);
+        var eveningData = filterData(allEveningData, selectedLevels, selectedDoctors);
+        var totalData = filterData(allTotalData, selectedLevels, selectedDoctors);
+
+        // ① 分三个 series 的分时段点状图
+        scatterChart = Highcharts.chart('container', {
+          chart: {
+            type: 'scatter',
+            zoomType: 'xy'
+          },
+          title: {
+            text: '医生每日检查量点状图（上午 / 下午 / 晚上）'
+          },
+          xAxis: {
+            type: 'datetime',
+            title: { text: '日期' }
+          },
+          yAxis: {
+            title: { text: '检查量（次数）' },
+            min: 0,
+            allowDecimals: false
+          },
+          legend: {
+            layout: 'horizontal',
+            align: 'center',
+            verticalAlign: 'top'
+          },
+          tooltip: {
+            useHTML: true,
+            headerFormat: '',
+            pointFormatter: function () {
+              return (
+                '医生：<b>' + this.name + '</b><br/>' +
+                '等级：' + (this.level || '无') + '<br/>' +
+                '日期：' + Highcharts.dateFormat('%Y-%m-%d', this.x) + '<br/>' +
+                '时段：' + this.period + '<br/>' +
+                '检查量：<b>' + this.y + '</b>'
+              );
+            }
+          },
+          plotOptions: {
+            scatter: {
+              marker: {
+                radius: 4,
+                symbol: 'circle'
+              }
+            },
+            series: {
+              turboThreshold: 0
+            }
+          },
+          series: [
+            {
+              name: '上午',
+              color: '#2b908f',
+              data: morningData
+            },
+            {
+              name: '下午',
+              color: '#f45b5b',
+              data: afternoonData
+            },
+            {
+              name: '晚上',
+              color: '#90ed7d',
+              data: eveningData
+            }
+          ]
+        });
+
+        // ② 总量视图（仅总量散点）
+        totalChart = Highcharts.chart('container-total', {
+          chart: {
+            type: 'scatter',
+            zoomType: 'xy'
+          },
+          title: {
+            text: '医生每日检查量点状图（总量视图）'
+          },
+          xAxis: {
+            type: 'datetime',
+            title: { text: '日期' }
+          },
+          yAxis: {
+            title: { text: '检查量总次数' },
+            min: 0,
+            allowDecimals: false
+          },
+          tooltip: {
+            useHTML: true,
+            headerFormat: '',
+            pointFormatter: function () {
+              return (
+                '医生：<b>' + this.name + '</b><br/>' +
+                '等级：' + (this.level || '无') + '<br/>' +
+                '日期：' + Highcharts.dateFormat('%Y-%m-%d', this.x) + '<br/>' +
+                '总检查量：<b>' + this.y + '</b>'
+              );
+            }
+          },
+          plotOptions: {
+            scatter: {
+              marker: {
+                radius: 4,
+                symbol: 'circle'
+              }
+            },
+            series: {
+              turboThreshold: 0
+            }
+          },
+          series: [{
+            name: '总量',
+            type: 'scatter',
+            color: '#7cb5ec',
+            data: totalData
+          }]
+        });
+      }
+
+      // 初次渲染
+      renderCharts();
+
+      // 监听等级复选框变化，重新渲染
+      var levelCheckboxes = document.querySelectorAll('.level-filter');
+      levelCheckboxes.forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          renderCharts();
+        });
+      });
+
+      // 监听医生复选框变化，重新渲染
+      var doctorCheckboxes = document.querySelectorAll('.doctor-filter');
+      doctorCheckboxes.forEach(function (cb) {
+        cb.addEventListener('change', function () {
+          renderCharts();
+        });
+      });
+    });
+  </script>
+</body>
+</html>

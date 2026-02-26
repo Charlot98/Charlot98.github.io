@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>登录 - 统计看板</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #111827;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 360px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+      padding: 24px 28px 28px;
+    }
+    .login-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+    .login-sub {
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .field-label {
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #374151;
+    }
+    .field {
+      margin-bottom: 14px;
+    }
+    .field input {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+    }
+    .error {
+      color: #b91c1c;
+      font-size: 12px;
+      min-height: 16px;
+      margin-bottom: 4px;
+    }
+    .login-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 8px 0;
+      border-radius: 999px;
+      border: none;
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.05s ease;
+    }
+    .login-btn:hover {
+      background: #1d4ed8;
+    }
+    .login-btn:active {
+      transform: translateY(1px);
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-title">统计看板登录</div>
+    <div class="login-sub">请输入账号密码后进入首页</div>
+    <div id="error" class="error"></div>
+    <div class="field">
+      <div class="field-label">账号</div>
+      <input id="username" type="text" autocomplete="username" />
+    </div>
+    <div class="field">
+      <div class="field-label">密码</div>
+      <input id="password" type="password" autocomplete="current-password" />
+    </div>
+    <button id="login-btn" class="login-btn">登录</button>
+  </div>
+
+  <script>
+    (function () {
+      var VALID_USER = 'cauvet';
+      var VALID_PASS = 'cauvet';
+      var STORAGE_KEY = 'dash_auth_token';
+
+      function $(id) { return document.getElementById(id); }
+
+      function setError(msg) {
+        $('error').textContent = msg || '';
+      }
+
+      function handleLogin() {
+        var u = $('username').value.trim();
+        var p = $('password').value;
+        if (!u || !p) {
+          setError('请输入账号和密码');
+          return;
+        }
+        if (u !== VALID_USER || p !== VALID_PASS) {
+          setError('账号或密码错误');
+          return;
+        }
+        // 登录成功，写入本地标记
+        try {
+          localStorage.setItem(STORAGE_KEY, 'logged_in');
+        } catch (e) {}
+        // 登录后进入 dashboard
+        window.location.href = 'dashboard.html';
+      }
+
+      $('login-btn').addEventListener('click', handleLogin);
+      $('password').addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') handleLogin();
+      });
+
+      // 如已登录，直接进入 dashboard
+      try {
+        if (localStorage.getItem(STORAGE_KEY) === 'logged_in') {
+          window.location.replace('dashboard.html');
+        }
+      } catch (e) {}
+    })();
+  </script>
+</body>
+</html>
+
