@@ -22,8 +22,6 @@ let csvReferenceData = {
     '猫心超（含体重）': null
 };
 
-// 跟踪spherical是否处于激活状态
-let sphericalActivated = false;
 
 // 跟踪选中的参考体重（用于参考范围查找，不影响输入框）
 let selectedReferenceWeight = null;
@@ -1234,66 +1232,6 @@ function calculateESVI() {
     parameters['ESVI'] = esviRounded;
 }
 
-// 计算并显示 EDV Spherical 值
-// EDV = LVDd^3 (Spherical)
-function calculateEDVSpherical() {
-    const lvddInput = document.querySelector('input[data-param="LVDd"]');
-    const edvSphericalDisplay = document.getElementById('edvSphericalDisplay');
-    
-    if (lvddInput && edvSphericalDisplay) {
-        const lvddValue = parseFloat(lvddInput.value.trim());
-        
-        if (!isNaN(lvddValue) && lvddValue > 0) {
-            // LVDd单位是mm，需要转换为cm
-            const lvddCm = lvddValue / 10;
-            // Spherical公式: EDV = LVDd^3
-            const edvSpherical = Math.pow(lvddCm, 3);
-            // 保存原始值用于模板生成
-            parameters['EDV_spherical'] = edvSpherical;
-            // 当值在0.1到1之间时，保留1位小数，否则保留整数
-            const edvSphericalRounded = (edvSpherical > 0.1 && edvSpherical < 1) ? edvSpherical.toFixed(1) : edvSpherical.toFixed(0);
-            
-            edvSphericalDisplay.value = edvSphericalRounded;
-        } else {
-            // 没有输入值时，显示为空
-            edvSphericalDisplay.value = '';
-            delete parameters['EDV_spherical'];
-        }
-        // 更新EF spherical
-        calculateEFSpherical();
-    }
-}
-
-// 计算并显示 ESV Spherical 值
-// ESV = LVDs^3 (Spherical)
-function calculateESVSpherical() {
-    const lvdsInput = document.querySelector('input[data-param="LVDs"]');
-    const esvSphericalDisplay = document.getElementById('esvSphericalDisplay');
-    
-    if (lvdsInput && esvSphericalDisplay) {
-        const lvdsValue = parseFloat(lvdsInput.value.trim());
-        
-        if (!isNaN(lvdsValue) && lvdsValue > 0) {
-            // LVDs单位是mm，需要转换为cm
-            const lvdsCm = lvdsValue / 10;
-            // Spherical公式: ESV = LVDs^3
-            const esvSpherical = Math.pow(lvdsCm, 3);
-            // 保存原始值用于模板生成
-            parameters['ESV_spherical'] = esvSpherical;
-            // 当值在0.1到1之间时，保留1位小数，否则保留整数
-            const esvSphericalRounded = (esvSpherical > 0.1 && esvSpherical < 1) ? esvSpherical.toFixed(1) : esvSpherical.toFixed(0);
-            
-            esvSphericalDisplay.value = esvSphericalRounded;
-        } else {
-            // 没有输入值时，显示为空
-            esvSphericalDisplay.value = '';
-            delete parameters['ESV_spherical'];
-        }
-        // 更新EF spherical
-        calculateEFSpherical();
-    }
-}
-
 // 计算并显示 LVDDN 值
 // LVDDn = LVDd（cm）/[体重（kg）^0.294]
 function calculateLVDDN() {
@@ -1332,46 +1270,6 @@ function calculateLVDDN() {
     }
 }
 
-// 计算并显示 EF Spherical 值
-// EF spherical = ((EDV spherical - ESV spherical) / EDV spherical) * 100
-function calculateEFSpherical() {
-    const lvddInput = document.querySelector('input[data-param="LVDd"]');
-    const lvdsInput = document.querySelector('input[data-param="LVDs"]');
-    const efSphericalDisplay = document.getElementById('efSphericalDisplay');
-    
-    if (lvddInput && lvdsInput && efSphericalDisplay) {
-        const lvddValue = parseFloat(lvddInput.value.trim());
-        const lvdsValue = parseFloat(lvdsInput.value.trim());
-        
-        // 计算EDV spherical和ESV spherical
-        if (!isNaN(lvddValue) && lvddValue > 0 && !isNaN(lvdsValue) && lvdsValue > 0) {
-            // LVDd和LVDs单位是mm，需要转换为cm
-            const lvddCm = lvddValue / 10;
-            const lvdsCm = lvdsValue / 10;
-            
-            // Spherical公式: EDV = LVDd^3, ESV = LVDs^3
-            const edvSpherical = Math.pow(lvddCm, 3);
-            const esvSpherical = Math.pow(lvdsCm, 3);
-            
-            // 计算EF spherical: EF = ((EDV - ESV) / EDV) * 100
-            if (edvSpherical > 0) {
-                const efSpherical = ((edvSpherical - esvSpherical) / edvSpherical) * 100;
-                // 保存原始值用于模板生成
-                parameters['EF_spherical'] = efSpherical;
-                const efSphericalRounded = efSpherical.toFixed(0);
-                
-                efSphericalDisplay.textContent = `${efSphericalRounded}% Spherical`;
-            } else {
-                efSphericalDisplay.textContent = '-% Spherical';
-                delete parameters['EF_spherical'];
-            }
-        } else {
-            // 即使没有输入值，也显示占位符
-            efSphericalDisplay.textContent = '-% Spherical';
-        }
-    }
-}
-
 // 自动计算 EDV 函数（Teicholz公式）
 // EDV = [7/(2.4+LVDd)] * (LVDd^3)
 function calculateEDV() {
@@ -1394,7 +1292,6 @@ function calculateEDV() {
             }
             delete parameters['EDVI'];
             calculateEF();
-            calculateEDVSpherical();
             return;
         }
         
@@ -1429,8 +1326,6 @@ function calculateEDV() {
             // 如果EDV变化，自动计算EDVI和EF
             calculateEDVI();
             calculateEF();
-            // 同时计算并更新Spherical值
-            calculateEDVSpherical();
         }
     }
 }
@@ -1457,7 +1352,6 @@ function calculateESV() {
             }
             delete parameters['ESVI'];
             calculateEF();
-            calculateESVSpherical();
             return;
         }
         
@@ -1494,26 +1388,19 @@ function calculateESV() {
             // 如果ESV变化，自动计算ESVI和EF
             calculateESVI();
             calculateEF();
-            // 同时计算并更新Spherical值
-            calculateESVSpherical();
         }
     }
 }
 
 // 自动计算 FS 函数
-// FS = (LVDd - LVDs) / LVDd * 100
+// FS = [LVDd - LVDs] / LVDd * 100，结果保留整数
+// 依据 LVDd、LVDs 输入值的变化实时更新，同时保留手动输入功能（用户可随时手动修改）
 function calculateFS() {
     const lvddInput = document.querySelector('input[data-param="LVDd"]');
     const lvdsInput = document.querySelector('input[data-param="LVDs"]');
     const fsInput = document.querySelector('input[data-param="FS"]');
     
     if (lvddInput && lvdsInput && fsInput) {
-        // 如果FS输入框被禁用，说明是自动计算的，应该重新计算
-        // 如果FS输入框没有被禁用，说明用户可能手动输入了，不覆盖
-        if (!fsInput.disabled && fsInput.value.trim()) {
-            return; // 用户手动输入了值，不自动计算
-        }
-        
         const lvddValue = parseFloat(lvddInput.value.trim());
         const lvdsValue = parseFloat(lvdsInput.value.trim());
         
@@ -1521,61 +1408,49 @@ function calculateFS() {
         fsInput.style.color = '';
         
         if (!isNaN(lvddValue) && !isNaN(lvdsValue) && lvddValue > 0) {
-            // FS = (LVDd - LVDs) / LVDd * 100
+            // FS = [LVDd - LVDs] / LVDd * 100
             const fs = ((lvddValue - lvdsValue) / lvddValue) * 100;
-            const fsRounded = fs.toFixed(0);
+            const fsRounded = Math.round(fs).toString();
             
             fsInput.value = fsRounded;
             parameters['FS'] = fsRounded;
         } else {
-            // 如果LVDd或LVDs为空或无效，清空FS并启用输入框
+            // 如果 LVDd 或 LVDs 为空或无效，清空 FS
             fsInput.value = '';
-            fsInput.disabled = false;
             delete parameters['FS'];
         }
     }
 }
 
 // 自动计算 EF 函数
-// EF = (EDV - ESV) / EDV * 100
+// EF = [EDV(Teich) - ESV(Teich)] / EDV(Teich) * 100，结果保留整数
+// 依据 Teich 所在输入框的 EDV、ESV 数值变化实时更新，同时保留手动输入功能（用户可随时手动修改）
 function calculateEF() {
     const edvInput = document.querySelector('input[data-param="EDV"]');
     const esvInput = document.querySelector('input[data-param="ESV"]');
     const efInput = document.querySelector('input[data-param="EF"]');
     
     if (edvInput && esvInput && efInput) {
-        // 如果EF输入框被禁用，说明是自动计算的，应该重新计算
-        // 如果EF输入框没有被禁用，但EDV和ESV都有值，也应该计算（用户可能手动输入了EDV和ESV，希望自动计算EF）
-        // 只有当EF输入框没有被禁用且EF有值，同时EDV或ESV为空时，才不计算
         const edvValue = parseFloat(edvInput.value.trim());
         const esvValue = parseFloat(esvInput.value.trim());
-        const efValue = efInput.value.trim();
-        
-        // 如果EF输入框没有被禁用且有值，且EDV和ESV都有值，说明用户可能想手动输入EF，不覆盖
-        // 但如果EF输入框被禁用，或者EF为空，就应该计算
-        if (!efInput.disabled && efValue && !isNaN(edvValue) && !isNaN(esvValue)) {
-            // 用户手动输入了EF，且EDV和ESV都有值，不自动计算
-            return;
-        }
         
         // 重置颜色
         efInput.style.color = '';
         
-        // 优先使用完整小数值（如果存在），否则使用输入框的值
+        // 优先使用完整小数值（EDV/ESV 由 LVDd/LVDs 自动计算时保存），否则使用 Teich 输入框的值
         const edvForCalc = parameters['EDV_raw'] !== undefined ? parameters['EDV_raw'] : edvValue;
         const esvForCalc = parameters['ESV_raw'] !== undefined ? parameters['ESV_raw'] : esvValue;
         
         if (!isNaN(edvForCalc) && !isNaN(esvForCalc) && edvForCalc > 0) {
-            // EF = (EDV - ESV) / EDV * 100，使用完整小数值进行计算
+            // EF = [EDV - ESV] / EDV * 100
             const ef = ((edvForCalc - esvForCalc) / edvForCalc) * 100;
-            const efRounded = ef.toFixed(0);
+            const efRounded = Math.round(ef).toString();
             
             efInput.value = efRounded;
             parameters['EF'] = efRounded;
         } else {
-            // 如果EDV或ESV为空或无效，清空EF并启用输入框
+            // 如果 EDV 或 ESV 为空或无效，清空 EF
             efInput.value = '';
-            efInput.disabled = false;
             delete parameters['EF'];
         }
     }
@@ -1825,29 +1700,29 @@ function setupInputListeners() {
             // 如果LVDd变化，自动计算EDV和FS
             if (paramName === 'LVDd') {
                 calculateEDV();
-                calculateFS();
-                calculateEDVSpherical();
                 calculateLVDDN();
+                calculateFS();
+                updateSpecialLogicInputColors();
             }
             
             // 如果LVDs变化，自动计算ESV和FS
             if (paramName === 'LVDs') {
                 calculateESV();
                 calculateFS();
-                calculateESVSpherical();
+                updateSpecialLogicInputColors();
             }
             
-        // 如果EDV或ESV变化（手动输入的情况），自动计算EF
-        if (paramName === 'EDV' || paramName === 'ESV') {
-            // 用户手动输入了EDV或ESV，清除对应的_raw值，使用输入框的值进行计算
+            // 如果EDV或ESV被手动编辑，清除对应的_raw值并自动计算EF
             if (paramName === 'EDV') {
                 delete parameters['EDV_raw'];
+                calculateEF();
+                updateSpecialLogicInputColors();
             }
             if (paramName === 'ESV') {
                 delete parameters['ESV_raw'];
+                calculateEF();
+                updateSpecialLogicInputColors();
             }
-            calculateEF();
-        }
             
             // 如果EDV或体重变化，自动计算EDVI
             if (paramName === 'EDV' || paramName === '体重') {
@@ -1970,131 +1845,6 @@ function setupInputListeners() {
     });
 }
 
-// 处理 spherical 显示元素的点击事件
-function setupSphericalClickHandlers() {
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1755',message:'setupSphericalClickHandlers called',data:{readyState:document.readyState},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    const edvSphericalDisplay = document.getElementById('edvSphericalDisplay');
-    const esvSphericalDisplay = document.getElementById('esvSphericalDisplay');
-    const efSphericalDisplay = document.getElementById('efSphericalDisplay');
-    // #region agent log
-    fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1759',message:'Elements found',data:{edvFound:!!edvSphericalDisplay,esvFound:!!esvSphericalDisplay,efFound:!!efSphericalDisplay,edvTag:edvSphericalDisplay?.tagName,esvTag:esvSphericalDisplay?.tagName,efTag:efSphericalDisplay?.tagName},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
-    // 切换所有spherical文本的边框样式
-    function toggleSphericalBorders() {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1761',message:'toggleSphericalBorders called',data:{sphericalActivated,edvExists:!!edvSphericalDisplay,esvExists:!!esvSphericalDisplay,efExists:!!efSphericalDisplay},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-        if (sphericalActivated) {
-            // 激活状态：所有三个都添加边框
-            if (edvSphericalDisplay) {
-                edvSphericalDisplay.classList.add('spherical-activated');
-            }
-            if (esvSphericalDisplay) {
-                esvSphericalDisplay.classList.add('spherical-activated');
-            }
-            if (efSphericalDisplay) {
-                efSphericalDisplay.classList.add('spherical-activated');
-            }
-        } else {
-            // 非激活状态：移除所有边框
-            if (edvSphericalDisplay) {
-                edvSphericalDisplay.classList.remove('spherical-activated');
-            }
-            if (esvSphericalDisplay) {
-                esvSphericalDisplay.classList.remove('spherical-activated');
-            }
-            if (efSphericalDisplay) {
-                efSphericalDisplay.classList.remove('spherical-activated');
-            }
-        }
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1784',message:'Borders toggled',data:{edvHasClass:edvSphericalDisplay?.classList.contains('spherical-activated'),esvHasClass:esvSphericalDisplay?.classList.contains('spherical-activated'),efHasClass:efSphericalDisplay?.classList.contains('spherical-activated')},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-        // #endregion
-    }
-    
-    // 显示提示词（在鼠标位置）
-    function showSphericalNotification(message, event) {
-        const notification = document.getElementById('sphericalNotification');
-        if (notification && event) {
-            notification.textContent = message;
-            notification.style.display = 'block';
-            
-            // 根据消息内容设置颜色：激活时红色，取消激活时蓝色
-            if (message === '已引用spherical计算结果') {
-                notification.style.backgroundColor = '#e74c3c'; // 红色
-            } else if (message === '已取消引用spherical计算结果') {
-                notification.style.backgroundColor = '#4a90e2'; // 蓝色
-            }
-            
-            // 获取鼠标位置
-            const x = event.clientX;
-            const y = event.clientY;
-            
-            // 设置提示词位置（稍微偏移，避免遮挡鼠标）
-            notification.style.left = (x + 10) + 'px';
-            notification.style.top = (y - 40) + 'px';
-            notification.style.transform = 'none'; // 移除居中transform
-            
-            // 3秒后自动隐藏
-            setTimeout(() => {
-                notification.style.display = 'none';
-            }, 3000);
-        }
-    }
-    
-    // 统一的点击处理函数
-    function handleSphericalClick(event) {
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1811',message:'handleSphericalClick called',data:{hasEvent:!!event,clientX:event?.clientX,clientY:event?.clientY,currentState:sphericalActivated},timestamp:Date.now(),runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-        // 切换激活状态
-        const wasActivated = sphericalActivated;
-        sphericalActivated = !sphericalActivated;
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1815',message:'State toggled',data:{wasActivated,nowActivated:sphericalActivated},timestamp:Date.now(),runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        
-        // 显示提示词（传递事件对象以获取鼠标位置）
-        if (sphericalActivated) {
-            showSphericalNotification('已引用spherical计算结果', event);
-        } else {
-            showSphericalNotification('已取消引用spherical计算结果', event);
-        }
-        
-        // 更新边框样式
-        toggleSphericalBorders();
-        // 重新生成模板
-        generateTemplate();
-    }
-    
-    // EDV spherical 点击事件
-    if (edvSphericalDisplay) {
-        edvSphericalDisplay.style.cursor = 'pointer';
-        edvSphericalDisplay.addEventListener('click', function(event) {
-            handleSphericalClick(event);
-        });
-    }
-    
-    // ESV spherical 点击事件
-    if (esvSphericalDisplay) {
-        esvSphericalDisplay.style.cursor = 'pointer';
-        esvSphericalDisplay.addEventListener('click', function(event) {
-            handleSphericalClick(event);
-        });
-    }
-    
-    // EF spherical 点击事件
-    if (efSphericalDisplay) {
-        efSphericalDisplay.style.cursor = 'pointer';
-        efSphericalDisplay.addEventListener('click', function(event) {
-            handleSphericalClick(event);
-        });
-    }
-}
-
 // 设置 tooltip 提示功能
 function setupTooltips() {
     const tooltip = document.getElementById('infoTooltip');
@@ -2103,16 +1853,10 @@ function setupTooltips() {
     // Tooltip 内容定义
     const tooltipContent = {
         'teich': {
-            html: 'LV Volume = [7/(2.4 + LVID)] × LVID³<br><br>含修正系数，适用于常规心超中心室呈<strong>非球形</strong>的心脏。<br><br><a href="https://www.e-echocardiography.com/calculators/volume/left-ventricular-stroke-volume-from-left-ventricular-area" target="_blank">参考网址</a>'
-        },
-        'spherical': {
-            html: 'LV Volume = LVID³<br><br>适用于心室近似<strong>球形</strong>的心脏，例如心衰动物。<br><br><a href="https://www.e-echocardiography.com/calculators/volume/left-ventricular-stroke-volume-from-left-ventricular-area" target="_blank">参考网址</a>'
+            html: 'LV Volume = [7/(2.4 + LVID)] × LVID³<br><a href="https://www.e-echocardiography.com/calculators/volume/left-ventricular-stroke-volume-from-left-ventricular-area" target="_blank">参考网址</a>'
         },
         'lvddn': {
-            html: 'LVDDn = <span style="font-family: serif;">LVDd（cm）</span> / <span style="font-family: serif;">体重（kg）<sup>0.294</sup></span><br><br>当LVDDN≥1.7，可能提示左心室容量过载'
-        },
-        'spherical-click': {
-            html: '单击引用此内容'
+            html: 'LVDDn = <span style="font-family: serif;">LVDd（cm）</span> / <span style="font-family: serif;">体重（kg）<sup>0.294</sup></span><br>参考值LVDDN＜1.7'
         }
     };
     
@@ -2228,28 +1972,56 @@ function setupRefreshButton() {
     }
 }
 
+// 设置右侧栏垂直高度手动调节
+function setupRightSidebarResize() {
+    const rightSidebar = document.getElementById('rightSidebar');
+    const resizeHandle = document.getElementById('rightSidebarResizeHandle');
+    if (!rightSidebar || !resizeHandle) return;
+
+    const TOP_OFFSET = 42;
+    const MIN_HEIGHT = 200;
+    const MAX_HEIGHT = window.innerHeight - TOP_OFFSET;
+
+    resizeHandle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        const startY = e.clientY;
+        const startHeight = rightSidebar.offsetHeight;
+
+        function onMouseMove(e) {
+            const deltaY = e.clientY - startY;
+            let newHeight = startHeight + deltaY;
+            newHeight = Math.max(MIN_HEIGHT, Math.min(MAX_HEIGHT, newHeight));
+            rightSidebar.style.height = newHeight + 'px';
+        }
+
+        function onMouseUp() {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        document.body.style.cursor = 'ns-resize';
+        document.body.style.userSelect = 'none';
+    });
+}
+
 // 立即尝试绑定（如果DOM已加载）
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         setupInputListeners();
-        setupSphericalClickHandlers();
         setupTooltips();
         setupRefreshButton();
-        // 初始化时显示 spherical 值（即使没有输入值也显示占位符）
-        calculateEDVSpherical();
-        calculateESVSpherical();
-        calculateEFSpherical();
+        setupRightSidebarResize();
         calculateLVDDN();
     });
 } else {
     setupInputListeners();
-    setupSphericalClickHandlers();
     setupTooltips();
     setupRefreshButton();
-    // 初始化时显示 spherical 值（即使没有输入值也显示占位符）
-    calculateEDVSpherical();
-    calculateESVSpherical();
-    calculateEFSpherical();
+    setupRightSidebarResize();
     calculateLVDDN();
 }
 
@@ -2591,30 +2363,24 @@ function setHeartRateDefault() {
 
 // 根据含辛普森测量按钮状态显示/隐藏辛普森输入框
 function toggleSimpsonInputs() {
-    const edvSimpsonItem = document.getElementById('edvSimpsonItem');
-    const esvSimpsonItem = document.getElementById('esvSimpsonItem');
     const edvSimpsonInput = document.getElementById('edvSimpsonInput');
     const esvSimpsonInput = document.getElementById('esvSimpsonInput');
     const efSimpsonInput = document.getElementById('efSimpsonInput');
     
     if (simpsonEnabled) {
-        // 显示辛普森输入框
-        if (edvSimpsonItem) edvSimpsonItem.style.display = 'flex';
-        if (esvSimpsonItem) esvSimpsonItem.style.display = 'flex';
+        // 显示辛普森输入框（位于EDV、ESV右侧）
+        if (edvSimpsonInput) edvSimpsonInput.style.display = 'block';
+        if (esvSimpsonInput) esvSimpsonInput.style.display = 'block';
         if (efSimpsonInput) efSimpsonInput.style.display = 'block';
     } else {
         // 隐藏辛普森输入框并清空值
-        if (edvSimpsonItem) {
-            edvSimpsonItem.style.display = 'none';
-        }
         if (edvSimpsonInput) {
+            edvSimpsonInput.style.display = 'none';
             edvSimpsonInput.value = '';
             delete parameters['EDV辛普森'];
         }
-        if (esvSimpsonItem) {
-            esvSimpsonItem.style.display = 'none';
-        }
         if (esvSimpsonInput) {
+            esvSimpsonInput.style.display = 'none';
             esvSimpsonInput.value = '';
             delete parameters['ESV辛普森'];
         }
@@ -3199,24 +2965,9 @@ const templateConfig = {
             result = result.replace(new RegExp(`{${templateParamName}参考值}`, 'g'), refValue || '');
         });
         
-        // 处理EDV/ESV格式：不显示辛普森部分
-        // 根据spherical激活状态使用不同的数值
-        let edv, esv;
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2778',message:'Template generation - selecting values',data:{sphericalActivated,hasEDVSpherical:parameters['EDV_spherical']!==undefined,hasESVSpherical:parameters['ESV_spherical']!==undefined,edvSpherical:parameters['EDV_spherical'],esvSpherical:parameters['ESV_spherical'],edvTeich:get('EDV',''),esvTeich:get('ESV','')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-        if (sphericalActivated) {
-            // 激活状态：EDV、ESV都使用spherical值
-            edv = parameters['EDV_spherical'] !== undefined ? parameters['EDV_spherical'] : get('EDV', '');
-            esv = parameters['ESV_spherical'] !== undefined ? parameters['ESV_spherical'] : get('ESV', '');
-        } else {
-            // 非激活状态：使用默认的Teich值
-            edv = get('EDV', '');
-            esv = get('ESV', '');
-        }
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2786',message:'Values selected for template',data:{edv,esv},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
+        // 处理EDV/ESV格式：使用Teich输入框数值
+        const edv = get('EDV', '');
+        const esv = get('ESV', '');
         const edvFormatted = edv ? formatEDVESV(edv) : '';
         const esvFormatted = esv ? formatEDVESV(esv) : '';
         // 处理EDV辛普森和ESV辛普森
@@ -3260,22 +3011,8 @@ const templateConfig = {
         result = result.replace(/{EDVI}/g, '');
         result = result.replace(/{ESVI}/g, '');
         
-        // 处理EF格式：不显示辛普森部分，保留整数
-        // 根据spherical激活状态使用不同的数值
-        let ef;
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2810',message:'EF value selection',data:{sphericalActivated,hasEFSpherical:parameters['EF_spherical']!==undefined,efSpherical:parameters['EF_spherical'],efTeich:get('EF','')},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-        if (sphericalActivated) {
-            // 激活状态：EF使用spherical值
-            ef = parameters['EF_spherical'] !== undefined ? parameters['EF_spherical'] : get('EF', '');
-        } else {
-            // 非激活状态：使用默认的Teich值
-            ef = get('EF', '');
-        }
-        // #region agent log
-        fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:2817',message:'EF value selected',data:{ef},timestamp:Date.now(),runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
+        // 处理EF格式：不显示辛普森部分，保留整数（手动输入）
+        const ef = get('EF', '');
         const efFormatted = ef ? formatValue(ef, true) : '';
         // 处理EF辛普森
         const efSimpson = get('EF辛普森', '');
