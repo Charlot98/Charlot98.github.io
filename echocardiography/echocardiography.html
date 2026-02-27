@@ -12,7 +12,6 @@
 </head>
 <body>
     <!-- 提示词显示区域 -->
-    <div id="sphericalNotification" class="spherical-notification" style="display: none;"></div>
     <!-- Tooltip 显示区域 -->
     <div id="infoTooltip" class="info-tooltip" style="display: none;"></div>
     <!-- 页面顶部的控制栏 -->
@@ -77,7 +76,7 @@
                             IVSd
                             <span class="reference-value" data-param="IVSd" data-csv-key="IVSd"></span>
                         </label>
-                        <input type="text" class="m-type-input" data-param="IVSd" placeholder="请输入数值">
+                        <input type="text" class="m-type-input" data-param="IVSd" placeholder="请输入数值" tabindex="1">
                     </div>
                     <div class="m-type-item" id="lvddItem">
                         <label class="m-type-label">
@@ -85,35 +84,35 @@
                             <span class="reference-value" data-param="LVDd" data-csv-key="LVDd"></span>
                             <span class="spherical-display tooltip-trigger" id="lvddnDisplay" data-tooltip="lvddn"></span>
                         </label>
-                        <input type="text" class="m-type-input" data-param="LVDd" placeholder="请输入数值">
+                        <input type="text" class="m-type-input" data-param="LVDd" placeholder="请输入数值" tabindex="2">
                     </div>
                     <div class="m-type-item">
                         <label class="m-type-label">
                             LVWd
                             <span class="reference-value" data-param="LVPWd" data-csv-key="LVWd"></span>
                         </label>
-                        <input type="text" class="m-type-input" data-param="LVPWd" placeholder="请输入数值">
+                        <input type="text" class="m-type-input" data-param="LVPWd" placeholder="请输入数值" tabindex="3">
                     </div>
                     <div class="m-type-item">
                         <label class="m-type-label">
                             IVSs
                             <span class="reference-value" data-param="IVSs" data-csv-key="IVSs"></span>
                         </label>
-                        <input type="text" class="m-type-input" data-param="IVSs" placeholder="请输入数值">
+                        <input type="text" class="m-type-input" data-param="IVSs" placeholder="请输入数值" tabindex="4">
                     </div>
                     <div class="m-type-item">
                         <label class="m-type-label">
                             LVDs
                             <span class="reference-value" data-param="LVDs" data-csv-key="LVDs"></span>
                         </label>
-                        <input type="text" class="m-type-input" data-param="LVDs" placeholder="请输入数值">
+                        <input type="text" class="m-type-input" data-param="LVDs" placeholder="请输入数值" tabindex="5">
                     </div>
                     <div class="m-type-item">
                         <label class="m-type-label">
                             LVWs
                             <span class="reference-value" data-param="LVPWs" data-csv-key="LVWs"></span>
                         </label>
-                        <input type="text" class="m-type-input" data-param="LVPWs" placeholder="请输入数值">
+                        <input type="text" class="m-type-input" data-param="LVPWs" placeholder="请输入数值" tabindex="6">
                     </div>
                     <div class="m-type-item" id="edvItem">
                         <label class="m-type-label">
@@ -123,16 +122,10 @@
                         </label>
                         <div class="combined-input-wrapper">
                             <div class="input-with-label-wrapper">
-                                <input type="text" class="m-type-input" data-param="EDV" placeholder="请输入数值">
+                                <input type="text" class="m-type-input" data-param="EDV" placeholder="请输入数值" tabindex="7">
                                 <span class="input-label-text tooltip-trigger" data-tooltip="teich">Teich</span>
                             </div>
-                        </div>
-                        <div class="combined-input-wrapper" style="margin-top: 6px;">
-                            <div class="input-with-label-wrapper">
-                                <input type="text" class="m-type-input tooltip-trigger" id="edvSphericalDisplay" readonly style="cursor: pointer;" data-tooltip="spherical-click">
-                                <span class="input-label-text tooltip-trigger" data-tooltip="spherical">Spherical</span>
-                            </div>
-                            <input type="text" class="m-type-input simpson-input" style="display: none; flex: 1;" aria-hidden="true">
+                            <input type="text" class="m-type-input simpson-input" id="edvSimpsonInput" data-param="EDV辛普森" placeholder="辛普森" style="display: none;" tabindex="8">
                         </div>
                     </div>
                     <div class="m-type-item" id="esvItem">
@@ -143,38 +136,21 @@
                         </label>
                         <div class="combined-input-wrapper">
                             <div class="input-with-label-wrapper">
-                                <input type="text" class="m-type-input" data-param="ESV" placeholder="请输入数值">
+                                <input type="text" class="m-type-input" data-param="ESV" placeholder="请输入数值" tabindex="9">
                                 <span class="input-label-text tooltip-trigger" data-tooltip="teich">Teich</span>
                             </div>
+                            <input type="text" class="m-type-input simpson-input" id="esvSimpsonInput" data-param="ESV辛普森" placeholder="辛普森" style="display: none;" tabindex="10">
                         </div>
-                        <div class="combined-input-wrapper" style="margin-top: 6px;">
-                            <div class="input-with-label-wrapper">
-                                <input type="text" class="m-type-input tooltip-trigger" id="esvSphericalDisplay" readonly style="cursor: pointer;" data-tooltip="spherical-click">
-                                <span class="input-label-text tooltip-trigger" data-tooltip="spherical">Spherical</span>
-                            </div>
-                            <input type="text" class="m-type-input simpson-input" style="display: none; flex: 1;" aria-hidden="true">
-                        </div>
-                    </div>
-                    <div class="m-type-item" id="edvSimpsonItem" style="display: none;">
-                        <label class="m-type-label">EDV辛普森</label>
-                        <input type="text" class="m-type-input simpson-input" id="edvSimpsonInput" data-param="EDV辛普森" placeholder="请输入数值">
-                    </div>
-                    <div class="m-type-item" id="esvSimpsonItem" style="display: none;">
-                        <label class="m-type-label">ESV辛普森</label>
-                        <input type="text" class="m-type-input simpson-input" id="esvSimpsonInput" data-param="ESV辛普森" placeholder="请输入数值">
                     </div>
                     <div class="m-type-item">
                         <label class="m-type-label">FS</label>
-                        <input type="text" class="m-type-input" data-param="FS" placeholder="请输入数值">
+                        <input type="text" class="m-type-input" data-param="FS" placeholder="请输入数值" tabindex="11">
                     </div>
                     <div class="m-type-item" id="efItem">
-                        <label class="m-type-label">
-                            EF
-                            <span class="spherical-display tooltip-trigger" id="efSphericalDisplay" data-tooltip="spherical-click"></span>
-                        </label>
+                        <label class="m-type-label">EF</label>
                         <div class="combined-input-wrapper">
-                            <input type="text" class="m-type-input" data-param="EF" placeholder="请输入数值">
-                            <input type="text" class="m-type-input simpson-input" id="efSimpsonInput" data-param="EF辛普森" placeholder="辛普森" style="display: none; flex: 1;">
+                            <input type="text" class="m-type-input" data-param="EF" placeholder="请输入数值" tabindex="12">
+                            <input type="text" class="m-type-input simpson-input" id="efSimpsonInput" data-param="EF辛普森" placeholder="辛普森" style="display: none;" tabindex="13">
                         </div>
                     </div>
                 </div>
@@ -333,7 +309,8 @@
             </div>
                 
             </div>
-            <div class="right-sidebar">
+            <div class="right-sidebar" id="rightSidebar">
+                <div class="right-sidebar-resize-handle" id="rightSidebarResizeHandle" title="拖拽右下角调节高度"></div>
                 <div class="template-section">
                     <div class="section-header">
                         <h4>所见</h4>
@@ -344,7 +321,7 @@
                             </svg>
                         </button>
                     </div>
-                    <textarea class="template-text" id="findingsText" rows="24" readonly placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
+                    <textarea class="template-text" id="findingsText" rows="20" readonly placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
                     
                     <div class="section-header">
                         <h4 class="conclusion-title">结论</h4>
@@ -355,7 +332,7 @@
                             </svg>
                         </button>
                     </div>
-                    <textarea class="template-text" id="conclusionText" rows="8" readonly placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
+                    <textarea class="template-text" id="conclusionText" rows="5" readonly placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
                     
                     </div>
             </div>
