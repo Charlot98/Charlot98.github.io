@@ -1850,14 +1850,8 @@ function setupTooltips() {
     const tooltip = document.getElementById('infoTooltip');
     if (!tooltip) return;
     
-    // Tooltip 内容定义
+    // Tooltip 内容定义（LVDDN、EDV Teich、ESV Teich 使用原生 title，与右下角一致）
     const tooltipContent = {
-        'teich': {
-            html: 'LV Volume = [7/(2.4 + LVID)] × LVID³<br><a href="https://www.e-echocardiography.com/calculators/volume/left-ventricular-stroke-volume-from-left-ventricular-area" target="_blank">参考网址</a>'
-        },
-        'lvddn': {
-            html: 'LVDDn = <span style="font-family: serif;">LVDd（cm）</span> / <span style="font-family: serif;">体重（kg）<sup>0.294</sup></span><br>参考值LVDDN＜1.7'
-        }
     };
     
     // 获取所有 tooltip 触发器
@@ -1979,13 +1973,15 @@ function setupRightSidebarResize() {
     if (!rightSidebar || !resizeHandle) return;
 
     const TOP_OFFSET = 42;
-    const MIN_HEIGHT = 200;
-    const MAX_HEIGHT = window.innerHeight - TOP_OFFSET;
+    const MIN_HEIGHT = 400;
+    const BOTTOM_BUFFER = 24; // 预留底部空间，避免超出视口
 
     resizeHandle.addEventListener('mousedown', function(e) {
         e.preventDefault();
         const startY = e.clientY;
         const startHeight = rightSidebar.offsetHeight;
+        // 每次拖拽时动态计算上限，确保不超出视口
+        const MAX_HEIGHT = Math.max(MIN_HEIGHT, window.innerHeight - TOP_OFFSET - BOTTOM_BUFFER);
 
         function onMouseMove(e) {
             const deltaY = e.clientY - startY;

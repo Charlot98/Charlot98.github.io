@@ -659,7 +659,7 @@ body {
     width: 50%;
     height: calc(100vh - 42px);
     min-height: 200px;
-    max-height: calc(100vh - 42px);
+    max-height: calc(100vh - 66px); /* 顶栏42px + 底部预留24px，防止拖拽超出视口 */
     padding: 14px 14px 18px 14px;
     overflow: auto;
     background-color: transparent;
@@ -669,15 +669,28 @@ body {
     box-sizing: border-box;
 }
 
-/* 右侧栏垂直高度调节 - 右下角拖拽区域，无图标 */
+/* 右侧栏垂直高度调节 - 右下角拖拽区域，增大接触面积 */
 .right-sidebar-resize-handle {
     position: absolute;
     right: 0;
     bottom: 0;
-    width: 24px;
-    height: 14px;
+    width: 40px;
+    height: 24px;
     cursor: ns-resize;
     z-index: 20;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+}
+
+/* 简单提示 - 虚线与外边框统一 */
+.right-sidebar-resize-handle::after {
+    content: '';
+    width: 14px;
+    height: 0;
+    border-top: 1px dashed #818181;
+    margin-right: 4px;
+    margin-bottom: 4px;
 }
 /* 模板生成区域 - 占满右侧栏高度 */
 .template-section {
