@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <title>医生每日检查量（上午/下午/晚上/总量）点状图</title>
+  <link rel="stylesheet" href="css/common.css" />
+  <link rel="stylesheet" href="css/vets.css" />
+  <script src="js/auth.js"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="js/utils.js"></script>
+</head>
+<body>
+  <div class="nav-sidebar">
+    <div class="nav-sidebar-inner">
+      <a href="1_dashboard.html">首页</a>
+      <div class="nav-sidebar-more">
+        <a href="2_cases_scatter.html">分级（散点图）</a>
+        <a href="3_vets.html" class="active">个人（日期）</a>
+        <a href="4_vets2.html">个人（入职时长）</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+  <div class="filters">
+    <div class="filter-group">
+      <span class="filter-label">医生等级：</span>
+      <label class="chip"><input type="checkbox" class="level-filter" value="预备" checked /> 预备</label>
+      <label class="chip"><input type="checkbox" class="level-filter" value="初级" checked /> 初级</label>
+      <label class="chip"><input type="checkbox" class="level-filter" value="中级" checked /> 中级</label>
+      <label class="chip"><input type="checkbox" class="level-filter" value="高级" checked /> 高级</label>
+    </div>
+    <div class="filter-group" style="margin-left: 24px;">
+      <span class="filter-label">医生：</span>
+      <span class="doctor-actions">
+        <button id="doctor-select-all" type="button">全选</button>
+        <button id="doctor-select-clear" type="button" style="margin-left: 4px;">取消全选</button>
+      </span>
+    </div>
+  </div>
+  <div style="padding: 0 16px 12px;">
+    <div id="doctor-checkboxes"></div>
+  </div>
+
+  <div class="page-header page-header-vets">
+    <div class="page-title">医生每日检查量点状图</div>
+    <div class="page-controls">
+      <span>开始月份：</span>
+      <select id="start-month"></select>
+      <span>结束月份：</span>
+      <select id="end-month"></select>
+    </div>
+  </div>
+
+  <div id="container" class="chart-container chart-vets-main"></div>
+  <div id="container-total" class="chart-container chart-vets-total"></div>
+  <div id="container-cumulative" class="chart-container chart-vets-cumulative"></div>
+  </div>
+
+  <script src="js/vets.js"></script>
+</body>
+</html>

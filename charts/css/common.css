@@ -1,0 +1,122 @@
+body {
+  font-family: "宋体", "SimSun", STSong, serif;
+}
+
+/* 顶部导航（cases_lines, vets 等） */
+.nav-top {
+  padding: 8px 16px 0;
+  font-size: 14px;
+}
+.nav-top a {
+  text-decoration: none;
+  color: #6b7280;
+  transition: color 0.15s ease;
+}
+.nav-top a:hover {
+  color: #374151;
+}
+
+/* 左侧折叠侧边栏（cases_scatter 等）- 固定宽度，上下折叠，hover 不改变页面布局 */
+.nav-sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 130px;
+  min-width: 130px;
+  background: transparent;
+  border-right: 1px solid #e5e7eb;
+  z-index: 9999;
+  overflow: visible;
+}
+.nav-sidebar-inner {
+  padding: 12px 0;
+  width: 130px;
+  min-width: 130px;
+}
+.nav-sidebar a {
+  display: block;
+  padding: 10px 12px;
+  text-decoration: none;
+  color: #6b7280;
+  font-size: 14px;
+  white-space: nowrap;
+  text-align: center;
+  background: transparent;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.nav-sidebar a:hover {
+  color: #374151;
+  background: transparent;
+}
+.nav-sidebar a.active {
+  color: #0072c7;
+}
+/* 默认仅显示首页，其余项向下折叠隐藏；hover 时展开 */
+.nav-sidebar-more {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+.nav-sidebar:hover .nav-sidebar-more {
+  max-height: 280px;
+}
+.nav-sidebar-more a {
+  white-space: normal;
+  word-break: keep-all;
+}
+.main-content {
+  margin-left: 130px;
+  margin-right: 16px;
+  padding-top: 8px;
+}
+
+/* 页面标题与控件 */
+.page-header {
+  margin: 4px 0 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  position: relative;
+}
+.page-title {
+  font-weight: 600;
+  text-align: center;
+}
+.page-controls {
+  font-size: 16px;
+  position: absolute;
+  right: 40px;
+}
+.page-controls span { margin-right: 4px; }
+.page-controls span + span { margin: 0 4px 0 12px; }
+.page-controls select {
+  font-size: 15px;
+  padding: 2px 6px;
+}
+
+/* 图表容器 */
+.chart-container {
+  width: 100%;
+  height: 600px;
+  margin-top: 16px;
+}
+.chart-container-second {
+  margin-top: 40px;
+}
+.page-header-vets .page-title { font-size: 16px; }
+.page-header-vets .page-controls { font-size: 14px; }
+.page-header-vets .page-controls select { font-size: 14px; }
+.chart-vets-main {
+  height: 650px;
+  margin-bottom: 40px;
+}
+.chart-vets-total {
+  height: 450px;
+  margin-top: 0;
+}
+.chart-vets-cumulative {
+  height: 450px;
+  margin-top: 40px;
+}

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>登录 - 统计看板</title>
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <link rel="stylesheet" href="css/login.css" />
+</head>
+<body>
+  <div class="login-card">
+    <div class="login-title">统计看板登录</div>
+    <div class="login-sub">请输入账号密码后进入首页</div>
+    <div id="error" class="error"></div>
+    <div class="field">
+      <div class="field-label">账号</div>
+      <input id="username" type="text" autocomplete="username" />
+    </div>
+    <div class="field">
+      <div class="field-label">密码</div>
+      <input id="password" type="password" autocomplete="current-password" />
+    </div>
+    <button id="login-btn" class="login-btn">登录</button>
+  </div>
+  <script src="js/login.js"></script>
+</body>
+</html>
