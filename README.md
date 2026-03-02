@@ -5,4 +5,4 @@
 
 - [知识库](https://charlot98.github.io/my_docs/)
 
-- [统计](https://charlot98.github.io/charts/1_dashboard.html)
+- [统计](https://charlot98.github.io/charts/dashboard.html)

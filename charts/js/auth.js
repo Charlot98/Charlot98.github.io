@@ -5,15 +5,15 @@
     var isReload = nav ? nav.type === 'reload' : (performance.navigation && performance.navigation.type === 1);
     if (isReload) {
       try { localStorage.removeItem(KEY); } catch (e) {}
-      window.location.replace('0_login.html');
+      window.location.replace('login.html');
       return;
     }
   } catch (e) {}
   try {
     if (localStorage.getItem(KEY) !== 'logged_in') {
-      window.location.replace('0_login.html');
+      window.location.replace('login.html');
     }
   } catch (e) {
-    window.location.replace('0_login.html');
+    window.location.replace('login.html');
   }
 })();
