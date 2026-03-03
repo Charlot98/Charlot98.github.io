@@ -1956,11 +1956,22 @@ function setupTooltips() {
     });
 }
 
-// 设置刷新按钮
+// 禁用所有输入的记忆功能（刷新后不恢复历史数据）
+function disableInputMemory() {
+    document.querySelectorAll('input, select, textarea').forEach(el => {
+        el.setAttribute('autocomplete', 'off');
+    });
+}
+
+// 设置刷新按钮 - 清空所有数据后刷新，不记忆
 function setupRefreshButton() {
     const refreshButton = document.getElementById('refreshButton');
     if (refreshButton) {
         refreshButton.addEventListener('click', function() {
+            // 清空所有输入框、下拉框
+            document.querySelectorAll('input[type="text"]').forEach(el => { el.value = ''; });
+            document.querySelectorAll('select').forEach(el => { el.selectedIndex = 0; });
+            document.querySelectorAll('textarea').forEach(el => { el.value = ''; });
             window.location.reload();
         });
     }
@@ -2007,6 +2018,7 @@ function setupRightSidebarResize() {
 // 立即尝试绑定（如果DOM已加载）
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
+        disableInputMemory();
         setupInputListeners();
         setupTooltips();
         setupRefreshButton();
@@ -2014,6 +2026,7 @@ if (document.readyState === 'loading') {
         calculateLVDDN();
     });
 } else {
+    disableInputMemory();
     setupInputListeners();
     setupTooltips();
     setupRefreshButton();
