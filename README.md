@@ -5,4 +5,6 @@
 
 - [知识库](https://charlot98.github.io/my_docs/)
 
-- [统计](https://charlot98.github.io/charts/dashboard.html)
+- [统计看板](https://charlot98.github.io/charts/dashboard.html)
+
+- [牙表](https://charlot98.github.io/dentalchart/dental_chart_pub.html)
