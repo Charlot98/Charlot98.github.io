@@ -21,6 +21,7 @@ loadCSV('不同等级医生工作量.csv', function (csv) {
 
   var seriesMap = {};
   var overallDaily = {};
+  var rawRows = [];
 
   for (var i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
@@ -34,6 +35,8 @@ loadCSV('不同等级医生工作量.csv', function (csv) {
     var wdFlag = idxWorkday >= 0 ? (cols[idxWorkday] || '') : '';
 
     if (!dateStr || !level) continue;
+    var monthKey = dateStr.substring(0, 7);
+    rawRows.push({ cols: cols, _monthKey: monthKey });
     var parts = dateStr.split('-');
     if (parts.length < 3) continue;
     var year = parseInt(parts[0], 10);
@@ -293,4 +296,19 @@ loadCSV('不同等级医生工作量.csv', function (csv) {
   renderCharts();
   startSel.addEventListener('change', renderCharts);
   endSel.addEventListener('change', renderCharts);
+
+  document.getElementById('export-excel-btn').onclick = function () {
+    var startMonth = startSel.value;
+    var endMonth = endSel.value;
+    if (startMonth > endMonth) { var t = startMonth; startMonth = endMonth; endMonth = t; }
+    var filtered = rawRows.filter(function (r) {
+      return r._monthKey >= startMonth && r._monthKey <= endMonth;
+    });
+    var rows = filtered.map(function (r) { return r.cols; });
+    if (!rows.length) {
+      alert('当前日期范围内没有数据可导出');
+      return;
+    }
+    downloadExcel(header, rows, '不同等级医生工作量_' + startMonth + '_' + endMonth + '.xlsx');
+  };
 });

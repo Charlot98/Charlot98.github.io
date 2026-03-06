@@ -26,7 +26,7 @@ loadCSV('医生列表.csv', function (listCsv) {
     return;
   }
 
-  var header = lines[0].split(',');
+  var header = lines[0].split(',').map(function (h) { return h.trim(); });
   var idxDoctor = header.indexOf('医生');
   var idxDate = header.indexOf('日期');
   var idxMorn = header.indexOf('上午');
@@ -43,6 +43,7 @@ loadCSV('医生列表.csv', function (listCsv) {
   var allAfternoonData = [];
   var allEveningData = [];
   var allTotalData = [];
+  var rawRows = [];
   var doctorSet = {};
 
   for (var i = 1; i < lines.length; i++) {
@@ -73,6 +74,7 @@ loadCSV('医生列表.csv', function (listCsv) {
 
     if (doctor) doctorSet[doctor] = true;
     var monthKey = dateStr.substring(0, 7);
+    rawRows.push({ cols: cols, _monthKey: monthKey });
 
     if (!isNaN(morn) && morn > 0) {
       allMorningData.push({
@@ -420,5 +422,29 @@ loadCSV('医生列表.csv', function (listCsv) {
   });
   startSel.addEventListener('change', renderCharts);
   endSel.addEventListener('change', renderCharts);
+
+  document.getElementById('export-excel-btn').onclick = function () {
+    var startMonth = startSel.value;
+    var endMonth = endSel.value;
+    if (startMonth > endMonth) { var t = startMonth; startMonth = endMonth; endMonth = t; }
+    var selectedLevels = getSelectedLevels();
+    var selectedDoctors = getSelectedDoctors();
+    var filtered = rawRows.filter(function (r) {
+      if (r._monthKey < startMonth || r._monthKey > endMonth) return false;
+      var doc = r.cols[idxDoctor];
+      if (!doc || selectedDoctors.indexOf(doc) === -1) return false;
+      if (selectedLevels.length > 0) {
+        var lvl = idxLevel >= 0 ? (r.cols[idxLevel] || '').trim() : '';
+        if (lvl && selectedLevels.indexOf(lvl) === -1) return false;
+      }
+      return true;
+    });
+    var rows = filtered.map(function (r) { return r.cols; });
+    if (!rows.length) {
+      alert('当前筛选条件下没有数据可导出');
+      return;
+    }
+    downloadExcel(header, rows, '医生检查量_' + startMonth + '_' + endMonth + '.xlsx');
+  };
   });
 });

@@ -34,3 +34,18 @@ function loadCSV(path, callback) {
   };
   xhr.send();
 }
+
+/** 导出为 Excel：header 为表头数组，rows 为二维数组（每行一列数组），filename 不含扩展名会补 .xlsx */
+function downloadExcel(header, rows, filename) {
+  if (typeof XLSX === 'undefined') {
+    alert('导出需要 SheetJS，请刷新页面后重试');
+    return;
+  }
+  if (!filename) filename = 'export';
+  if (filename.indexOf('.xlsx') === -1) filename += '.xlsx';
+  var aoa = [header].concat(rows);
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  var wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '数据');
+  XLSX.writeFile(wb, filename);
+}

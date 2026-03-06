@@ -45,6 +45,7 @@ loadCSV('医生列表.csv', function (listCsv) {
   var allAfternoonData = [];
   var allEveningData = [];
   var allTotalData = [];
+  var rawRows = [];
   var doctorSet = {};
   var tenureMin = Infinity, tenureMax = -Infinity;
 
@@ -106,6 +107,7 @@ loadCSV('医生列表.csv', function (listCsv) {
         _checkDate: checkDateTs, _tenure: tenure
       });
     }
+    rawRows.push({ cols: cols, _tenure: tenure });
   }
   var doctorNames = doctorOrder.filter(function (d) { return doctorSet[d]; });
   var extra = Object.keys(doctorSet).filter(function (d) { return doctorOrder.indexOf(d) === -1; });
@@ -304,7 +306,7 @@ loadCSV('医生列表.csv', function (listCsv) {
 
     Highcharts.chart('container-total', {
       chart: { type: 'scatter', zoomType: 'xy' },
-      title: { text: '医生每日检查量（总量）' },
+      title: { text: '医生每日检查量' },
       xAxis: {
         type: 'linear',
         title: { text: '入职时长（天）' },
@@ -330,14 +332,16 @@ loadCSV('医生列表.csv', function (listCsv) {
       series: totalSeries
     });
 
+    var minDaysNum = parseInt(minDays, 10);
     var maxDaysNum = parseInt(maxDays, 10);
+    if (isNaN(minDaysNum)) minDaysNum = 0;
     if (isNaN(maxDaysNum)) maxDaysNum = Infinity;
     var filteredForSum = filterData(allTotalData, selectedLevels, selectedDoctors);
     var doctorTotals = {};
     selectedDoctors.forEach(function (doc) { doctorTotals[doc] = 0; });
     filteredForSum.forEach(function (p) {
       var t = p._tenure != null ? p._tenure : p.x;
-      if (t <= maxDaysNum && doctorTotals[p.name] !== undefined) {
+      if (t >= minDaysNum && t <= maxDaysNum && doctorTotals[p.name] !== undefined) {
         doctorTotals[p.name] += p.y;
       }
     });
@@ -346,7 +350,7 @@ loadCSV('医生列表.csv', function (listCsv) {
 
     Highcharts.chart('container-cumulative', {
       chart: { type: 'column' },
-      title: { text: '入职天数 ≤ ' + maxDays + ' 天内的病例总数（按医生）' },
+      title: { text: ' 入职 '+ minDays + ' 天~ ' + maxDays + ' 天的检查量' },
       xAxis: {
         type: 'category',
         categories: barCategories
@@ -378,5 +382,32 @@ loadCSV('医生列表.csv', function (listCsv) {
   minDaysInput.addEventListener('change', renderCharts);
   maxDaysInput.addEventListener('input', renderCharts);
   maxDaysInput.addEventListener('change', renderCharts);
+
+  document.getElementById('export-excel-btn').onclick = function () {
+    var minDays = parseInt(minDaysInput.value, 10);
+    var maxDays = parseInt(maxDaysInput.value, 10);
+    if (isNaN(minDays)) minDays = 0;
+    if (isNaN(maxDays)) maxDays = 99999;
+    if (minDays > maxDays) { var t = minDays; minDays = maxDays; maxDays = t; }
+    var selectedLevels = getSelectedLevels();
+    var selectedDoctors = getSelectedDoctors();
+    var filtered = rawRows.filter(function (r) {
+      var t = r._tenure;
+      if (t == null || t < minDays || t > maxDays) return false;
+      var doc = r.cols[idxDoctor];
+      if (!doc || selectedDoctors.indexOf(doc) === -1) return false;
+      if (selectedLevels.length > 0) {
+        var lvl = idxLevel >= 0 ? (r.cols[idxLevel] || '').trim() : '';
+        if (lvl && selectedLevels.indexOf(lvl) === -1) return false;
+      }
+      return true;
+    });
+    var rows = filtered.map(function (r) { return r.cols; });
+    if (!rows.length) {
+      alert('当前筛选条件下没有数据可导出');
+      return;
+    }
+    downloadExcel(header, rows, '医生检查量_入职' + minDays + '-' + maxDays + '天.xlsx');
+  };
   });
 });

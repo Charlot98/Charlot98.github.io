@@ -1,0 +1,28 @@
+/* 引导页：文本与图片居中，自适应宽度，双侧留白 */
+body {
+  margin: 0;
+  padding: 24px 5%;
+  box-sizing: border-box;
+}
+
+.guide-wrap {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.guide-title {
+  font-size: 1.25rem;
+  margin-bottom: 16px;
+  background-color:rgba(123, 197, 137, 0.85);
+}
+
+
+.guide-img {
+  display: block;
+  width: 720px;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
