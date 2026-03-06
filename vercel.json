@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/my_docs/:path*", "destination": "/my_docs/200.html" },
+    { "source": "/vetvault_changelog/:path*", "destination": "/vetvault_changelog/200.html" }
+  ]
+}

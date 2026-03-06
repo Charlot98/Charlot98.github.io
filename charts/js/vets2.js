@@ -1,4 +1,4 @@
-loadCSV('00 医生列表.csv', function (listCsv) {
+loadCSV('医生列表.csv', function (listCsv) {
   var listLines = listCsv.trim().split('\n');
   var doctorOrder = [];
   var doctorLevelMap = {};
@@ -20,10 +20,10 @@ loadCSV('00 医生列表.csv', function (listCsv) {
     }
   }
 
-  loadCSV('03 医生检查量.csv', function (csv) {
+  loadCSV('医生检查量.csv', function (csv) {
   var lines = csv.trim().split('\n');
   if (lines.length <= 1) {
-    alert('03 医生检查量.csv 内容为空或只有表头');
+    alert('医生检查量.csv 内容为空或只有表头');
     return;
   }
 
@@ -304,13 +304,13 @@ loadCSV('00 医生列表.csv', function (listCsv) {
 
     Highcharts.chart('container-total', {
       chart: { type: 'scatter', zoomType: 'xy' },
-      title: { text: '医生每日检查量点状图（总量视图）' },
+      title: { text: '医生每日检查量（总量）' },
       xAxis: {
         type: 'linear',
         title: { text: '入职时长（天）' },
         allowDecimals: false
       },
-      yAxis: { title: { text: '检查量总次数' }, min: 0, allowDecimals: false },
+      yAxis: { title: { text: '检查量（次数）' }, min: 0, allowDecimals: false },
       credits: { enabled: false },
       legend: { layout: 'horizontal', align: 'center', verticalAlign: 'top' },
       tooltip: {
@@ -352,7 +352,7 @@ loadCSV('00 医生列表.csv', function (listCsv) {
         categories: barCategories
       },
       yAxis: {
-        title: { text: '总病例数' },
+        title: { text: '检查量（次数）' },
         min: 0,
         allowDecimals: false
       },

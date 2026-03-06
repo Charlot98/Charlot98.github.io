@@ -14,26 +14,25 @@
     <div class="nav-sidebar-inner">
       <a href="dashboard.html">首页</a>
       <div class="nav-sidebar-more">
-        <a href="cases_scatter.html" class="active">分级（散点图）</a>
-        <a href="vets.html">个人（日期）</a>
+        <a href="cases_scatter.html" class="active">分级（正常日期）</a>
+        <a href="vets.html">个人（正常日期）</a>
         <a href="vets2.html">个人（入职时长）</a>
       </div>
     </div>
   </div>
 
   <div class="main-content">
-    <div class="page-header">
-      <div class="page-title">不同等级医生每日人均病例量（仅上午+下午）</div>
+    <div class="page-header page-header-cases">
       <div class="page-controls">
         <span>开始月份：</span>
         <select id="start-month"></select>
         <span>结束月份：</span>
         <select id="end-month"></select>
       </div>
+      <div class="page-title">不同等级医生每日人均病例量（仅上午+下午）</div>
     </div>
 
     <div id="container-levels" class="chart-container"></div>
-    <div id="container-level-fee" class="chart-container chart-container-second"></div>
   </div>
 
   <script src="js/cases_scatter.js"></script>

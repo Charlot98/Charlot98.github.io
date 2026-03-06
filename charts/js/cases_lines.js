@@ -1,7 +1,7 @@
-loadCSV('05不同等级医生工作量.csv', function (csv) {
+loadCSV('不同等级医生工作量.csv', function (csv) {
   var lines = csv.trim().split('\n');
   if (lines.length <= 1) {
-    alert('05不同等级医生工作量.csv 内容为空或只有表头');
+    alert('不同等级医生工作量.csv 内容为空或只有表头');
     return;
   }
 

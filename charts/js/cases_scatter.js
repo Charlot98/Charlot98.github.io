@@ -1,7 +1,7 @@
-loadCSV('05不同等级医生工作量.csv', function (csv) {
+loadCSV('不同等级医生工作量.csv', function (csv) {
   var lines = csv.trim().split('\n');
   if (lines.length <= 1) {
-    alert('05不同等级医生工作量.csv 内容为空或只有表头');
+    alert('不同等级医生工作量.csv 内容为空或只有表头');
     return;
   }
 
@@ -79,6 +79,20 @@ loadCSV('05不同等级医生工作量.csv', function (csv) {
   });
   var months = Object.keys(monthSet).sort();
 
+  var minStartMonth = '2023-10';
+  if (months.length && months[0] > minStartMonth) {
+    var filled = [];
+    var y = 2023, m = 10;
+    var target = months[0];
+    while (true) {
+      var key = y + '-' + ('0' + m).slice(-2);
+      if (key >= target) break;
+      filled.push(key);
+      m++; if (m > 12) { m = 1; y++; }
+    }
+    months = filled.concat(months);
+  }
+
   var startSel = document.getElementById('start-month');
   var endSel = document.getElementById('end-month');
   months.forEach(function (m) {
@@ -88,7 +102,7 @@ loadCSV('05不同等级医生工作量.csv', function (csv) {
     opt2.value = m; opt2.textContent = m; endSel.appendChild(opt2);
   });
   if (months.length) {
-    startSel.value = months[0];
+    startSel.value = months.indexOf(minStartMonth) >= 0 ? minStartMonth : months[0];
     endSel.value = months[months.length - 1];
   }
 
@@ -220,31 +234,6 @@ loadCSV('05不同等级医生工作量.csv', function (csv) {
   }
 
   /** 为 levels 等级生成回归曲线序列（费用 fee） */
-  function buildRegressionSeriesFee(filteredMap, levels) {
-    levels = levels || order.concat(['全部']);
-    var arr = [];
-    levels.forEach(function (lvl) {
-      var pts = filteredMap[lvl];
-      if (!pts || pts.length < 3) return;
-      var feePts = pts.map(function (p) { return { x: p.x, y: p.fee }; });
-      var result = polynomialRegression(feePts, 'x', 'y', 2);
-      if (!result) return;
-      var lineData = regressionCurveData(feePts, result, 'x', 'y');
-      arr.push({
-        name: lvl + ' 回归曲线',
-        type: 'spline',
-        data: lineData,
-        marker: { enabled: false },
-        line: { width: 2 },
-        color: levelColors[lvl] || '#666',
-        showInLegend: false,
-        linkedTo: 'level-' + lvl,
-        enableMouseTracking: true
-      });
-    });
-    return arr;
-  }
-
   function renderCharts() {
     if (!months.length) return;
     var startMonth = startSel.value;
@@ -260,19 +249,6 @@ loadCSV('05不同等级医生工作量.csv', function (csv) {
 
     var regressionCounts = buildRegressionSeries(filteredMap);
     var allSeriesCounts = seriesForCounts.concat(regressionCounts);
-
-    var feeMap = {};
-    Object.keys(filteredMap).forEach(function (lvl) {
-      feeMap[lvl] = filteredMap[lvl].map(function (p) {
-        return { x: p.x, y: p.fee, level: p.level, ratio: p.ratio,
-          levelCount: p.levelCount, workFlag: p.workFlag };
-      });
-    });
-    var feeSeries = buildSeriesFromMap(feeMap);
-    var feeSeriesForChart = feeSeries;
-
-    var regressionFee = buildRegressionSeriesFee(filteredMap);
-    var allSeriesFee = feeSeriesForChart.concat(regressionFee);
 
     Highcharts.chart('container-levels', {
       chart: { type: 'scatter', zoomType: 'x' },
@@ -312,42 +288,6 @@ loadCSV('05不同等级医生工作量.csv', function (csv) {
       series: allSeriesCounts
     });
 
-    Highcharts.chart('container-level-fee', {
-      chart: { type: 'scatter', zoomType: 'x' },
-      title: { text: '不同等级医生每日人均总费用（仅上午+下午）' },
-      xAxis: {
-        type: 'datetime',
-        title: { text: null },
-        tickInterval: sameMonthRange ? 24 * 3600 * 1000 * 10 : 30 * 24 * 3600 * 1000,
-        labels: {
-          formatter: function () {
-            return sameMonthRange
-              ? Highcharts.dateFormat('%Y-%m-%d', this.value)
-              : Highcharts.dateFormat('%Y-%m', this.value);
-          }
-        }
-      },
-      yAxis: { title: { text: '每日人均总费用' }, min: 0 },
-      legend: { layout: 'horizontal', align: 'center', verticalAlign: 'top' },
-      credits: { enabled: false },
-      tooltip: {
-        useHTML: true, headerFormat: '',
-        pointFormatter: function () {
-          if (this.level == null) {
-            return '日期：<b>' + Highcharts.dateFormat('%Y-%m-%d', this.x) + '</b><br/>预测人均费用：<b>' + this.y.toFixed(2) + '</b>';
-          }
-          return '日期：<b>' + Highcharts.dateFormat('%Y-%m-%d', this.x) + '</b><br/>' +
-            '医生等级：' + this.level + '<br/>每日人均总费用：<b>' + this.y.toFixed(2) + '</b><br/>' +
-            '每日费用病例比：' + this.ratio.toFixed(2) + '<br/>' +
-            '该等级医生数量：' + this.levelCount + '<br/>工作日/周末：' + (this.workFlag || '');
-        }
-      },
-      plotOptions: {
-        scatter: { marker: { enabled: true, radius: 3, symbol: 'circle' } },
-        series: { turboThreshold: 0 }
-      },
-      series: allSeriesFee
-    });
   }
 
   renderCharts();

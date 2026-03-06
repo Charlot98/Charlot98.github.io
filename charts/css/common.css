@@ -25,7 +25,7 @@ body {
   width: 130px;
   min-width: 130px;
   background: transparent;
-  border-right: 1px solid #e5e7eb;
+  border-right: none;
   z-index: 9999;
   overflow: visible;
 }
@@ -108,13 +108,29 @@ body {
 .page-header-vets .page-title { font-size: 16px; }
 .page-header-vets .page-controls { font-size: 14px; }
 .page-header-vets .page-controls select { font-size: 14px; }
+.page-header-cases {
+  margin: 4px 0 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  font-size: 18px;
+}
+.page-header-cases .page-controls {
+  align-self: flex-end;
+  position: static;
+  margin-bottom: 4px;
+}
+.page-header-cases .page-title {
+  width: 100%;
+  text-align: center;
+}
 .chart-vets-main {
   height: 650px;
   margin-bottom: 40px;
 }
 .chart-vets-total {
   height: 450px;
-  margin-top: 0;
+  margin-top: 32px;
 }
 .chart-vets-cumulative {
   height: 450px;

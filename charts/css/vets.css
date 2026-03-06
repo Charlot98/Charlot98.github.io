@@ -10,6 +10,7 @@ body {
   align-items: center;
   font-size: 14px;
   color: #4b5563;
+  border: none;
 }
 .filter-group {
   display: flex;
@@ -52,7 +53,7 @@ body {
 }
 #doctor-checkboxes {
   margin-top: 4px;
-  max-height: 150px;
+  max-height: 320px;
   overflow-y: auto;
   border: 1px solid #e5e7eb;
   padding: 6px;
