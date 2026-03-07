@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <title>超声造影统计</title>
+  <link rel="stylesheet" href="css/common.css" />
+  <script src="js/auth.js"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="js/utils.js"></script>
+</head>
+<body>
+  <div class="nav-sidebar">
+    <div class="nav-sidebar-inner">
+      <a href="dashboard.html">返回首页</a>
+      <a></a>
+      <div class="nav-sidebar-more">
+        <a href="cases_scatter.html">分级（正常日期）</a>
+        <a href="vets.html">个人（正常日期）</a>
+        <a href="vets2.html">个人（入职时长）</a>
+        <a href="ultra_contrast.html" class="active">超声造影</a>
+        <a href="guide.html">使用指南</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="chart-wrap-combined page-header-ultra">
+      <div class="chart-inner-header">
+        <div class="chart-inner-title">超声造影月度病例统计</div>
+        <div class="chart-inner-controls">
+          <span>开始月份：</span>
+          <select id="start-month"></select>
+          <span>结束月份：</span>
+          <select id="end-month"></select>
+        </div>
+      </div>
+      <div id="container-combined" class="chart-container"></div>
+    </div>
+  </div>
+
+  <script src="js/ultra_contrast.js"></script>
+</body>
+</html>
