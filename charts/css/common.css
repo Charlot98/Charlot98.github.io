@@ -145,3 +145,33 @@ body {
   height: 450px;
   margin-top: 40px;
 }
+
+.chart-wrap-combined {
+  margin-top: 8px;
+}
+.page-header-ultra .chart-inner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 4px 0;
+  font-size: 16px;
+}
+.page-header-ultra .chart-inner-title {
+  font-weight: 600;
+  font-size: 18px;
+}
+.page-header-ultra .chart-inner-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.page-header-ultra .chart-inner-controls span { margin-right: 2px; }
+.page-header-ultra .chart-inner-controls select {
+  font-size: 14px;
+  padding: 4px 8px;
+  margin-right: 12px;
+}
