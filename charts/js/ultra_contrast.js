@@ -49,7 +49,7 @@ loadCSV('超声造影（26.2.10）.csv', function (csv) {
     var cols = parseCSVLine(lines[i]);
     if (cols.length <= Math.max(idxReportTime, idxLiangExing)) continue;
     var monthKey = parseReportDate(cols[idxReportTime]);
-    if (!monthKey) continue;
+    if (!monthKey || monthKey.indexOf('2026') === 0) continue;
     var lx = (cols[idxLiangExing] || '').trim();
     if (lx !== '良性' && lx !== '恶性') lx = '其他';
 
@@ -63,10 +63,10 @@ loadCSV('超声造影（26.2.10）.csv', function (csv) {
     alert('无有效数据');
     return;
   }
-  var minStartMonth = '2022-01';
+  var minStartMonth = '2020-01';
   if (months.length && months[0] > minStartMonth) {
     var filled = [];
-    var y = 2022, m = 1;
+    var y = 2020, m = 1;
     var target = months[0];
     while (true) {
       var key = y + '-' + ('0' + m).slice(-2);
