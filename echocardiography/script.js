@@ -518,6 +518,9 @@ let mdTemplates = {
 // 含辛普森测量按钮状态
 let simpsonEnabled = false;
 
+// 辛普森数据缓存：按「疾病类型_参考范围」存储，切换疾病/参考/辛普森按钮时保留，刷新清空时清除
+let simpsonDataCache = {};
+
 // 根据疾病类型和参考范围生成模版文件名
 function getTemplateFileName(diseaseType, referenceRange, useSimpson = false) {
     // 模版文件名映射规则
@@ -1963,16 +1966,24 @@ function disableInputMemory() {
     });
 }
 
-// 设置刷新按钮 - 清空所有数据后刷新，不记忆
+// 设置刷新按钮 - 清空已填写数据，并激活"健康"（正常）
 function setupRefreshButton() {
     const refreshButton = document.getElementById('refreshButton');
     if (refreshButton) {
         refreshButton.addEventListener('click', function() {
-            // 清空所有输入框、下拉框
+            // 清空 parameters 对象（所见/结论模板依赖此数据）
+            Object.keys(parameters).forEach(k => delete parameters[k]);
+            selectedReferenceWeight = null;
+            simpsonDataCache = {};
+            // 清空所有输入框
             document.querySelectorAll('input[type="text"]').forEach(el => { el.value = ''; });
-            document.querySelectorAll('select').forEach(el => { el.selectedIndex = 0; });
             document.querySelectorAll('textarea').forEach(el => { el.value = ''; });
-            window.location.reload();
+            // 清空所有下拉框
+            document.querySelectorAll('select').forEach(el => { el.selectedIndex = 0; });
+            // 取消所有反流程度按钮的激活状态
+            document.querySelectorAll('.regurgitation-severity-btn').forEach(btn => { btn.classList.remove('active'); });
+            // 激活"正常"（健康），并更新模板
+            handleDiseaseTypeChange('Normal');
         });
     }
 }
@@ -2055,6 +2066,7 @@ let selectedDiseaseType = '';
 
 // 通用的疾病类型处理函数
 function handleDiseaseTypeChange(diseaseType) {
+    saveSimpsonDataToCache();
     selectedDiseaseType = diseaseType;
     
     // 移除所有按钮的激活状态
@@ -2244,6 +2256,7 @@ let selectedReferenceRange = '';
 const referenceRangeSelect = document.getElementById('referenceRangeSelect');
 if (referenceRangeSelect) {
     referenceRangeSelect.addEventListener('change', function() {
+        saveSimpsonDataToCache();
         selectedReferenceRange = this.value;
         // 重置选中的参考体重（当参考范围改变时）
         selectedReferenceWeight = null;
@@ -2370,6 +2383,39 @@ function setHeartRateDefault() {
     }
 }
 
+// 保存当前辛普森数据到缓存（按疾病类型+参考范围）。在隐藏/切换前调用。
+function saveSimpsonDataToCache() {
+    if (!selectedDiseaseType || !selectedReferenceRange) return;
+    const key = `${selectedDiseaseType}_${selectedReferenceRange}`;
+    const edv = (parameters['EDV辛普森'] ?? document.getElementById('edvSimpsonInput')?.value?.trim() ?? '').toString();
+    const esv = (parameters['ESV辛普森'] ?? document.getElementById('esvSimpsonInput')?.value?.trim() ?? '').toString();
+    const ef = (parameters['EF辛普森'] ?? document.getElementById('efSimpsonInput')?.value?.trim() ?? '').toString();
+    simpsonDataCache[key] = { EDV辛普森: edv, ESV辛普森: esv, EF辛普森: ef };
+}
+
+// 从缓存恢复辛普森数据到输入框和 parameters
+function restoreSimpsonDataFromCache() {
+    if (!simpsonEnabled || !selectedDiseaseType || !selectedReferenceRange) return;
+    const key = `${selectedDiseaseType}_${selectedReferenceRange}`;
+    const cached = simpsonDataCache[key];
+    if (!cached) return;
+    const edvSimpsonInput = document.getElementById('edvSimpsonInput');
+    const esvSimpsonInput = document.getElementById('esvSimpsonInput');
+    const efSimpsonInput = document.getElementById('efSimpsonInput');
+    if (edvSimpsonInput) {
+        edvSimpsonInput.value = cached.EDV辛普森 ?? '';
+        if (cached.EDV辛普森) parameters['EDV辛普森'] = cached.EDV辛普森; else delete parameters['EDV辛普森'];
+    }
+    if (esvSimpsonInput) {
+        esvSimpsonInput.value = cached.ESV辛普森 ?? '';
+        if (cached.ESV辛普森) parameters['ESV辛普森'] = cached.ESV辛普森; else delete parameters['ESV辛普森'];
+    }
+    if (efSimpsonInput) {
+        efSimpsonInput.value = cached.EF辛普森 ?? '';
+        if (cached.EF辛普森) parameters['EF辛普森'] = cached.EF辛普森; else delete parameters['EF辛普森'];
+    }
+}
+
 // 根据含辛普森测量按钮状态显示/隐藏辛普森输入框
 function toggleSimpsonInputs() {
     const edvSimpsonInput = document.getElementById('edvSimpsonInput');
@@ -2377,12 +2423,14 @@ function toggleSimpsonInputs() {
     const efSimpsonInput = document.getElementById('efSimpsonInput');
     
     if (simpsonEnabled) {
-        // 显示辛普森输入框（位于EDV、ESV右侧）
+        // 显示辛普森输入框
         if (edvSimpsonInput) edvSimpsonInput.style.display = 'block';
         if (esvSimpsonInput) esvSimpsonInput.style.display = 'block';
         if (efSimpsonInput) efSimpsonInput.style.display = 'block';
+        restoreSimpsonDataFromCache();
     } else {
-        // 隐藏辛普森输入框并清空值
+        // 隐藏前先保存到缓存，再清空
+        saveSimpsonDataToCache();
         if (edvSimpsonInput) {
             edvSimpsonInput.style.display = 'none';
             edvSimpsonInput.value = '';
