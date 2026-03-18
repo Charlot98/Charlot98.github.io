@@ -4211,7 +4211,7 @@ const templateConfig = {
                 const dpdtDisplay = (get('dp/dt显示', '不显示') || '').toString().trim();
                 const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
                 if (dpdtDisplay === '显示' && dpdtRaw) {
-                    findings += `    dp/dt：${formatValue(dpdtRaw)}（mmHg/s）\n`;
+                    findings += `    dP/dt：${formatValue(dpdtRaw)}mmHg/s\n`;
                 }
             }
 
@@ -5188,7 +5188,14 @@ async function generateTemplate() {
         }
 
         if (typeof conclusion === 'string' && !conclusion.includes('心脏节律不齐')) {
-            conclusion = conclusion.trimEnd() + '\n心脏节律不齐，建议结合ECG评估。';
+            const lines = conclusion.trimEnd().split('\n').filter(Boolean);
+            const numberedLines = lines.filter(l => /^\s*\d+\./.test(l));
+            let nextIndex = 1;
+            if (numberedLines.length > 0) {
+                const m = numberedLines[numberedLines.length - 1].match(/^\s*(\d+)\./);
+                if (m && m[1]) nextIndex = parseInt(m[1], 10) + 1;
+            }
+            conclusion = conclusion.trimEnd() + `\n  ${nextIndex}.心脏节律不齐，建议结合ECG评估。`;
         }
     }
 

@@ -136,6 +136,7 @@ body {
 .top-disease-selector .disease-button:hover {
     border-color: #4a90e2;
     color: #4a90e2;
+    background-color: #e8f2ff;
     box-shadow: none;
 }
 
@@ -203,10 +204,10 @@ body {
 }
 
 .refresh-button:hover {
-    background-color: #c7c5c574;
+    background-color: #e8f2ff;
     box-shadow: none;
     transform: translateY(-1px);
-    border: 1px solid #71717174;
+    border: 1px solid #4a90e2;
 }
 
 .refresh-button:active {
@@ -245,6 +246,7 @@ body {
 .simpson-button:hover {
     border-color: #4a90e2;
     color: #4a90e2;
+    background-color: #e8f2ff;
 }
 
 .simpson-button:focus {
@@ -253,8 +255,8 @@ body {
 }
 
 .simpson-button.active {
-    border-color: #2e7bd6;
-    background: linear-gradient(135deg, #2e7bd6 0%, #1e5aa3 100%);
+    border-color: #4a90e2;
+    background-color: #4a90e2;
     color: #fff;
     box-shadow: none;
     font-weight: 600;
@@ -700,6 +702,12 @@ body {
     border-color: #4a90e2;
     background-color: #4a90e2;
     color: #fff;
+}
+
+#dpdtInputItem .dpdt-display-btn:hover:not(.active) {
+    border-color: #4a90e2;
+    background-color: #e8f2ff;
+    color: #4a90e2;
 }
 
 .other-param-label {
@@ -1195,31 +1203,31 @@ body {
 
 /* 节律不齐按钮 */
 .rhythm-irregular-btn {
-    padding: 7px 14px;
-    border: 1px solid #818181;
+    padding: 4px 12px;
+    border: 1px solid #ddd;
     border-radius: 4px;
-    background-color: #ffffff;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
     color: #666;
+    background-color: #f5f5f5;
     cursor: pointer;
     transition: all 0.2s ease;
-    text-align: center;
     white-space: nowrap;
+    min-width: 70px;
+    text-align: center;
     flex-shrink: 0;
-    min-width: fit-content;
 }
 
 .rhythm-irregular-btn:hover {
     border-color: #4a90e2;
+    background-color: #e8f2ff;
     color: #4a90e2;
 }
 
 .rhythm-irregular-btn.active {
-    border-color: #2e7bd6;
-    background: linear-gradient(135deg, #2e7bd6 0%, #1e5aa3 100%);
+    border-color: #4a90e2;
+    background-color: #4a90e2;
     color: #fff;
-    box-shadow: none;
     font-weight: 600;
 }
 
