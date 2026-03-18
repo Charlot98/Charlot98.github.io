@@ -1814,7 +1814,9 @@ function setupInputListeners() {
                 const weight = parameters['体重'];
                 const weightValue = weight ? parseFloat(weight) : NaN;
 
-                // 优化体重自动选择：体重 <= 3.0kg 自动选择 M型（犬＜3kg）
+                // 优化体重自动选择：
+                // 体重 <= 3.0kg 自动选择 M型（犬＜3kg）
+                // 体重 > 3.0kg 自动选择 非M型（犬＞3kg）
                 if (!Number.isNaN(weightValue) && weightValue <= 3.0) {
                     const referenceRangeSelect = document.getElementById('referenceRangeSelect');
                     if (referenceRangeSelect && referenceRangeSelect.value !== 'M型') {
@@ -1825,6 +1827,22 @@ function setupInputListeners() {
                     selectedReferenceWeight = null;
 
                     // 与参考范围切换一致：M型 默认激活含辛普森测量
+                    const simpsonButton = document.getElementById('simpsonButton');
+                    if (simpsonButton && !simpsonEnabled) {
+                        simpsonButton.classList.add('active');
+                        simpsonEnabled = true;
+                        toggleSimpsonInputs();
+                    }
+                } else if (!Number.isNaN(weightValue) && weightValue > 3.0) {
+                    const referenceRangeSelect = document.getElementById('referenceRangeSelect');
+                    if (referenceRangeSelect && referenceRangeSelect.value !== '非M型') {
+                        referenceRangeSelect.value = '非M型';
+                    }
+                    selectedReferenceRange = '非M型';
+                    referenceRange = '非M型';
+                    selectedReferenceWeight = null;
+
+                    // 与参考范围切换一致：非M型 默认激活含辛普森测量
                     const simpsonButton = document.getElementById('simpsonButton');
                     if (simpsonButton && !simpsonEnabled) {
                         simpsonButton.classList.add('active');
