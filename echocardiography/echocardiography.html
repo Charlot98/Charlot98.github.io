@@ -39,6 +39,9 @@
                     <path d="M3 21v-5h5"></path>
                 </svg>
             </button>
+            <div class="ocr-controls">
+                <span id="ocrStatus" class="ocr-status-tag" aria-live="polite">OCR：可直接粘贴截图到页面</span>
+            </div>
         </div>
         <div class="top-right-controls">
             <div class="reference-range-select-wrapper">
@@ -121,10 +124,7 @@
                             <span class="pressure-gradient-display" id="edviDisplay">-</span>
                         </label>
                         <div class="combined-input-wrapper">
-                            <div class="input-with-label-wrapper">
-                                <input type="text" class="m-type-input" data-param="EDV" placeholder="请输入数值" tabindex="7">
-                                <span class="input-label-text" title="LV Volume = [7/(2.4 + LVID)] × LVID³">Teich</span>
-                            </div>
+                            <input type="text" class="m-type-input" data-param="EDV" placeholder="请输入数值" tabindex="7">
                             <input type="text" class="m-type-input simpson-input" id="edvSimpsonInput" data-param="EDV辛普森" placeholder="辛普森" style="display: none;" tabindex="8">
                         </div>
                     </div>
@@ -135,10 +135,7 @@
                             <span class="pressure-gradient-display" id="esviDisplay">-</span>
                         </label>
                         <div class="combined-input-wrapper">
-                            <div class="input-with-label-wrapper">
-                                <input type="text" class="m-type-input" data-param="ESV" placeholder="请输入数值" tabindex="9">
-                                <span class="input-label-text" title="LV Volume = [7/(2.4 + LVID)] × LVID³">Teich</span>
-                            </div>
+                            <input type="text" class="m-type-input" data-param="ESV" placeholder="请输入数值" tabindex="9">
                             <input type="text" class="m-type-input simpson-input" id="esvSimpsonInput" data-param="ESV辛普森" placeholder="辛普森" style="display: none;" tabindex="10">
                         </div>
                     </div>
@@ -168,6 +165,10 @@
                             <button class="regurgitation-severity-btn" data-value="轻度">轻度</button>
                             <button class="regurgitation-severity-btn" data-value="中度">中度</button>
                             <button class="regurgitation-severity-btn" data-value="重度">重度</button>
+                        </div>
+                        <div class="regurgitation-severity-buttons" data-param="腱索断裂类型">
+                            <button class="regurgitation-severity-btn" data-value="疑部分腱索断裂">疑部分腱索断裂</button>
+                            <button class="regurgitation-severity-btn" data-value="部分腱索断裂">腱索断裂</button>
                         </div>
                     </div>
                 </div>
@@ -241,6 +242,14 @@
                         <label class="other-param-label">E/E'</label>
                         <input type="text" class="other-param-input" data-param="E/E'" placeholder="请输入数值">
                     </div>
+                    <div class="other-param-item" id="dpdtInputItem" style="display: none;">
+                        <label class="other-param-label">dp/dt</label>
+                        <input type="text" class="other-param-input" data-param="dp/dt" placeholder="请输入数值">
+                        <div class="dpdt-display-btn-group" aria-label="dp/dt显示开关">
+                            <button type="button" class="dpdt-display-btn active" data-param="dp/dt显示" data-value="不显示">不显示</button>
+                            <button type="button" class="dpdt-display-btn" data-param="dp/dt显示" data-value="显示">显示</button>
+                        </div>
+                    </div>
                 </div>
                 <!-- 动态添加的标签页输入框 -->
                 <div class="other-params-grid" id="dynamicTagInputs"></div>
@@ -250,6 +259,7 @@
                         <span class="regurgitation-label">二尖瓣反流速：</span>
                         <input type="text" class="other-param-input regurgitation-input" data-param="二尖瓣反流速" placeholder="请输入数值">
                         <span class="regurgitation-pressure-display" id="mitralRegurgPressureDisplay">-</span>
+                        <button type="button" class="regurgitation-unknown-btn" data-param="二尖瓣反流速未测得">未测得</button>
                         <span class="regurgitation-severity-label">程度</span>
                         <div class="regurgitation-severity-buttons" data-param="二尖瓣反流程度">
                             <button class="regurgitation-severity-btn" data-value="微量">微量</button>
@@ -262,6 +272,7 @@
                         <span class="regurgitation-label">三尖瓣反流速：</span>
                         <input type="text" class="other-param-input regurgitation-input" data-param="三尖瓣反流速" placeholder="请输入数值">
                         <span class="regurgitation-pressure-display" id="tricuspidRegurgPressureDisplay">-</span>
+                        <button type="button" class="regurgitation-unknown-btn" data-param="三尖瓣反流速未测得">未测得</button>
                         <span class="regurgitation-severity-label">程度</span>
                         <div class="regurgitation-severity-buttons" data-param="三尖瓣反流程度">
                             <button class="regurgitation-severity-btn" data-value="微量">微量</button>
@@ -274,6 +285,7 @@
                         <span class="regurgitation-label">肺动脉瓣反流速：</span>
                         <input type="text" class="other-param-input regurgitation-input" data-param="肺动脉瓣反流速" placeholder="请输入数值">
                         <span class="regurgitation-pressure-display" id="pulmonaryRegurgPressureDisplay">-</span>
+                        <button type="button" class="regurgitation-unknown-btn" data-param="肺动脉瓣反流速未测得">未测得</button>
                         <span class="regurgitation-severity-label">程度</span>
                         <div class="regurgitation-severity-buttons" data-param="肺动脉瓣反流程度">
                             <button class="regurgitation-severity-btn" data-value="微量">微量</button>
@@ -286,6 +298,7 @@
                         <span class="regurgitation-label">主动脉瓣反流速：</span>
                         <input type="text" class="other-param-input regurgitation-input" data-param="主动脉瓣反流速" placeholder="请输入数值">
                         <span class="regurgitation-pressure-display" id="aorticRegurgPressureDisplay">-</span>
+                        <button type="button" class="regurgitation-unknown-btn" data-param="主动脉瓣反流速未测得">未测得</button>
                         <span class="regurgitation-severity-label">程度</span>
                         <div class="regurgitation-severity-buttons" data-param="主动脉瓣反流程度">
                             <button class="regurgitation-severity-btn" data-value="微量">微量</button>
@@ -302,6 +315,7 @@
                 <div class="heart-rate-section">
                     <h3 class="parameters-section-title">4.心率</h3>
                     <input type="text" class="other-param-input heart-rate-input" data-param="心率" placeholder="请输入数值">
+                    <button type="button" id="rhythmIrregularButton" class="rhythm-irregular-btn" aria-pressed="false">节律不齐</button>
                 </div>
             </div>
                 </div>
@@ -338,6 +352,7 @@
             </div>
     </div>
 
+    <script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

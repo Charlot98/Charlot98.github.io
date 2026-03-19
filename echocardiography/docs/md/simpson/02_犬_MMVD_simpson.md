@@ -18,7 +18,6 @@
    频谱多普勒检查  
    VPA: {VPA}m/s；  VAO: {VAO}m/s；
    E: {E}m/s，A: {A}m/s，E/A{E/A}； E/E': {E/E'}；
-   dP/dt: mmHg/s；
    {二尖瓣反流}
    {三尖瓣反流}
    {肺动脉瓣反流}

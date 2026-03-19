@@ -1149,6 +1149,18 @@ function updateSpecialLogicInputColors() {
             vaoInput.style.color = '';
         }
     }
+
+    // dp/dt：<= 1800 标蓝，否则默认字体颜色
+    const dpdtInput = document.querySelector('input[data-param="dp/dt"]');
+    if (dpdtInput) {
+        const dpdtRaw = dpdtInput.value.trim();
+        const dpdtValue = dpdtRaw ? parseFloat(dpdtRaw) : NaN;
+        if (!isNaN(dpdtValue)) {
+            dpdtInput.style.color = dpdtValue <= 1800 ? '#4a90e2' : '';
+        } else {
+            dpdtInput.style.color = '';
+        }
+    }
     
     // E: ≥ 2 标红（由updateEColor函数处理，这里不需要重复处理）
 }
@@ -1259,6 +1271,9 @@ function calculateLVDDN() {
             
             lvddnDisplay.textContent = `LVDDN ${lvddnRounded}`;
             
+            // 同步到 parameters，供“结论”规则读取（例如 LVDDN >= 1.7）
+            parameters['LVDDN'] = parseFloat(lvddnRounded);
+            
             // 当LVDDN≥1.7时，数值文本显示为红色，否则显示为黑色
             if (lvddn >= 1.7) {
                 lvddnDisplay.style.color = '#e74c3c'; // 红色
@@ -1269,6 +1284,9 @@ function calculateLVDDN() {
             // 即使没有输入值，也显示默认文本
             lvddnDisplay.textContent = 'LVDDN -';
             lvddnDisplay.style.color = '#666'; // 灰色，表示暂无数据
+            
+            // 清空参数，避免旧值影响后续结论生成
+            delete parameters['LVDDN'];
         }
     }
 }
@@ -1294,7 +1312,6 @@ function calculateEDV() {
                 edviDisplay.style.color = '';
             }
             delete parameters['EDVI'];
-            calculateEF();
             return;
         }
         
@@ -1326,9 +1343,8 @@ function calculateEDV() {
             // 保存完整小数值用于后续计算
             parameters['EDV_raw'] = edv;
             
-            // 如果EDV变化，自动计算EDVI和EF
+            // 如果EDV变化，仅自动计算EDVI（不再自动更新EF）
             calculateEDVI();
-            calculateEF();
         }
     }
 }
@@ -1354,7 +1370,6 @@ function calculateESV() {
                 esviDisplay.style.color = '';
             }
             delete parameters['ESVI'];
-            calculateEF();
             return;
         }
         
@@ -1388,9 +1403,8 @@ function calculateESV() {
             
             // 保持输入框可编辑，不禁用
             
-            // 如果ESV变化，自动计算ESVI和EF
+            // 如果ESV变化，仅自动计算ESVI（不再自动更新EF）
             calculateESVI();
-            calculateEF();
         }
     }
 }
@@ -1700,30 +1714,24 @@ function setupInputListeners() {
                 calculateLVDDN();
             }
             
-            // 如果LVDd变化，自动计算EDV和FS
+            // 如果LVDd变化，自动计算LVDDN（不再自动计算EDV/FS）
             if (paramName === 'LVDd') {
-                calculateEDV();
                 calculateLVDDN();
-                calculateFS();
                 updateSpecialLogicInputColors();
             }
             
-            // 如果LVDs变化，自动计算ESV和FS
+            // 如果LVDs变化，仅更新颜色（不再自动计算ESV/FS）
             if (paramName === 'LVDs') {
-                calculateESV();
-                calculateFS();
                 updateSpecialLogicInputColors();
             }
             
-            // 如果EDV或ESV被手动编辑，清除对应的_raw值并自动计算EF
+            // 如果EDV或ESV被手动编辑，仅清除对应的_raw值（不再自动计算EF）
             if (paramName === 'EDV') {
                 delete parameters['EDV_raw'];
-                calculateEF();
                 updateSpecialLogicInputColors();
             }
             if (paramName === 'ESV') {
                 delete parameters['ESV_raw'];
-                calculateEF();
                 updateSpecialLogicInputColors();
             }
             
@@ -1768,7 +1776,7 @@ function setupInputListeners() {
             }
             
             // 如果特殊逻辑参数变化，更新颜色显示
-            if (['FS', 'EF', 'VPA', 'VAO', 'E'].includes(paramName)) {
+            if (['FS', 'EF', 'VPA', 'VAO', 'E', 'dp/dt'].includes(paramName)) {
                 updateSpecialLogicInputColors();
             }
             
@@ -1781,13 +1789,67 @@ function setupInputListeners() {
             if (['二尖瓣反流速', '三尖瓣反流速', '肺动脉瓣反流速', '主动脉瓣反流速'].includes(paramName)) {
                 updateRegurgitationPressure(paramName, value);
                 updateRegurgitationVelocityColor();
+
+                // 若用户输入了反流速数值，则取消该瓣口的“未测得”标记
+                if (value) {
+                    const unknownMap = {
+                        '二尖瓣反流速': '二尖瓣反流速未测得',
+                        '三尖瓣反流速': '三尖瓣反流速未测得',
+                        '肺动脉瓣反流速': '肺动脉瓣反流速未测得',
+                        '主动脉瓣反流速': '主动脉瓣反流速未测得'
+                    };
+                    const unknownParam = unknownMap[paramName];
+                    if (unknownParam) {
+                        delete parameters[unknownParam];
+                        const unknownBtn = document.querySelector(`.regurgitation-unknown-btn[data-param="${unknownParam}"]`);
+                        if (unknownBtn) unknownBtn.classList.remove('active');
+                    }
+                }
             }
             
             // 如果体重变化，自动选择最接近的体重值（中间的选项），更新参考值显示和引用体重值，并自动更新模板
             if (paramName === '体重') {
                 // 用户手动输入体重时，自动选择最接近的体重值
-                const referenceRange = selectedReferenceRange;
+                let referenceRange = selectedReferenceRange;
                 const weight = parameters['体重'];
+                const weightValue = weight ? parseFloat(weight) : NaN;
+
+                // 优化体重自动选择：
+                // 体重 <= 3.0kg 自动选择 M型（犬＜3kg）
+                // 体重 > 3.0kg 自动选择 非M型（犬＞3kg）
+                if (!Number.isNaN(weightValue) && weightValue <= 3.0) {
+                    const referenceRangeSelect = document.getElementById('referenceRangeSelect');
+                    if (referenceRangeSelect && referenceRangeSelect.value !== 'M型') {
+                        referenceRangeSelect.value = 'M型';
+                    }
+                    selectedReferenceRange = 'M型';
+                    referenceRange = 'M型';
+                    selectedReferenceWeight = null;
+
+                    // 与参考范围切换一致：M型 默认激活含辛普森测量
+                    const simpsonButton = document.getElementById('simpsonButton');
+                    if (simpsonButton && !simpsonEnabled) {
+                        simpsonButton.classList.add('active');
+                        simpsonEnabled = true;
+                        toggleSimpsonInputs();
+                    }
+                } else if (!Number.isNaN(weightValue) && weightValue > 3.0) {
+                    const referenceRangeSelect = document.getElementById('referenceRangeSelect');
+                    if (referenceRangeSelect && referenceRangeSelect.value !== '非M型') {
+                        referenceRangeSelect.value = '非M型';
+                    }
+                    selectedReferenceRange = '非M型';
+                    referenceRange = '非M型';
+                    selectedReferenceWeight = null;
+
+                    // 与参考范围切换一致：非M型 默认激活含辛普森测量
+                    const simpsonButton = document.getElementById('simpsonButton');
+                    if (simpsonButton && !simpsonEnabled) {
+                        simpsonButton.classList.add('active');
+                        simpsonEnabled = true;
+                        toggleSimpsonInputs();
+                    }
+                }
                 
                 // #region agent log
                 fetch('http://127.0.0.1:7244/ingest/05f58e13-e211-436c-a191-0963c2a2ae6e',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'script.js:1915',message:'Weight input changed',data:{referenceRange,weight,selectedReferenceWeightBefore:selectedReferenceWeight},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
@@ -1796,7 +1858,6 @@ function setupInputListeners() {
                 if ((referenceRange === 'M型' || referenceRange === '非M型' || referenceRange === '猫心超（含体重）') && weight) {
                     const dataArray = csvReferenceData[referenceRange];
                     if (dataArray && dataArray.length > 0) {
-                        const weightValue = parseFloat(weight);
                         if (!isNaN(weightValue)) {
                             // 查找最接近的体重值
                             let closestWeight = null;
@@ -1846,6 +1907,33 @@ function setupInputListeners() {
             }
         });
     });
+
+    // dp/dt：显示开关（两按钮），仅影响 MMVD 所见是否输出 dp/dt 行
+    const dpdtBtns = document.querySelectorAll('#dpdtInputItem button[data-param="dp/dt显示"]');
+    if (dpdtBtns && dpdtBtns.length > 0) {
+        dpdtBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const value = btn.getAttribute('data-value') || '';
+                dpdtBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                if (value === '显示') {
+                    parameters['dp/dt显示'] = '显示';
+                } else {
+                    delete parameters['dp/dt显示'];
+                }
+                updateSpecialLogicInputColors();
+                generateTemplate();
+            });
+        });
+        
+        // 默认“不显示”
+        const activeBtn = document.querySelector('#dpdtInputItem button[data-param="dp/dt显示"].active');
+        const activeVal = activeBtn ? (activeBtn.getAttribute('data-value') || '') : '';
+        if (activeVal !== '显示') {
+            delete parameters['dp/dt显示'];
+        }
+    }
 }
 
 // 设置 tooltip 提示功能
@@ -1975,6 +2063,13 @@ function setupRefreshButton() {
             Object.keys(parameters).forEach(k => delete parameters[k]);
             selectedReferenceWeight = null;
             simpsonDataCache = {};
+
+            // OCR提示词恢复默认
+            const ocrStatus = document.getElementById('ocrStatus');
+            if (ocrStatus) {
+                ocrStatus.textContent = '可直接粘贴截图到页面，支持自动识别和回填';
+            }
+
             // 清空所有输入框
             document.querySelectorAll('input[type="text"]').forEach(el => { el.value = ''; });
             document.querySelectorAll('textarea').forEach(el => { el.value = ''; });
@@ -1982,6 +2077,10 @@ function setupRefreshButton() {
             document.querySelectorAll('select').forEach(el => { el.selectedIndex = 0; });
             // 取消所有反流程度按钮的激活状态
             document.querySelectorAll('.regurgitation-severity-btn').forEach(btn => { btn.classList.remove('active'); });
+            // 重置“节律不齐”按钮与参数
+            const rhythmBtn = document.getElementById('rhythmIrregularButton');
+            if (rhythmBtn) rhythmBtn.classList.remove('active');
+            delete parameters['节律不齐'];
             // 激活"正常"（健康），并更新模板
             handleDiseaseTypeChange('Normal');
         });
@@ -2026,6 +2125,286 @@ function setupRightSidebarResize() {
     });
 }
 
+// OCR：粘贴/拖拽/选择图片 → 识别参数 → 自动回填
+function setupOCR() {
+    // 避免重复绑定
+    if (window.__echoOcrInitialized) return;
+    window.__echoOcrInitialized = true;
+
+    const ocrStatus = document.getElementById('ocrStatus');
+
+    const canUseTesseract = typeof window.Tesseract !== 'undefined';
+    if (!canUseTesseract) {
+        if (ocrStatus) ocrStatus.textContent = 'OCR库未加载（请检查网络/CDN）';
+        return;
+    }
+
+    function setBusy(isBusy) {
+        // 仅用于更新状态文案，不再控制按钮样式
+        if (isBusy && ocrStatus) {
+            ocrStatus.textContent = 'OCR识别中…';
+        }
+    }
+
+    function setStatus(text) {
+        if (ocrStatus) ocrStatus.textContent = text || '';
+    }
+
+    function extractFirstImageFromClipboardEvent(e) {
+        const items = e.clipboardData?.items;
+        if (!items) return null;
+        for (const item of items) {
+            if (item.type && item.type.startsWith('image/')) {
+                return item.getAsFile();
+            }
+        }
+        return null;
+    }
+
+    function normalizeOcrText(raw) {
+        if (!raw) return '';
+        return raw
+            .replace(/\u00A0/g, ' ')
+            .replace(/[，、]/g, ',')
+            .replace(/[：]/g, ':')
+            .replace(/[（）]/g, ' ')
+            .replace(/mm\b/gi, ' mm')
+            .replace(/cm\b/gi, ' cm')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function mapKeyToParam(key) {
+        const k = key.toUpperCase().replace(/\s+/g, '');
+        const map = {
+            'IVSD': 'IVSd',
+            'IVSDD': 'IVSd',
+            'IVSDD.': 'IVSd',
+            'IVSDD:': 'IVSd',
+            'IVSD:': 'IVSd',
+            'LVDD': 'LVDd',
+            'LVIDD': 'LVDd',
+            'LVIDD.': 'LVDd',
+            'LVIDD:': 'LVDd',
+            'LVPWD': 'LVPWd',
+            'LVWD': 'LVPWd',
+            'LVFWD': 'LVPWd',
+            'IVSS': 'IVSs',
+            'LVDS': 'LVDs',
+            'LVIDS': 'LVDs',
+            'LVPWS': 'LVPWs',
+            'LVWS': 'LVPWs',
+            'LVFWS': 'LVPWs',
+            'AO': 'AO',
+            'AO.': 'AO',
+            'LA': 'LA',
+            'FS': 'FS',
+            'EF': 'EF',
+            'VPA': 'VPA',
+            'VAO': 'VAO',
+            // Diastolic / chambers（OCR）
+            'E': 'E',
+            'A': 'A',
+            'LA_AO': 'LA/AO'
+        };
+        return map[k] || null;
+    }
+
+    function parseValue(rawValue) {
+        if (!rawValue) return null;
+        // 允许：5.2 / 5,2 / 52（配单位 cm→mm）等
+        const cleaned = rawValue
+            .replace(/[,，]/g, '.')
+            .replace(/[^\d.]+/g, ' ')
+            .trim()
+            .split(' ')[0];
+        if (!cleaned) return null;
+        const num = Number.parseFloat(cleaned);
+        if (Number.isNaN(num)) return null;
+        return num;
+    }
+
+    function parseOcrToParamValues(text) {
+        const normalized = normalizeOcrText(text);
+        if (!normalized) return {};
+
+        // 先用同义词把中文/英文描述统一替换成标准缩写，方便后续正则匹配
+        // 这些同义词完全写在本文件中，不依赖 readme.md
+        let unified = normalized
+            // IVSd
+            .replace(/舒张末期室间隔厚度/gi, 'IVSd')
+            .replace(/舒张期室间隔厚度/gi, 'IVSd')
+            // LVDd（含 LVIDd）
+            .replace(/舒张末期左心室内径/gi, 'LVDd')
+            .replace(/舒张期左心室内径/gi, 'LVDd')
+            .replace(/舒张期左心室直径/gi, 'LVDd')
+            .replace(/舒张末期左心室直径/gi, 'LVDd')
+            .replace(/\bLVIDd\b/gi, 'LVDd')
+            // LVWd（含 LVFWd）
+            .replace(/舒张末期左心室游离壁厚度/gi, 'LVWd')
+            .replace(/舒张期左心室游离壁厚度/gi, 'LVWd')
+            .replace(/\bLVFWd\b/gi, 'LVWd')
+            // IVSs
+            .replace(/收缩期室间隔厚度/gi, 'IVSs')
+            .replace(/收缩末期室间隔厚度/gi, 'IVSs')
+            // LVDs（含 LVIDs）
+            .replace(/收缩末期左心室内径/gi, 'LVDs')
+            .replace(/收缩期左心室内径/gi, 'LVDs')
+            .replace(/收缩末期左心室直径/gi, 'LVDs')
+            .replace(/收缩期左心室直径/gi, 'LVDs')
+            .replace(/\bLVIDs\b/gi, 'LVDs')
+            // LVWs（含 LVFWs）
+            .replace(/收缩末期左心室游离壁厚度/gi, 'LVWs')
+            .replace(/收缩期左心室游离壁厚度/gi, 'LVWs')
+            .replace(/\bLVFWs\b/gi, 'LVWs')
+            // EDV（Teich）
+            .replace(/EDV\(teich\)/gi, 'EDV')
+            .replace(/舒张末期容积（?ml）?/gi, 'EDV')
+            .replace(/舒张末期左心室容量/gi, 'EDV')
+            .replace(/舒张期左心室容量/gi, 'EDV')
+            // ESV（Teich）
+            .replace(/ESV\(teich\)/gi, 'ESV')
+            .replace(/收缩末期容积（?ml）?/gi, 'ESV')
+            .replace(/收缩末期左心室容量/gi, 'ESV')
+            .replace(/收缩期左心室容量/gi, 'ESV')
+            // FS
+            .replace(/缩短分数/gi, 'FS')
+            .replace(/Fractional Shortening/gi, 'FS')
+            // EF（Teich）
+            .replace(/EF\(teich\)/gi, 'EF')
+            .replace(/射血分数/gi, 'EF')
+            .replace(/左心室射血分数/gi, 'EF')
+            .replace(/\bLVEF\b/gi, 'EF')
+            .replace(/Left Ventricular Ejection Fraction/gi, 'EF')
+            .replace(/Ejection Fraction/gi, 'EF')
+            // LA/AO：先统一为 LA_AO，避免后续 AO 正则误命中
+            .replace(/\bLA\s*\/\s*AO\b/gi, 'LA_AO')
+            .replace(/\bLA\s*\/\s*A0\b/gi, 'LA_AO')
+            .replace(/左房\s*\/\s*主动脉/gi, 'LA_AO')
+            .replace(/左心房\s*\/\s*主动脉/gi, 'LA_AO')
+            // E/A：避免 A 正则误命中 E/A 标签里的 A
+            .replace(/\bE\s*\/\s*A\b/gi, 'E_A');
+
+        // 再修正少量常见 OCR 误识别：LVIDd→LVDd、IVSd大小写、0/O 等
+        const fixed = unified
+            .replace(/\bLVlDd\b/gi, 'LVIDd')
+            .replace(/\bLVlDs\b/gi, 'LVIDs')
+            .replace(/\bIVS[dD]\b/g, 'IVSd')
+            .replace(/\bLVPW[dD]\b/g, 'LVPWd')
+            .replace(/\bLVPW[sS]\b/g, 'LVPWs');
+
+        const results = {};
+
+        // 只识别 1.M-MODE 段对应的字段：
+        // IVSd、LVDd、LVWd、IVSs、LVDs、LVWs、EDV（Teich）、ESV（Teich）、FS、EF（Teich）
+        // 规则：在字段名（或同义词已统一为字段名后）后面找到出现的第一个数字
+        const patterns = [
+            { key: 'IVSd',  re: /\bIVSd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LVIDd', re: /\bLVIDd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LVDd',  re: /\bLVDd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LVPWd', re: /\bLVPWd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LVWd',  re: /\bLVWd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'IVSs',  re: /\bIVSs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LVIDs', re: /\bLVIDs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LVDs',  re: /\bLVDs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LVPWs', re: /\bLVPWs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LVWs',  re: /\bLVWs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'EDV',   re: /\bEDV\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'ESV',   re: /\bESV\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'FS',    re: /\bFS\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'EF',    re: /\bEF\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            // E / A / AO / LA / LA/AO（Diastolic）
+            { key: 'E',      re: /\bE\b(?!\s*\/)\s*[:=]?\s*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'A',      re: /\bA\b(?!\s*\/)\s*[:=]?\s*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'AO',     re: /\bAO\b\s*[:=]?\s*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LA',     re: /\bLA\b\s*[:=]?\s*([0-9]+(?:[.,][0-9]+)?)/i },
+            { key: 'LA_AO', re: /\bLA_AO\b\s*[:=]?\s*([0-9]+(?:[.,][0-9]+)?)/i }
+        ];
+
+        for (const p of patterns) {
+            const m = fixed.match(p.re);
+            if (!m) continue;
+            const valueNum = parseValue(m[1]);
+            if (valueNum === null) continue;
+            // 先用 mapKeyToParam 做一次映射（处理 LVIDd/LVFWs 等），否则直接用 key 自身
+            const mapped = mapKeyToParam(p.key) || mapKeyToParam(p.key.toUpperCase());
+            const targetParam = mapped || p.key;
+            if (!targetParam) continue;
+
+            // 简化：不根据单位做 cm→mm 换算，直接使用识别到的数值
+            results[targetParam] = valueNum;
+        }
+
+        return results;
+    }
+
+    function writeParamsToInputs(paramValues) {
+        const entries = Object.entries(paramValues);
+        if (entries.length === 0) return 0;
+
+        let written = 0;
+        for (const [param, value] of entries) {
+            const input = document.querySelector(`input[data-param="${param}"]`);
+            if (!input) continue;
+            input.value = String(value);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            written++;
+        }
+        return written;
+    }
+
+    async function runOcrFromFile(file) {
+        if (!file) return;
+        setBusy(true);
+        setStatus('OCR识别中…（可稍等几秒）');
+        try {
+            const { data } = await window.Tesseract.recognize(file, 'eng', {
+                logger: (m) => {
+                    if (m?.status === 'recognizing text' && typeof m.progress === 'number') {
+                        setStatus(`OCR识别中… ${(m.progress * 100).toFixed(0)}%`);
+                    }
+                }
+            });
+            const text = data?.text || '';
+            const paramValues = parseOcrToParamValues(text);
+            const written = writeParamsToInputs(paramValues);
+            if (written > 0) {
+                setStatus(`已回填 ${written} 项：${Object.keys(paramValues).join('、')}`);
+            } else {
+                setStatus('未识别到可回填的字段（建议裁剪到测量值区域再粘贴）');
+            }
+        } catch (err) {
+            console.error('OCR失败:', err);
+            setStatus('OCR失败（请换更清晰/更小范围的截图再试）');
+        } finally {
+            setBusy(false);
+        }
+    }
+
+    // 粘贴：直接从剪贴板取图片
+    document.addEventListener('paste', async (e) => {
+        const img = extractFirstImageFromClipboardEvent(e);
+        if (!img) return;
+        e.preventDefault();
+        await runOcrFromFile(img);
+    });
+
+    // 拖拽：拖拽图片到页面任意位置
+    document.addEventListener('dragover', (e) => {
+        if (e.dataTransfer?.types?.includes('Files')) {
+            e.preventDefault();
+        }
+    });
+    document.addEventListener('drop', async (e) => {
+        const file = e.dataTransfer?.files?.[0];
+        if (!file || !file.type?.startsWith('image/')) return;
+        e.preventDefault();
+        await runOcrFromFile(file);
+    });
+
+    setStatus('可直接粘贴截图到页面，支持自动识别和回填');
+}
+
 // 立即尝试绑定（如果DOM已加载）
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
@@ -2034,6 +2413,7 @@ if (document.readyState === 'loading') {
         setupTooltips();
         setupRefreshButton();
         setupRightSidebarResize();
+        setupOCR();
         calculateLVDDN();
     });
 } else {
@@ -2042,6 +2422,7 @@ if (document.readyState === 'loading') {
     setupTooltips();
     setupRefreshButton();
     setupRightSidebarResize();
+    setupOCR();
     calculateLVDDN();
 }
 
@@ -2161,11 +2542,24 @@ function handleDiseaseTypeChange(diseaseType) {
         if (mmvdInputs) {
             if (selectedDiseaseType === 'MMVD') {
                 mmvdInputs.style.display = 'block';
+                // 默认选择“轻度”（与 readme 规则一致）
+                const severityButtons = mmvdInputs.querySelector('.regurgitation-severity-buttons[data-param="脱垂程度"]');
+                if (severityButtons) {
+                    const hasActive = severityButtons.querySelector('.regurgitation-severity-btn.active');
+                    if (!hasActive) {
+                        const mildBtn = severityButtons.querySelector('.regurgitation-severity-btn[data-value="轻度"]');
+                        if (mildBtn) {
+                            mildBtn.classList.add('active');
+                            parameters['脱垂程度'] = mildBtn.getAttribute('data-value');
+                        }
+                    }
+                }
             } else {
                 mmvdInputs.style.display = 'none';
                 // 清除MMVD特定参数
                 delete parameters['二尖瓣前叶厚度'];
                 delete parameters['脱垂程度'];
+                delete parameters['腱索断裂类型'];
                 // 清除输入框的值
                 const thicknessInput = mmvdInputs.querySelector('input[data-param="二尖瓣前叶厚度"]');
                 if (thicknessInput) thicknessInput.value = '';
@@ -2176,7 +2570,36 @@ function handleDiseaseTypeChange(diseaseType) {
                         btn.classList.remove('active');
                     });
                 }
+                // 清除腱索断裂按钮组的激活状态
+                const chordButtons = mmvdInputs.querySelector('.regurgitation-severity-buttons[data-param="腱索断裂类型"]');
+                if (chordButtons) {
+                    chordButtons.querySelectorAll('.regurgitation-severity-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                }
             }
+        }
+
+        // dp/dt：仅在 MMVD 模型中显示
+        const dpdtItem = document.getElementById('dpdtInputItem');
+        if (dpdtItem) {
+            if (selectedDiseaseType === 'MMVD') {
+                dpdtItem.style.display = 'flex';
+            } else {
+                dpdtItem.style.display = 'none';
+                delete parameters['dp/dt'];
+                delete parameters['dp/dt显示'];
+                const dpdtInput = dpdtItem.querySelector('input[data-param="dp/dt"]');
+                if (dpdtInput) dpdtInput.value = '';
+                // 默认：不显示
+                const dpdtBtns = dpdtItem.querySelectorAll('button[data-param="dp/dt显示"]');
+                if (dpdtBtns && dpdtBtns.length > 0) {
+                    dpdtBtns.forEach(b => b.classList.remove('active'));
+                    const notShowBtn = dpdtItem.querySelector('button[data-param="dp/dt显示"][data-value="不显示"]');
+                    if (notShowBtn) notShowBtn.classList.add('active');
+                }
+            }
+            updateSpecialLogicInputColors();
         }
         
         updateReferenceValues();
@@ -2328,6 +2751,24 @@ if (simpsonButton) {
             await loadMDTemplateNew(selectedDiseaseType, selectedReferenceRange, true, simpsonEnabled);
         }
         // 重新生成模板
+        generateTemplate();
+    });
+}
+
+// 节律不齐按钮事件
+const rhythmIrregularButton = document.getElementById('rhythmIrregularButton');
+if (rhythmIrregularButton) {
+    rhythmIrregularButton.addEventListener('click', function() {
+        const willBeActive = !this.classList.contains('active');
+        if (willBeActive) {
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+            parameters['节律不齐'] = '是';
+        } else {
+            this.classList.remove('active');
+            this.setAttribute('aria-pressed', 'false');
+            delete parameters['节律不齐'];
+        }
         generateTemplate();
     });
 }
@@ -2557,6 +2998,41 @@ function removeTagInput(paramName) {
 
 // 反流程度按钮点击事件
 document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('regurgitation-unknown-btn')) {
+        const button = e.target;
+        const item = button.closest('.regurgitation-velocity-item');
+        if (!item) return;
+
+        const unknownParam = button.getAttribute('data-param');
+        if (!unknownParam) return;
+
+        const willBeActive = !button.classList.contains('active');
+
+        // 切换按钮激活状态
+        if (willBeActive) {
+            button.classList.add('active');
+            parameters[unknownParam] = '未测得';
+        } else {
+            button.classList.remove('active');
+            delete parameters[unknownParam];
+        }
+
+        // 若标记为“未测得”，清空对应的反流速/压差参数，避免后续逻辑按数值生成
+        if (willBeActive) {
+            const velocityInput = item.querySelector('input[data-param]');
+            if (velocityInput) {
+                const velocityParam = velocityInput.getAttribute('data-param');
+                velocityInput.value = '';
+                if (velocityParam) delete parameters[velocityParam];
+                updateRegurgitationPressure(velocityParam, '');
+            }
+            updateRegurgitationVelocityColor();
+        }
+
+        generateTemplate();
+        return;
+    }
+
     if (e.target.classList.contains('regurgitation-severity-btn')) {
         const button = e.target;
         const buttonsContainer = button.closest('.regurgitation-severity-buttons');
@@ -2564,6 +3040,16 @@ document.addEventListener('click', function(e) {
         
         const paramName = buttonsContainer.getAttribute('data-param');
         const value = button.getAttribute('data-value');
+
+        // 腱索断裂类型：允许两个按钮都不激活；再次点击已激活按钮则取消
+        if (paramName === '腱索断裂类型' && button.classList.contains('active')) {
+            buttonsContainer.querySelectorAll('.regurgitation-severity-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            delete parameters[paramName];
+            generateTemplate();
+            return;
+        }
         
         // 取消同组其他按钮的激活状态
         buttonsContainer.querySelectorAll('.regurgitation-severity-btn').forEach(btn => {
@@ -2650,19 +3136,26 @@ function toggleRegurgitationVelocityInput(tag, isActive) {
     if (inputItem) {
         if (isActive) {
             inputItem.style.display = 'flex';
-            // 设置反流程度按钮组的默认值为"轻度"（如果还没有值）
+            // 设置反流程度按钮组的默认值（若还没有激活按钮）
             const severityButtons = inputItem.querySelector('.regurgitation-severity-buttons');
             if (severityButtons) {
                 const severityParamName = severityButtons.getAttribute('data-param');
                 if (severityParamName) {
+                    const getDefaultSeverity = (paramName) => {
+                        // 肺动脉瓣/主动脉瓣默认优先“微量”
+                        if (paramName === '肺动脉瓣反流程度' || paramName === '主动脉瓣反流程度') return '微量';
+                        return '轻度';
+                    };
+
                     // 检查是否已经有激活的按钮
                     const activeBtn = severityButtons.querySelector('.regurgitation-severity-btn.active');
                     if (!activeBtn) {
-                        // 如果没有激活的按钮，激活"轻度"按钮
-                        const mildBtn = severityButtons.querySelector('.regurgitation-severity-btn[data-value="轻度"]');
-                        if (mildBtn) {
-                            mildBtn.classList.add('active');
-                            parameters[severityParamName] = '轻度';
+                        // 如果没有激活的按钮，激活默认按钮
+                        const defaultSeverity = getDefaultSeverity(severityParamName);
+                        const defaultBtn = severityButtons.querySelector(`.regurgitation-severity-btn[data-value="${defaultSeverity}"]`);
+                        if (defaultBtn) {
+                            defaultBtn.classList.add('active');
+                            parameters[severityParamName] = defaultSeverity;
                         }
                     } else {
                         // 如果有激活的按钮，确保参数值被设置
@@ -2682,19 +3175,29 @@ function toggleRegurgitationVelocityInput(tag, isActive) {
                 // 清空对应的压力差显示
                 updateRegurgitationPressure(paramName, '');
             }
-            // 重置反流程度按钮组为默认值"轻度"
+
+            // 清空“未测得”按钮状态与参数
+            inputItem.querySelectorAll('.regurgitation-unknown-btn').forEach(btn => {
+                const unknownParam = btn.getAttribute('data-param');
+                btn.classList.remove('active');
+                if (unknownParam) delete parameters[unknownParam];
+            });
+
+            // 重置反流程度按钮组为默认值
             const severityButtons = inputItem.querySelector('.regurgitation-severity-buttons');
             if (severityButtons) {
                 const severityParamName = severityButtons.getAttribute('data-param');
+                const getDefaultSeverity = (paramName) => {
+                    if (paramName === '肺动脉瓣反流程度' || paramName === '主动脉瓣反流程度') return '微量';
+                    return '轻度';
+                };
                 // 取消所有按钮的激活状态
                 severityButtons.querySelectorAll('.regurgitation-severity-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
-                // 激活"轻度"按钮
-                const mildBtn = severityButtons.querySelector('.regurgitation-severity-btn[data-value="轻度"]');
-                if (mildBtn) {
-                    mildBtn.classList.add('active');
-                }
+                const defaultSeverity = getDefaultSeverity(severityParamName);
+                const defaultBtn = severityButtons.querySelector(`.regurgitation-severity-btn[data-value="${defaultSeverity}"]`);
+                if (defaultBtn) defaultBtn.classList.add('active');
                 delete parameters[severityParamName];
             }
         }
@@ -2716,19 +3219,29 @@ function hideAllRegurgitationVelocityInputs() {
                 delete parameters[paramName];
                 updateRegurgitationPressure(paramName, '');
             }
-            // 重置反流程度按钮组为默认值"轻度"
+
+            // 清空“未测得”按钮状态与参数
+            item.querySelectorAll('.regurgitation-unknown-btn').forEach(btn => {
+                const unknownParam = btn.getAttribute('data-param');
+                btn.classList.remove('active');
+                if (unknownParam) delete parameters[unknownParam];
+            });
+
+            // 重置反流程度按钮组为默认值
             const severityButtons = item.querySelector('.regurgitation-severity-buttons');
             if (severityButtons) {
                 const severityParamName = severityButtons.getAttribute('data-param');
+                const getDefaultSeverity = (paramName) => {
+                    if (paramName === '肺动脉瓣反流程度' || paramName === '主动脉瓣反流程度') return '微量';
+                    return '轻度';
+                };
                 // 取消所有按钮的激活状态
                 severityButtons.querySelectorAll('.regurgitation-severity-btn').forEach(btn => {
                     btn.classList.remove('active');
                 });
-                // 激活"轻度"按钮
-                const mildBtn = severityButtons.querySelector('.regurgitation-severity-btn[data-value="轻度"]');
-                if (mildBtn) {
-                    mildBtn.classList.add('active');
-                }
+                const defaultSeverity = getDefaultSeverity(severityParamName);
+                const defaultBtn = severityButtons.querySelector(`.regurgitation-severity-btn[data-value="${defaultSeverity}"]`);
+                if (defaultBtn) defaultBtn.classList.add('active');
                 delete parameters[severityParamName];
             }
         }
@@ -3357,6 +3870,65 @@ const templateConfig = {
                 result = result.replace(new RegExp(`\\{${key}\\}`, 'g'), '');
             }
         });
+
+        // 清理“仅空白字符”的行（常见于占位符整行被替换为空时，留下缩进空行）
+        // 只移除含空格/Tab 的空行，不影响模板中真正的空行（只有 \n 的那种）
+        result = result.replace(/^[ \t]+\n/gm, '');
+
+        // 3.彩色多普勒检查这一行：如果尾部是中文逗号，统一改为中文分号
+        // 例如只激活三尖瓣/肺动脉瓣反流时，会出现“...反流，”的结尾
+        result = result.replace(/^(3\.\s*彩色多普勒检查[^\n]*?)，\s*$/gm, '$1；');
+        // 防御：如果模板本身结尾已写“；”，避免出现“，；”
+        result = result.replace(/，；/g, '；');
+
+        // 定向修复：第3段反流明细在仅激活部分瓣膜时，容易出现“多一行空行”
+        // 目标：E/A 这一行结束后，直接跟第一条“X尖瓣反流速”明细，中间不留空行
+        // 同时：各条反流明细之间不出现额外空行
+        const regurgStartRe = /(E:\s*[^\n]*\n)(?:\s*\n)+(\s*(?:二尖瓣反流速|三尖瓣反流速|肺动脉瓣反流速|主动脉瓣反流速))/g;
+        result = result.replace(regurgStartRe, '$1$2');
+        const regurgBetweenRe = /(\n\s*(?:二尖瓣反流速|三尖瓣反流速|肺动脉瓣反流速|主动脉瓣反流速)[^\n]*\n)(?:\s*\n)+(\s*(?:二尖瓣反流速|三尖瓣反流速|肺动脉瓣反流速|主动脉瓣反流速))/g;
+        result = result.replace(regurgBetweenRe, '$1$2');
+
+        // 结论：瓣口血流结论（用于模板中的 {瓣口血流结论}）
+        const buildValveFlowConclusion = () => {
+            const regurgTags = [
+                { tag: '二尖瓣反流', label: '二尖瓣', severityParam: '二尖瓣反流程度', velocityParam: '二尖瓣反流速' },
+                { tag: '三尖瓣反流', label: '三尖瓣', severityParam: '三尖瓣反流程度', velocityParam: '三尖瓣反流速' },
+                { tag: '肺动脉瓣反流', label: '肺动脉瓣', severityParam: '肺动脉瓣反流程度', velocityParam: '肺动脉瓣反流速' },
+                { tag: '主动脉瓣反流', label: '主动脉瓣', severityParam: '主动脉瓣反流程度', velocityParam: '主动脉瓣反流速' }
+            ];
+
+            const activeRegurg = regurgTags.filter(v => isTagActive(v.tag));
+            const normalActive = isTagActive('各瓣口血流正常');
+
+            // 有任何反流：另起一行描述血流异常（同一条结论项内换行）
+            if (activeRegurg.length > 0) {
+                const parts = activeRegurg.map(v => {
+                    const sev = (get(v.severityParam, '') || '').trim();
+                    return `${v.label}${sev || ''}反流`;
+                });
+
+                let sentence = `\n    各瓣口血流异常：${parts.join('、')}。`;
+
+                // 额外规则：二尖瓣反流速 > 6.5m/s
+                const mvActive = isTagActive('二尖瓣反流');
+                if (mvActive) {
+                    const mvVelRaw = (get('二尖瓣反流速', '') || '').toString().trim();
+                    const mvVel = Number.parseFloat(mvVelRaw);
+                    if (!Number.isNaN(mvVel) && mvVel > 6.5) {
+                        sentence += '收缩压偏高，建议排查高血压。';
+                    }
+                }
+
+                return sentence;
+            }
+
+            // 无反流：若“各瓣口血流正常”激活 → 固定结论；否则也给一个合理默认
+            if (normalActive) return '各瓣口血流未见明显异常。';
+            return '各瓣口血流未见明显异常。';
+        };
+
+        result = result.replace(/{瓣口血流结论}/g, buildValveFlowConclusion());
         
         // 注意：不在这里清理编号格式，保持模板的原始缩进
         // 编号格式的清理将在提取"结论"部分时进行，而"所见"部分保持原始格式
@@ -3394,6 +3966,347 @@ const templateConfig = {
         } else if (referenceRange === '兔子' && breedReferenceData && breedReferenceData['兔']) {
             // 兔子：从不同品种参考值中获取（CSV中为"兔"）
             referenceData = breedReferenceData['兔'];
+        }
+
+        // =========================
+        // 规则生成（不依赖 Markdown 模板）
+        // 当前覆盖：Normal（犬） + MMVD（犬）→ 使用与 Normal 一致的规则框架
+        // =========================
+        const isDogRuleBase =
+            (diseaseType === 'Normal' || diseaseType === 'MMVD' || !diseaseType) &&
+            (referenceRange === 'M型' || referenceRange === '非M型' || referenceRange === '金毛');
+
+        if (isDogRuleBase) {
+            const formatValue = (value, isInteger = false) => {
+                if (value === undefined || value === null || value === '') return '';
+                const num = parseFloat(value);
+                if (isNaN(num)) return String(value);
+                return isInteger ? num.toFixed(0) : num.toFixed(2);
+            };
+
+            // 参数名映射（将CSV列名映射到标准参数名）
+            const standardToCsvMap = {
+                'IVSd': ['IVSd', 'IVSd '],
+                'LVDd': ['LVIDd', 'LVDd'],
+                'LVWd': ['LVFWd', 'LVWd', 'LVWd '],
+                'IVSs': ['IVSs'],
+                'LVDs': ['LVIDs', 'LVIDs ', 'LVDs'],
+                'LVWs': ['LVFWs', 'LVWs', 'LVWs '],
+                'LA': ['LA'],
+                'AO': ['AO', 'Ao']
+            };
+
+            const getReferenceValue = (csvKey) => {
+                if (!referenceData || !csvKey) return '';
+                if (referenceData[csvKey]) return referenceData[csvKey];
+                const csvColNames = standardToCsvMap[csvKey] || [csvKey];
+                for (const csvColName of csvColNames) {
+                    if (referenceData[csvColName]) return referenceData[csvColName];
+                    const trimmedColName = csvColName.trim().toLowerCase();
+                    for (const key in referenceData) {
+                        if (key.trim().toLowerCase() === trimmedColName) return referenceData[key];
+                    }
+                }
+                return '';
+            };
+
+            // canonical key -> 当前输入值（页面参数名映射）
+            const valueByKey = (key) => {
+                switch (key) {
+                    case 'IVSd': return get('IVSd', '');
+                    case 'LVDd': return get('LVDd', '');
+                    case 'LVWd': return get('LVPWd', ''); // 页面：LVPWd
+                    case 'IVSs': return get('IVSs', '');
+                    case 'LVDs': return get('LVDs', '');
+                    case 'LVWs': return get('LVPWs', ''); // 页面：LVPWs
+                    case 'EDV_teich': return get('EDV', '');
+                    case 'EDV_simpson': return get('EDV辛普森', '');
+                    case 'ESV_teich': return get('ESV', '');
+                    case 'ESV_simpson': return get('ESV辛普森', '');
+                    case 'EDVI': return get('EDVI', '');
+                    case 'ESVI': return get('ESVI', '');
+                    case 'FS': return get('FS', '');
+                    case 'EF_teich': return get('EF', '');
+                    case 'EF_simpson': return get('EF辛普森', '');
+                    default: return get(key, '');
+                }
+            };
+
+            const formatParamWithRef = (label, value, refKey = null) => {
+                const refValue = refKey ? getReferenceValue(refKey) : '';
+                const formattedValue = value ? formatValue(value) : '';
+                if (formattedValue) return refValue ? `${label}: ${formattedValue}（${refValue}）` : `${label}: ${formattedValue}（）`;
+                return refValue ? `${label}:（${refValue}）` : `${label}:（）`;
+            };
+
+            // 两列间距：左列补齐宽度（越小两列越靠近）
+            // 注意：包含中文全角括号/标点时，padEnd按“字符数”补齐会导致视觉不齐；
+            // 这里按“显示宽度”（全角=2，半角=1）补齐，保证两列稳定对齐。
+            const colWidth = 30;
+
+            const charDisplayWidth = (ch) => {
+                const cp = ch.codePointAt(0);
+                // 简化版 East Asian Width：常见全角/中日韩字符视为2列宽
+                if (
+                    (cp >= 0x1100 && cp <= 0x115F) || // Hangul Jamo
+                    (cp >= 0x2E80 && cp <= 0xA4CF) || // CJK, radicals, Yi
+                    (cp >= 0xAC00 && cp <= 0xD7A3) || // Hangul Syllables
+                    (cp >= 0xF900 && cp <= 0xFAFF) || // CJK Compatibility Ideographs
+                    (cp >= 0xFE10 && cp <= 0xFE19) || // Vertical forms
+                    (cp >= 0xFE30 && cp <= 0xFE6F) || // CJK Compatibility Forms
+                    (cp >= 0xFF00 && cp <= 0xFF60) || // Fullwidth forms
+                    (cp >= 0xFFE0 && cp <= 0xFFE6)    // Fullwidth symbols
+                ) {
+                    return 2;
+                }
+                return 1;
+            };
+
+            const stringDisplayWidth = (s) => {
+                let w = 0;
+                for (const ch of String(s)) w += charDisplayWidth(ch);
+                return w;
+            };
+
+            const padToDisplayWidth = (s, targetWidth) => {
+                const str = String(s);
+                let w = stringDisplayWidth(str);
+                if (w >= targetWidth) return str;
+                return str + ' '.repeat(targetWidth - w);
+            };
+
+            const alignCol = (text) => padToDisplayWidth(text, colWidth);
+
+            // readme: mmode_2col_rows
+            const rows = [
+                { left: 'IVSd', right: 'LVDd' },
+                { left: 'LVWd', right: 'IVSs' },
+                { left: 'LVDs', right: 'LVWs' },
+                { left: ['EDV_teich', 'EDV_simpson'], right: ['ESV_teich', 'ESV_simpson'] },
+                { left: 'EDVI', right: 'ESVI' },
+                { left: 'FS', right: ['EF_teich', 'EF_simpson'] }
+            ];
+
+            const weightText =
+                referenceRange === '金毛'
+                    ? `（参考：金毛）`
+                    : (referenceWeight
+                        ? `（参考值: ${referenceWeight}kg）`
+                        : (get('体重') ? `（参考值: ${get('体重')}kg）` : ''));
+
+            let findings = '';
+            findings += `犬侧卧位扫查:\n`;
+            findings += `  1.M-MODE/2D (mm) ${weightText}\n`;
+
+            const renderLeftRight = (leftText, rightText) => {
+                // 缩进与 "1.M-MODE/2D" 中的 "M" 对齐（前面 4 个空格）
+                findings += `    ${alignCol(leftText)}${rightText}\n`;
+            };
+
+            for (const r of rows) {
+                // EDV/ESV 行（Teich/Simpson）
+                if (Array.isArray(r.left) && Array.isArray(r.right) && r.left[0] === 'EDV_teich') {
+                    const edvTeich = valueByKey('EDV_teich');
+                    const edvSimp = simpsonEnabled ? valueByKey('EDV_simpson') : '';
+                    const esvTeich = valueByKey('ESV_teich');
+                    const esvSimp = simpsonEnabled ? valueByKey('ESV_simpson') : '';
+
+                    const edvBase = edvTeich ? `EDV: ${formatValue(edvTeich, true)}ml` : 'EDV: ml';
+                    const esvBase = esvTeich ? `ESV: ${formatValue(esvTeich, true)}ml` : 'ESV: ml';
+
+                    let edvText = edvBase;
+                    let esvText = esvBase;
+
+                    if (simpsonEnabled) {
+                        const edvSimpPart = edvSimp ? `${formatValue(edvSimp, true)}ml` : 'ml';
+                        const esvSimpPart = esvSimp ? `${formatValue(esvSimp, true)}ml` : 'ml';
+                        edvText = `${edvBase}/${edvSimpPart}（辛普森）`;
+                        esvText = `${esvBase}/${esvSimpPart}（辛普森）`;
+                    }
+                    renderLeftRight(edvText, esvText);
+                    continue;
+                }
+
+                // FS/EF 行（EF Teich/Simpson）
+                if (r.left === 'FS' && Array.isArray(r.right)) {
+                    const fs = valueByKey('FS');
+                    const efTeich = valueByKey('EF_teich');
+                    const efSimp = simpsonEnabled ? valueByKey('EF_simpson') : '';
+                    const fsText = fs ? `FS: ${formatValue(fs, true)}%` : 'FS: %';
+                    const efBase = efTeich ? `EF: ${formatValue(efTeich, true)}%` : 'EF: %';
+
+                    let efText = efBase;
+                    if (simpsonEnabled) {
+                        const efSimpPart = efSimp ? `${formatValue(efSimp, true)}%` : '%';
+                        efText = `${efBase}/${efSimpPart}（辛普森）`;
+                    }
+                    renderLeftRight(fsText, efText);
+                    continue;
+                }
+
+                // EDVI/ESVI 行：无参考值，显示为“EDVI: {值}ml/m2”
+                if (r.left === 'EDVI' && r.right === 'ESVI') {
+                    const edvi = valueByKey('EDVI');
+                    const esvi = valueByKey('ESVI');
+                    const edviText = edvi ? `EDVI: ${formatValue(edvi, true)}ml/m2` : 'EDVI: ml/m2';
+                    const esviText = esvi ? `ESVI: ${formatValue(esvi, true)}ml/m2` : 'ESVI: ml/m2';
+                    renderLeftRight(edviText, esviText);
+                    continue;
+                }
+
+                const leftKey = r.left;
+                const rightKey = r.right;
+                const leftLabel = leftKey;
+                const rightLabel = rightKey;
+
+                const leftRefKey = leftKey === 'LVWd' ? 'LVWd' : leftKey;
+                const rightRefKey = rightKey === 'LVWs' ? 'LVWs' : rightKey;
+
+                const leftText = formatParamWithRef(leftLabel, valueByKey(leftKey), leftRefKey);
+                const rightText = formatParamWithRef(rightLabel, valueByKey(rightKey), rightRefKey);
+                renderLeftRight(leftText, rightText);
+            }
+
+            findings += `\n`;
+            if (diseaseType === 'MMVD') {
+                const thickness = get('二尖瓣前叶厚度', '');
+                const droop = get('脱垂程度', '');
+                const thickPart = thickness ? `（较厚处约：${thickness}mm）` : '';
+                const droopText = droop ? `${droop}脱垂` : '脱垂';
+                const line2Base = `  2.瓣膜异常: 二尖瓣前叶增厚${thickPart}、${droopText}`;
+
+                const chordType = get('腱索断裂类型', '');
+                if (chordType) {
+                    findings += `${line2Base}； 二尖瓣前叶可见游离强回声亮线。\n`;
+                } else {
+                    findings += `${line2Base}。\n`;
+                }
+            } else {
+                findings += `  2.瓣膜异常: 未见明显异常；\n`;
+                findings += `    心肌及运动异常: 未见明显异常。\n`;
+            }
+            findings += `    ${formatParamWithRef('AO', get('AO', ''), 'AO')}\n`;
+            findings += `    ${formatParamWithRef('LA', get('LA', ''), 'LA')}\n`;
+            findings += `    LA/AO:  ${formatValue(get('LA/AO', ''))}\n`;
+            const lavi = get('LAVi', '');
+            if (lavi) {
+                findings += `    LA Volume:  ${formatValue(lavi)}ml/kg\n`;
+            }
+            findings += `\n`;
+
+            // 3. 彩色多普勒检查：根据左侧标签动态描述各瓣口血流
+            const isTagActive = (tagName) => {
+                const button = document.querySelector(`.valve-flow-tag[data-tag="${tagName}"]`);
+                return button && button.classList.contains('active');
+            };
+            const regurgFlowTags = [
+                { tag: '二尖瓣反流', label: '二尖瓣', severityParam: '二尖瓣反流程度' },
+                { tag: '三尖瓣反流', label: '三尖瓣', severityParam: '三尖瓣反流程度' },
+                { tag: '肺动脉瓣反流', label: '肺动脉瓣', severityParam: '肺动脉瓣反流程度' },
+                { tag: '主动脉瓣反流', label: '主动脉瓣', severityParam: '主动脉瓣反流程度' }
+            ];
+            const activeFlows = regurgFlowTags.filter(v => isTagActive(v.tag));
+
+            if (isTagActive('各瓣口血流正常') && activeFlows.length === 0) {
+                findings += `  3.彩色多普勒检查  各瓣口未见明显反流、湍流；\n`;
+            } else if (activeFlows.length > 0) {
+                const parts = activeFlows.map(v => {
+                    const sev = (get(v.severityParam, '') || '').trim();
+                    return `${v.label}${sev || ''}反流`;
+                });
+                findings += `  3.彩色多普勒检查  ${parts.join('，')}；\n`;
+            } else {
+                // 未明确勾选“正常”也未勾选具体反流标签时，兜底按正常描述
+                findings += `  3.彩色多普勒检查  各瓣口未见明显反流、湍流；\n`;
+            }
+
+            // 频谱多普勒 + E/A、E/E'
+            findings += `    频谱多普勒检查  VPA: ${get('VPA', '')}m/s；  VAO: ${get('VAO', '')}m/s；\n`;
+            findings += `    E: ${get('E', '')}m/s，A: ${get('A', '')}m/s，E/A${get('E/A', '')}； E/E': ${get("E/E'", '')}；\n`;
+
+            // MMVD：在 E/A 行下一行展示 dp/dt（输入为空则不显示）
+            if (diseaseType === 'MMVD') {
+                const dpdtDisplay = (get('dp/dt显示', '不显示') || '').toString().trim();
+                const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
+                if (dpdtDisplay === '显示' && dpdtRaw) {
+                    findings += `    dP/dt：${formatValue(dpdtRaw)}mmHg/s\n`;
+                }
+            }
+
+            // 在 E/A 行下面补充各瓣口反流速 + 压差（若有）
+            // “未测得”按钮：若激活，则把对应瓣口速度行替换为“XXX反流速未测得；”，并对多个未测得瓣口进行合并书写
+            const unknownValves = [];
+            const mitralUnknown = get('二尖瓣反流速未测得', '');
+            if (isTagActive('二尖瓣反流') && mitralUnknown) unknownValves.push('二尖瓣');
+
+            const tricuspidUnknown = get('三尖瓣反流速未测得', '');
+            if (isTagActive('三尖瓣反流') && tricuspidUnknown) unknownValves.push('三尖瓣');
+
+            const pulmonaryUnknown = get('肺动脉瓣反流速未测得', '');
+            if (isTagActive('肺动脉瓣反流') && pulmonaryUnknown) unknownValves.push('肺动脉瓣');
+
+            const aorticUnknown = get('主动脉瓣反流速未测得', '');
+            if (isTagActive('主动脉瓣反流') && aorticUnknown) unknownValves.push('主动脉瓣');
+
+            const velocityLines = [];
+            if (isTagActive('二尖瓣反流') && !mitralUnknown) {
+                const mitralVel = get('二尖瓣反流速', '');
+                const mitralDp = get('二尖瓣压力差', '');
+                const velText = mitralVel ? formatValue(mitralVel) : 'm/s';
+                const dpText = mitralDp ? `${formatValue(mitralDp)}mmHg` : 'mmHg';
+                velocityLines.push(`    二尖瓣反流速：${velText}（${dpText}）；`);
+            }
+            if (isTagActive('三尖瓣反流') && !tricuspidUnknown) {
+                const tricuspidVel = get('三尖瓣反流速', '');
+                const tricuspidDp = get('三尖瓣压力差', '');
+                const velText = tricuspidVel ? formatValue(tricuspidVel) : 'm/s';
+                const dpText = tricuspidDp ? `${formatValue(tricuspidDp)}mmHg` : 'mmHg';
+                velocityLines.push(`    三尖瓣反流速：${velText}（${dpText}）；`);
+            }
+            if (isTagActive('肺动脉瓣反流') && !pulmonaryUnknown) {
+                const pulmonaryVel = get('肺动脉瓣反流速', '');
+                const pulmonaryDp = get('肺动脉瓣压力差', '');
+                const velText = pulmonaryVel ? formatValue(pulmonaryVel) : 'm/s';
+                const dpText = pulmonaryDp ? `${formatValue(pulmonaryDp)}mmHg` : 'mmHg';
+                velocityLines.push(`    肺动脉瓣反流速：${velText}（${dpText}）；`);
+            }
+            if (isTagActive('主动脉瓣反流') && !aorticUnknown) {
+                const aorticVel = get('主动脉瓣反流速', '');
+                const aorticDp = get('主动脉瓣压力差', '');
+                const velText = aorticVel ? formatValue(aorticVel) : 'm/s';
+                const dpText = aorticDp ? `${formatValue(aorticDp)}mmHg` : 'mmHg';
+                velocityLines.push(`    主动脉瓣反流速：${velText}（${dpText}）；`);
+            }
+
+            // 输出仍有数值的反流速行（不包括“未测得”瓣口）
+            if (velocityLines.length > 0) {
+                velocityLines.forEach(line => {
+                    findings += `${line}\n`;
+                });
+            }
+
+            // “未测得”放在有反流速下一行
+            if (unknownValves.length > 0) {
+                findings += `    ${unknownValves.join('、')}反流速未测得；\n`;
+            }
+
+            findings += `\n`;
+
+            // 心率：自动带单位 bpm（若用户已输入 bpm 则不重复追加）
+            const heartRateRaw = (get('心率', '') || '').toString().trim();
+            const heartRateText = heartRateRaw
+                ? /[bB]pm\s*$/.test(heartRateRaw)
+                    ? heartRateRaw
+                    : (/^\d+(\.\d+)?$/.test(heartRateRaw)
+                        ? `约${Math.round(parseFloat(heartRateRaw))}bpm`
+                        : `${heartRateRaw}bpm`)
+                : '';
+            findings += `  4.心率: ${heartRateText}。\n`;
+
+            // 统一编号格式（与模板路径保持一致）
+            findings = findings.replace(/^(\d+)\.\s+/gm, '  $1.');
+            findings = findings.replace(/^(?!  )(\d+)\./gm, '  $1.');
+            return findings + '\n';
         }
         
         // 检查是否有对应的MD模板（使用新的模版加载逻辑）
@@ -3659,7 +4572,8 @@ const templateConfig = {
             if (formattedValue) {
                 return refValue ? `${label}:${formattedValue}(${refValue})` : `${label}:${formattedValue}()`;
             } else {
-                return refValue ? `${label}:（${refValue}）` : `${label}:（）`;
+                // 为了让两列 padEnd 对齐稳定，避免使用全角括号（显示宽度不等于字符串长度）
+                return refValue ? `${label}:(${refValue})` : `${label}:()`;
             }
         };
         
@@ -3719,8 +4633,24 @@ const templateConfig = {
         findings += `     ${fsAligned}${efText}\n\n`;
         
         // 2. 瓣膜异常部分
-        findings += `  2.瓣膜异常：未见明显异常\n`;
-        findings += `    各瓣叶移动：未见明显异常\n`;
+        if (diseaseType === 'MMVD') {
+            const thickness = get('二尖瓣前叶厚度', '');
+            const droop = get('脱垂程度', '');
+            const thickPart = thickness ? `（较厚处约：${thickness}mm）` : '';
+            const droopText = droop ? `${droop}脱垂` : '脱垂';
+            const line2Base = `  2.瓣膜异常：二尖瓣前叶增厚${thickPart}、${droopText}`;
+            
+            const chordType = get('腱索断裂类型', '');
+            if (chordType) {
+                findings += `${line2Base}； 二尖瓣前叶可见游离强回声亮线。\n`;
+            } else {
+                findings += `${line2Base}。\n`;
+            }
+            findings += `    各瓣叶移动：未见明显异常\n`;
+        } else {
+            findings += `  2.瓣膜异常：未见明显异常\n`;
+            findings += `    各瓣叶移动：未见明显异常\n`;
+        }
         const la = get('LA', '');
         const ao = get('AO', '');
         const laAo = get('LA/AO', '');
@@ -3844,6 +4774,309 @@ const templateConfig = {
             // 兔子：从不同品种参考值中获取（CSV中为"兔"）
             referenceData = breedReferenceData['兔'];
         }
+
+        // =========================
+        // 规则生成（不依赖 Markdown 模板）
+        // 当前覆盖：Normal（犬） + MMVD（犬）→ 使用与 Normal 一致的规则框架
+        // =========================
+        const isDogRuleBase =
+            (diseaseType === 'Normal' || diseaseType === 'MMVD' || !diseaseType) &&
+            (referenceRange === 'M型' || referenceRange === '非M型' || referenceRange === '金毛');
+
+        if (isDogRuleBase) {
+            const isTagActive = (tagName) => {
+                const button = document.querySelector(`.valve-flow-tag[data-tag="${tagName}"]`);
+                return button && button.classList.contains('active');
+            };
+
+            const regurgTags = [
+                { tag: '二尖瓣反流', label: '二尖瓣', severityParam: '二尖瓣反流程度' },
+                { tag: '三尖瓣反流', label: '三尖瓣', severityParam: '三尖瓣反流程度' },
+                { tag: '肺动脉瓣反流', label: '肺动脉瓣', severityParam: '肺动脉瓣反流程度' },
+                { tag: '主动脉瓣反流', label: '主动脉瓣', severityParam: '主动脉瓣反流程度' }
+            ];
+            const activeRegurg = regurgTags.filter(v => isTagActive(v.tag));
+            const normalActive = isTagActive('各瓣口血流正常');
+            const mitralActive = isTagActive('二尖瓣反流');
+            const tvActive = isTagActive('三尖瓣反流');
+
+            let conclusion = '';
+            // MMVD：其余反流（非二尖瓣）延后到结论末尾生成
+            let mmvdDeferredOtherRegurgLinesRaw = [];
+            let mmvdDeferredOtherRegurgEnabled = false;
+            let mmvdNeedsDefaultChamberSummary = false;
+
+            if (diseaseType === 'MMVD' && mitralActive) {
+                // 1）二尖瓣退行性病变（固定为第 1 条）
+                mmvdNeedsDefaultChamberSummary = true;
+
+                const droop = (get('脱垂程度', '') || '').trim();
+                const droopText = droop ? `${droop}脱垂` : '脱垂';
+                const mitralSev = (get('二尖瓣反流程度', '') || '').trim();
+                const mitralText = mitralSev ? `${mitralSev}反流` : '反流';
+                const chordType = (get('腱索断裂类型', '') || '').trim();
+
+                const mvVelRaw = (get('二尖瓣反流速', '') || '').toString().trim();
+                const mvVel = Number.parseFloat(mvVelRaw);
+                const mvExtra = !Number.isNaN(mvVel) && mvVel > 6.5;
+
+                let mitralLine = `  1.二尖瓣退行性病变：二尖瓣前叶增厚、${droopText}、${mitralText}`;
+                if (chordType) {
+                    if (mvExtra) {
+                        // 按示例：疑部分腱索断裂后换行追加“收缩压偏高...”
+                        mitralLine += `；${chordType}；`;
+                        conclusion += mitralLine + '\n';
+                        conclusion += `    收缩压偏高，建议排查高血压。\n`;
+                    } else {
+                        mitralLine += `；${chordType}。`;
+                        conclusion += mitralLine + '\n';
+                    }
+                } else {
+                    if (mvExtra) {
+                        // MV>6.5：血压提示单独一行，但不新增编号（便于阅读）
+                        mitralLine += '；';
+                        conclusion += mitralLine + '\n';
+                        conclusion += `    收缩压偏高，建议排查高血压。\n`;
+                    } else {
+                        mitralLine += '。';
+                        conclusion += mitralLine + '\n';
+                    }
+                }
+
+                // 2）其余反流：延后到结论末尾，按 Normal 的“合并/拆分”逻辑生成
+                const otherActiveRegurg = regurgTags.filter(v => v.tag !== '二尖瓣反流' && isTagActive(v.tag));
+                if (otherActiveRegurg.length > 0) {
+                    const tvVelRaw = (get('三尖瓣反流速', '') || '').toString().trim();
+                    const tvVel = Number.parseFloat(tvVelRaw);
+                    const tvExtra = tvActive && !Number.isNaN(tvVel) && tvVel > 3.0;
+                    const hasExtraConclusionAny = mvExtra || tvExtra; // Normal：MV/TV 任一触发追加则拆分
+
+                    if (!hasExtraConclusionAny) {
+                        // 合并为一行
+                        const parts = otherActiveRegurg.map(v => {
+                            const sev = (get(v.severityParam, '') || '').trim();
+                            return `${v.label}${sev || ''}反流`;
+                        });
+                        mmvdDeferredOtherRegurgLinesRaw = [`${parts.join('、')}。`];
+                    } else {
+                        // 拆分为多行（顺序：三尖瓣 > 肺动脉瓣 > 主动脉瓣）
+                        mmvdDeferredOtherRegurgLinesRaw = [];
+                        for (const v of otherActiveRegurg) {
+                            const sev = (get(v.severityParam, '') || '').trim();
+                            let rawLine = `${v.label}${sev || ''}反流。`;
+                            if (v.tag === '三尖瓣反流') {
+                                if (tvExtra) {
+                                    const doubt = tvVel < 3.4
+                                        ? (sev ? `疑${sev}肺动脉高压。` : '疑肺动脉高压。')
+                                        : '肺动脉高压。';
+                                    rawLine = `${v.label}${sev || ''}反流，${doubt}`;
+                                }
+                            }
+                            mmvdDeferredOtherRegurgLinesRaw.push(rawLine);
+                        }
+                    }
+                    mmvdDeferredOtherRegurgEnabled = true;
+                }
+            } else if (activeRegurg.length === 0 && normalActive) {
+                // 正常：结论为一条，血流和腔室合在一起（与“所见”保持相同的首行缩进）
+                conclusion += '  1.心脏各腔室大小、室壁厚度、各瓣口血流未见明显异常。\n';
+            } else if (activeRegurg.length > 0) {
+                // 有瓣口血流异常：
+                // 1）如果所有瓣口都没有追加结论（如高压提示），则合并为一行
+                // 2）若任一瓣口触发追加结论，则每个瓣口单独一行
+
+                // 先预判哪些瓣口会触发“追加结论”
+                let hasExtraConclusion = false;
+                const mvVelRaw0 = (get('二尖瓣反流速', '') || '').toString().trim();
+                const mvVel0 = Number.parseFloat(mvVelRaw0);
+                if (isTagActive('二尖瓣反流') && !Number.isNaN(mvVel0) && mvVel0 > 6.5) {
+                    hasExtraConclusion = true;
+                }
+                const tvVelRaw0 = (get('三尖瓣反流速', '') || '').toString().trim();
+                const tvVel0 = Number.parseFloat(tvVelRaw0);
+                if (isTagActive('三尖瓣反流') && !Number.isNaN(tvVel0) && tvVel0 > 3.0) {
+                    hasExtraConclusion = true;
+                }
+
+                if (!hasExtraConclusion) {
+                    // 情况 1：无追加结论 → 合并为一行
+                    const parts = activeRegurg.map(v => {
+                        const sev = (get(v.severityParam, '') || '').trim();
+                        return `${v.label}${sev || ''}反流`;
+                    });
+                    conclusion += `  1.${parts.join('、')}。\n`;
+                    conclusion += '  2.心脏各腔室大小、室壁厚度未见明显异常。\n';
+                } else {
+                    // 情况 2：存在追加结论 → 每个瓣口单独一行，按 regurgTags 顺序编号
+                    let index = 1;
+                    for (const v of regurgTags) {
+                        if (!isTagActive(v.tag)) continue;
+
+                        const sev = (get(v.severityParam, '') || '').trim();
+                        let line = `  ${index}.${v.label}${sev || ''}反流。`;
+
+                        // 二尖瓣：反流速 > 6.5m/s
+                        if (v.tag === '二尖瓣反流') {
+                            const mvVelRaw = (get('二尖瓣反流速', '') || '').toString().trim();
+                            const mvVel = Number.parseFloat(mvVelRaw);
+                            if (!Number.isNaN(mvVel) && mvVel > 6.5) {
+                                line = line.replace(/。$/, '；');
+                                line += '收缩压偏高，建议排查高血压。';
+                            }
+                        }
+
+                        // 三尖瓣：反流速 > 3.0 m/s
+                        if (v.tag === '三尖瓣反流') {
+                            const tvVelRaw = (get('三尖瓣反流速', '') || '').toString().trim();
+                            const tvVel = Number.parseFloat(tvVelRaw);
+                            if (!Number.isNaN(tvVel) && tvVel > 3.0) {
+                                line = line.replace(/。$/, '；');
+                                if (tvVel < 3.4) {
+                                    line += '疑肺动脉高压。';
+                                } else {
+                                    line += '肺动脉高压。';
+                                }
+                            }
+                        }
+
+                        conclusion += `${line}\n`;
+                        index += 1;
+                    }
+
+                    // 血流结论之后，再给一行腔室/室壁总结
+                    conclusion += `  ${index}.心脏各腔室大小、室壁厚度未见明显异常。\n`;
+                }
+            } else {
+                // 既未勾选“各瓣口血流正常”，也无具体反流标签时，兜底按正常处理
+                conclusion += '  1.心脏各腔室大小、室壁厚度、各瓣口血流未见明显异常。\n';
+            }
+
+            // =========================
+            // 容量/结构类异常：可单独一行概括（Normal & MMVD 共用）
+            // EDVI 升高 / LVDDN 升高 / LA/AO 升高
+            // =========================
+            const edviNum = parseFloat(get('EDVI', ''));
+            const lvddnNum = parseFloat(get('LVDDN', ''));
+            const laAoNum = parseFloat(get('LA/AO', ''));
+
+            const numberedLinesForIndex = conclusion
+                .trimEnd()
+                .split('\n')
+                .filter(l => /^\s*\d+\./.test(l)).length;
+            let idx = numberedLinesForIndex + 1;
+
+            const hasLvOverload =
+                (!Number.isNaN(edviNum) && edviNum > 100) ||
+                (!Number.isNaN(lvddnNum) && lvddnNum >= 1.7);
+            const hasLaEnlargement = !Number.isNaN(laAoNum) && laAoNum >= 1.6;
+
+            let addedChamberSummary = false;
+            if (hasLvOverload && hasLaEnlargement) {
+                conclusion += `  ${idx}.左心容量过载，其余腔室大小尚可。\n`;
+                idx += 1;
+                addedChamberSummary = true;
+            } else if (hasLvOverload) {
+                conclusion += `  ${idx}.左心室容量过载，其余各腔室大小尚可。\n`;
+                idx += 1;
+                addedChamberSummary = true;
+            } else if (hasLaEnlargement) {
+                conclusion += `  ${idx}.左心房增大，其余各腔室大小尚可。\n`;
+                idx += 1;
+                addedChamberSummary = true;
+            }
+
+            // MMVD 特定：若没有“容量/结构”异常，仍要保证第 2 行为腔室/室壁总结
+            if (!addedChamberSummary && diseaseType === 'MMVD' && mmvdNeedsDefaultChamberSummary) {
+                conclusion += `  ${idx}.心脏各腔室大小、室壁厚度未见明显异常。\n`;
+            }
+            
+            // ===== 第 2 部分：左心室收缩 / 舒张功能 =====
+            // 计算下一条结论的编号
+            const nextIndex = conclusion
+                .trimEnd()
+                .split('\n')
+                .filter(l => /^\s*\d+\./.test(l)).length + 1;
+
+            const eAValue = get('E/A', '') || '';
+            const eOverEValue = get("E/E'", '') || '';
+            const esviRaw = get('ESVI', '');
+            const esvi = esviRaw ? parseFloat(esviRaw) : NaN;
+
+            // 舒张功能判断（readme 规则补全：E/A > 2 => 舒张功能失代偿）
+            let diastolicStatus = '未见明显异常';
+            const eAClean = eAValue.replace(/[＜<]/g, '<').replace(/[＞>]/g, '>');
+            // 约定：calculateEOverA 输出一般为 '＜1'、'＞1'、'＞2'
+            if (eAClean.indexOf('>2') !== -1) {
+                diastolicStatus = '失代偿';
+            } else if (eAClean.indexOf('<1') !== -1) {
+                diastolicStatus = '下降';
+            }
+
+            const eOverENum = eOverEValue ? parseFloat(eOverEValue) : NaN;
+            // 若已是失代偿，则不再覆盖；否则 E/E' > 11 => 下降
+            if (diastolicStatus !== '失代偿' && !Number.isNaN(eOverENum) && eOverENum > 11) {
+                diastolicStatus = '下降';
+            }
+
+            // 收缩功能判断（基于 ESVI）
+            let systolicStatus = '未见明显异常';
+            if (!Number.isNaN(esvi)) {
+                if (esvi >= 35 && esvi < 50) {
+                    systolicStatus = '轻度下降';
+                } else if (esvi >= 50) {
+                    systolicStatus = '下降';
+                }
+            }
+
+            // MMVD：dp/dt < 1800mmHg/s 时，认为收缩功能“下降”
+            let dpdtIndicatesSystolicDecline = false;
+            if (diseaseType === 'MMVD') {
+                const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
+                const dpdtNum = dpdtRaw ? parseFloat(dpdtRaw) : NaN;
+                if (!Number.isNaN(dpdtNum) && dpdtNum < 1800) {
+                    dpdtIndicatesSystolicDecline = true;
+                    systolicStatus = '下降';
+                }
+            }
+
+            // 组合结论句（readme 示例：舒张功能失代偿时用“收缩尚可，舒张功能失代偿”）
+            let funcLine = '';
+            if (diastolicStatus === '失代偿') {
+                const systolicText = (systolicStatus === '未见明显异常')
+                    ? '左心室收缩功能尚可'
+                    : `左心室收缩功能${systolicStatus}`;
+                funcLine = `  ${nextIndex}.${systolicText}，舒张功能失代偿。`;
+            } else if (systolicStatus === '未见明显异常' && diastolicStatus === '未见明显异常') {
+                funcLine = dpdtIndicatesSystolicDecline
+                    ? `  ${nextIndex}.左心室收缩功能下降，舒张功能未见明显异常。`
+                    : `  ${nextIndex}.左心室收缩、舒张功能未见明显异常。`;
+            } else if (systolicStatus === '未见明显异常') {
+                funcLine = dpdtIndicatesSystolicDecline
+                    ? `  ${nextIndex}.左心室收缩功能下降，舒张功能${diastolicStatus}。`
+                    : `  ${nextIndex}.左心室收缩功能未见明显异常，舒张功能${diastolicStatus}。`;
+            } else if (diastolicStatus === '未见明显异常') {
+                funcLine = `  ${nextIndex}.左心室收缩功能${systolicStatus}，舒张功能未见明显异常。`;
+            } else {
+                funcLine = `  ${nextIndex}.左心室收缩功能${systolicStatus}，舒张功能${diastolicStatus}。`;
+            }
+
+            conclusion += funcLine + '\n';
+
+            // MMVD：其余反流（非二尖瓣）放到结论末尾，排序三尖瓣 > 肺动脉瓣 > 主动脉瓣
+            if (diseaseType === 'MMVD' && mmvdDeferredOtherRegurgEnabled && mmvdDeferredOtherRegurgLinesRaw.length > 0) {
+                const numberedLines = conclusion
+                    .trimEnd()
+                    .split('\n')
+                    .filter(l => /^\s*\d+\./.test(l)).length;
+                let idx = numberedLines + 1;
+                for (const rawLine of mmvdDeferredOtherRegurgLinesRaw) {
+                    conclusion += `  ${idx}.${rawLine}\n`;
+                    idx += 1;
+                }
+            }
+
+            return conclusion;
+        }
         
         
         // 检查是否有对应的MD模板
@@ -3884,11 +5117,8 @@ const templateConfig = {
             const conclusionMatch = result.match(/#\s*结论\s*\n([\s\S]*?)$/);
             if (conclusionMatch) {
                 let conclusion = conclusionMatch[1].trim();
-                // 清理编号格式：将"数字. "或"数字."改为"  数字."（去除编号后的空格，并在编号前添加2个空格）
-                // 先处理"数字. "的情况
-                conclusion = conclusion.replace(/^(\d+)\.\s+/gm, '  $1.');
-                // 再处理行首没有2个空格的"数字."的情况
-                conclusion = conclusion.replace(/^(?!  )(\d+)\./gm, '  $1.');
+                // 清理编号格式：统一为“  数字.”（与所见首行缩进一致）
+                conclusion = conclusion.replace(/^\s*(\d+)\.\s*/gm, '  $1.');
                 return conclusion;
             }
             // 如果没有找到"# 结论"标记，尝试查找"结论"关键字
@@ -3897,11 +5127,8 @@ const templateConfig = {
                 let conclusion = result.substring(conclusionIndex + '# 结论'.length).trim();
                 // 去除开头的换行和空格
                 conclusion = conclusion.replace(/^\s*\n+/, '').trim();
-                // 清理编号格式：将"数字. "或"数字."改为"  数字."（去除编号后的空格，并在编号前添加2个空格）
-                // 先处理"数字. "的情况
-                conclusion = conclusion.replace(/^(\d+)\.\s+/gm, '  $1.');
-                // 再处理行首没有2个空格的"数字."的情况
-                conclusion = conclusion.replace(/^(?!  )(\d+)\./gm, '  $1.');
+                // 清理编号格式：统一为“  数字.”
+                conclusion = conclusion.replace(/^\s*(\d+)\.\s*/gm, '  $1.');
                 return conclusion;
             }
         }
@@ -3957,12 +5184,38 @@ async function generateTemplate() {
     if (!mdTemplates[templateKey]) {
         await loadMDTemplateNew(diseaseType, referenceRange, false, simpsonEnabled);
     }
+    // 如果模板已缓存但内容仍是旧版本（没有新占位符），自动强制重载一次，确保修改立即生效
+    if (mdTemplates[templateKey] && !mdTemplates[templateKey].includes('{瓣口血流结论}')) {
+        // 仅对本次新增占位符做兼容性重载，避免对所有场景产生额外网络开销
+        const maybeOld = mdTemplates[templateKey].includes('各瓣口血流未见明显异常');
+        if (maybeOld) {
+            await loadMDTemplateNew(diseaseType, referenceRange, true, simpsonEnabled);
+        }
+    }
 
     // 使用模板配置生成所见部分
-    const findings = templateConfig.generateFindings(diseaseType, referenceRange, parameters);
+    let findings = templateConfig.generateFindings(diseaseType, referenceRange, parameters);
     
     // 使用模板配置生成结论部分
-    const conclusion = templateConfig.generateConclusion(diseaseType, referenceRange, parameters);
+    let conclusion = templateConfig.generateConclusion(diseaseType, referenceRange, parameters);
+
+    // 节律不齐：在“所见”心率处补充，并在“结论”末尾追加
+    if (parameters['节律不齐']) {
+        if (typeof findings === 'string' && findings.includes('4.心率') && !findings.includes('节律不齐')) {
+            findings = findings.replace(/(4\.心率[:：]\s*[^\n。]*?)。/g, '$1，节律不齐。');
+        }
+
+        if (typeof conclusion === 'string' && !conclusion.includes('心脏节律不齐')) {
+            const lines = conclusion.trimEnd().split('\n').filter(Boolean);
+            const numberedLines = lines.filter(l => /^\s*\d+\./.test(l));
+            let nextIndex = 1;
+            if (numberedLines.length > 0) {
+                const m = numberedLines[numberedLines.length - 1].match(/^\s*(\d+)\./);
+                if (m && m[1]) nextIndex = parseInt(m[1], 10) + 1;
+            }
+            conclusion = conclusion.trimEnd() + `\n  ${nextIndex}.心脏节律不齐，建议结合ECG评估。`;
+        }
+    }
 
     // 使用value设置文本内容，将换行符保留
     document.getElementById('findingsText').value = findings;
