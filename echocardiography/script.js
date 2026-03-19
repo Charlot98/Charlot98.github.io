@@ -2067,7 +2067,7 @@ function setupRefreshButton() {
             // OCR提示词恢复默认
             const ocrStatus = document.getElementById('ocrStatus');
             if (ocrStatus) {
-                ocrStatus.textContent = '可直接粘贴截图到页面，支持自动识别和回填';
+                ocrStatus.textContent = 'OCR搭建中';
             }
 
             // 清空所有输入框
@@ -2402,7 +2402,7 @@ function setupOCR() {
         await runOcrFromFile(file);
     });
 
-    setStatus('可直接粘贴截图到页面，支持自动识别和回填');
+    setStatus('OCR搭建中');
 }
 
 // 立即尝试绑定（如果DOM已加载）
