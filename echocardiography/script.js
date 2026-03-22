@@ -2067,7 +2067,7 @@ function setupRefreshButton() {
             // OCR提示词恢复默认
             const ocrStatus = document.getElementById('ocrStatus');
             if (ocrStatus) {
-                ocrStatus.textContent = 'OCR搭建中';
+                ocrStatus.textContent = '可直接粘贴截图到页面，支持自动识别和回填';
             }
 
             // 清空所有输入框
@@ -2402,7 +2402,7 @@ function setupOCR() {
         await runOcrFromFile(file);
     });
 
-    setStatus('OCR搭建中');
+    setStatus('可直接粘贴截图到页面，支持自动识别和回填');
 }
 
 // 立即尝试绑定（如果DOM已加载）
@@ -4181,6 +4181,7 @@ const templateConfig = {
                 } else {
                     findings += `${line2Base}。\n`;
                 }
+                findings += `    心肌及运动异常: 未见明显异常。\n`;
             } else {
                 findings += `  2.瓣膜异常: 未见明显异常；\n`;
                 findings += `    心肌及运动异常: 未见明显异常。\n`;
