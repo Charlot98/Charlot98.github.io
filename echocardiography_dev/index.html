@@ -54,7 +54,7 @@
                                 <span id="weightReferenceDisplay" class="weight-reference-display"></span>
                             </div>
                         </div>
-                        <button id="refreshButton" class="refresh-button" title="刷新页面" aria-label="刷新页面">
+                        <button id="refreshButton" class="refresh-button" data-tooltip="点击此处刷新页面" title="点击此处刷新页面" aria-label="点击此处刷新页面">
                             <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                                 <path d="M21 3v5h-5"></path>
@@ -62,6 +62,7 @@
                                 <path d="M3 21v-5h5"></path>
                             </svg>
                         </button>
+                        <div id="refreshButtonTooltip" class="refresh-button-tooltip" role="tooltip" aria-label="点击此处刷新页面" style="display: none;"></div>
                     </div>
                 </div>
                 <div class="left-sidebar-scroll">
@@ -204,6 +205,9 @@
                     <span class="unit-label">ml</span>
                     <span class="lavi-display" id="laviDisplay">-</span>
                     <span class="lavi-unit">ml/kg</span>
+                    <div id="laVolumeInputItem" class="la-volume-display-btn-group" aria-label="LA Volume显示开关">
+                        <button type="button" class="la-volume-display-btn" data-param="LA Volume显示" data-value="显示">显示</button>
+                    </div>
                 </div>
             </div>
 
@@ -251,7 +255,6 @@
                         <label class="other-param-label">dP/dt</label>
                         <input type="text" class="other-param-input" data-param="dp/dt" placeholder="请输入数值">
                         <div class="dpdt-display-btn-group" aria-label="dP/dt显示开关">
-                            <button type="button" class="dpdt-display-btn active" data-param="dp/dt显示" data-value="不显示">不显示</button>
                             <button type="button" class="dpdt-display-btn" data-param="dp/dt显示" data-value="显示">显示</button>
                         </div>
                     </div>
@@ -329,6 +332,7 @@
             </div>
             <div class="right-sidebar" id="rightSidebar">
                 <div class="right-sidebar-resize-triangle" id="rightSidebarResizeTriangle" title="拖拽调节大小"></div>
+                <div id="refreshButtonTopSnipHint" class="refresh-button-top-snip-hint" role="status" aria-live="polite" aria-hidden="true" style="display: none;"></div>
                 <div class="template-section">
                     <div class="section-header">
                         <h4>所见</h4>
@@ -358,7 +362,7 @@
 
     <!-- 操作指引：第1层图标，第2/3层卡片 -->
     <div class="guide-wrapper">
-        <div class="guide-card visible" id="guideCard">
+        <div class="guide-card" id="guideCard">
             <div class="guide-card-body" id="guideCardBody"></div>
         </div>
         <button type="button" class="guide-trigger" id="guideTrigger" title="操作指引" aria-label="操作指引">
