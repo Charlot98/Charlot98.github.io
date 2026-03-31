@@ -35,6 +35,39 @@ function loadCSV(path, callback) {
   xhr.send();
 }
 
+// 解析 CSV 为二维数组，支持引号、逗号与换行
+function parseCSV(text) {
+  var rows = [];
+  var row = [];
+  var field = '';
+  var inQuotes = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (ch === '"') {
+      if (inQuotes && text[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === ',' && !inQuotes) {
+      row.push(field);
+      field = '';
+    } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(field);
+      field = '';
+      if (row.length > 1 || (row.length === 1 && row[0] !== '')) rows.push(row);
+      row = [];
+    } else {
+      field += ch;
+    }
+  }
+  row.push(field);
+  if (row.length > 1 || (row.length === 1 && row[0] !== '')) rows.push(row);
+  return rows;
+}
+
 /** 导出为 Excel：header 为表头数组，rows 为二维数组（每行一列数组），filename 不含扩展名会补 .xlsx */
 function downloadExcel(header, rows, filename) {
   if (typeof XLSX === 'undefined') {

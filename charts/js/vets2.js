@@ -1,16 +1,16 @@
 loadCSV('医生列表.csv', function (listCsv) {
-  var listLines = listCsv.trim().split('\n');
+  var listRows = parseCSV(listCsv);
   var doctorOrder = [];
   var doctorLevelMap = {};
   var idxListDoctor = -1, idxListNo = -1, idxListLevel = -1;
 
-  if (listLines.length > 1) {
-    var listHeader = listLines[0].split(',').map(function (h) { return h.trim(); });
+  if (listRows.length > 1) {
+    var listHeader = listRows[0].map(function (h) { return (h || '').trim(); });
     idxListNo = listHeader.indexOf('医生编号');
     idxListDoctor = listHeader.indexOf('医生');
     idxListLevel = listHeader.indexOf('等级');
-    for (var li = 1; li < listLines.length; li++) {
-      var listCols = listLines[li].split(',');
+    for (var li = 1; li < listRows.length; li++) {
+      var listCols = listRows[li];
       var no = listCols[idxListNo] || '';
       var doc = (listCols[idxListDoctor] || '').trim();
       var lvl = idxListLevel >= 0 ? (listCols[idxListLevel] || '').trim() : '';
@@ -21,13 +21,13 @@ loadCSV('医生列表.csv', function (listCsv) {
   }
 
   loadCSV('医生检查量.csv', function (csv) {
-  var lines = csv.trim().split('\n');
-  if (lines.length <= 1) {
+  var rows = parseCSV(csv);
+  if (rows.length <= 1) {
     alert('医生检查量.csv 内容为空或只有表头');
     return;
   }
 
-  var header = lines[0].split(',').map(function (h) { return h.trim(); });
+  var header = rows[0].map(function (h) { return (h || '').trim(); });
   var idxDoctor = header.indexOf('医生');
   var idxDate = header.indexOf('日期');
   var idxTenure = header.indexOf('入职时长');
@@ -49,9 +49,9 @@ loadCSV('医生列表.csv', function (listCsv) {
   var doctorSet = {};
   var tenureMin = Infinity, tenureMax = -Infinity;
 
-  for (var i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    var cols = lines[i].split(',');
+  for (var i = 1; i < rows.length; i++) {
+    var cols = rows[i];
+    if (!cols || !cols.length) continue;
     var doctor = cols[idxDoctor];
     var dateStr = cols[idxDate];
     var tenureRaw = idxTenure >= 0 ? cols[idxTenure] : '';

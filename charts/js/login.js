@@ -18,7 +18,7 @@
       return;
     }
     try { localStorage.setItem(STORAGE_KEY, 'logged_in'); } catch (e) {}
-    window.location.href = 'dashboard.html';
+    window.location.href = 'index.html';
   }
 
   $('login-btn').addEventListener('click', handleLogin);
@@ -28,7 +28,7 @@
 
   try {
     if (localStorage.getItem(STORAGE_KEY) === 'logged_in') {
-      window.location.replace('dashboard.html');
+      window.location.replace('index.html');
     }
   } catch (e) {}
 })();

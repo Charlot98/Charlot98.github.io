@@ -1,11 +1,11 @@
 loadCSV('不同等级医生工作量.csv', function (csv) {
-  var lines = csv.trim().split('\n');
-  if (lines.length <= 1) {
+  var rows = parseCSV(csv);
+  if (rows.length <= 1) {
     alert('不同等级医生工作量.csv 内容为空或只有表头');
     return;
   }
 
-  var header = lines[0].split(',').map(function (h) { return h.trim(); });
+  var header = rows[0].map(function (h) { return (h || '').trim(); });
   var idxDate = header.indexOf('日期');
   var idxLevel = header.indexOf('医生等级');
   var idxCount = header.indexOf('每日病例量');
@@ -22,9 +22,9 @@ loadCSV('不同等级医生工作量.csv', function (csv) {
   var seriesMap = {};
   var overallDaily = {};
 
-  for (var i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    var cols = lines[i].split(',');
+  for (var i = 1; i < rows.length; i++) {
+    var cols = rows[i];
+    if (!cols || !cols.length) continue;
     var dateStr = cols[idxDate];
     var level = cols[idxLevel] || '';
     var count = parseFloat(cols[idxCount] || '0');

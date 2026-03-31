@@ -1,21 +1,24 @@
 loadCSV('不同等级医生工作量.csv', function (csv) {
-  var lines = csv.trim().split('\n');
-  if (lines.length <= 1) {
+  var rows = parseCSV(csv);
+  if (rows.length <= 1) {
     alert('不同等级医生工作量.csv 内容为空或只有表头');
     return;
   }
 
-  var header = lines[0].split(',').map(function (h) { return h.trim(); });
+  var header = rows[0].map(function (h) { return (h || '').trim(); });
   var idxDate = header.indexOf('日期');
   var idxLevel = header.indexOf('医生等级');
-  var idxCount = header.indexOf('每日病例量');
-  var idxFee = header.indexOf('每日总费用');
+  var idxCount = header.indexOf('每日人均病例量');
+  if (idxCount === -1) idxCount = header.indexOf('每日病例量'); // 兼容旧表头
+  var idxFee = header.indexOf('每日人均费用');
+  if (idxFee === -1) idxFee = header.indexOf('每日总费用'); // 兼容旧表头
   var idxRatio = header.indexOf('每日费用病例比');
   var idxCntLv = header.indexOf('该等级医生数量');
-  var idxWorkday = header.indexOf('工作日/周末');
+  var idxNature = header.indexOf('日期性质');
+  if (idxNature === -1) idxNature = header.indexOf('工作日/周末'); // 兼容旧表头
 
   if (idxDate === -1 || idxLevel === -1 || idxCount === -1) {
-    alert('CSV 表头中缺少 必要列：日期 / 医生等级 / 每日病例量');
+    alert('CSV 表头中缺少 必要列：日期 / 医生等级 / 每日人均病例量');
     return;
   }
 
@@ -23,16 +26,16 @@ loadCSV('不同等级医生工作量.csv', function (csv) {
   var overallDaily = {};
   var rawRows = [];
 
-  for (var i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    var cols = lines[i].split(',');
+  for (var i = 1; i < rows.length; i++) {
+    var cols = rows[i];
+    if (!cols || !cols.length) continue;
     var dateStr = cols[idxDate];
     var level = cols[idxLevel] || '';
     var count = parseFloat(cols[idxCount] || '0');
     var fee = idxFee >= 0 ? parseFloat(cols[idxFee] || '0') : 0;
     var ratio = idxRatio >= 0 ? parseFloat(cols[idxRatio] || '0') : 0;
     var lvlCnt = idxCntLv >= 0 ? parseInt(cols[idxCntLv] || '0', 10) : 0;
-    var wdFlag = idxWorkday >= 0 ? (cols[idxWorkday] || '') : '';
+    var nature = idxNature >= 0 ? (cols[idxNature] || '') : '';
 
     if (!dateStr || !level) continue;
     var monthKey = dateStr.substring(0, 7);
@@ -48,7 +51,7 @@ loadCSV('不同等级医生工作量.csv', function (csv) {
     if (!seriesMap[level]) seriesMap[level] = [];
     seriesMap[level].push({
       x: xVal, y: count, level: level, fee: fee, ratio: ratio,
-      levelCount: lvlCnt, workFlag: wdFlag
+      levelCount: lvlCnt, dateNature: nature
     });
 
     var dateKey = dateStr;
@@ -67,7 +70,7 @@ loadCSV('不同等级医生工作量.csv', function (csv) {
     var avgFee = o.sumDocs ? (o.sumFees / o.sumDocs) : 0;
     overallSeries.push({
       x: o.x, y: avg, level: '全部', fee: avgFee,
-      ratio: avgFee / (avg || 1), levelCount: o.sumDocs, workFlag: ''
+      ratio: avg > 0 ? (avgFee / avg) : 0, levelCount: o.sumDocs, dateNature: ''
     });
   });
   if (overallSeries.length) seriesMap['全部'] = overallSeries;
@@ -281,7 +284,7 @@ loadCSV('不同等级医生工作量.csv', function (csv) {
             '医生等级：' + this.level + '<br/>每日人均病例量：<b>' + this.y + '</b><br/>' +
             '每日总费用（人均）：' + this.fee.toFixed(2) + '<br/>' +
             '每日费用病例比：' + this.ratio.toFixed(2) + '<br/>' +
-            '该等级医生数量：' + this.levelCount + '<br/>工作日/周末：' + (this.workFlag || '');
+            '该等级医生数量：' + this.levelCount + '<br/>日期性质：' + (this.dateNature || '');
         }
       },
       plotOptions: {
