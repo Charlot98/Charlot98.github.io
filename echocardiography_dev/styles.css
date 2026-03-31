@@ -187,6 +187,7 @@ body {
     min-height: 28px;
     flex-shrink: 0;
     box-shadow: none;
+    position: relative;
     margin-left: auto;
 }
 
@@ -203,6 +204,136 @@ body {
 
 .refresh-button:active {
     transform: none;
+}
+
+.refresh-button::after {
+    /* 移除刷新按钮右上角红点提示 */
+    content: none;
+}
+
+.refresh-button::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 50%;
+    left: auto;
+    right: 0;
+    transform: translateY(-50%) translateX(-8px);
+    opacity: 0; /* 交由 JS 计算并固定定位的提示层显示 */
+    padding: 4px 8px;
+    background-color: rgba(17, 24, 39, 0.95);
+    color: #fff;
+    font-size: 11px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10001;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.refresh-button:hover::before,
+.refresh-button:focus::before {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-8px);
+}
+
+/* 刷新按钮提示层：固定定位，避免被父容器 overflow 裁剪 */
+.refresh-button-tooltip {
+    position: fixed;
+    z-index: 10001;
+    background-color: rgba(17, 24, 39, 0.95);
+    color: #fff;
+    font-size: 11px;
+    border-radius: 4px;
+    white-space: nowrap;
+    padding: 4px 8px;
+    pointer-events: none;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    display: none;
+}
+
+/* 右侧栏顶部：单独悬浮（可拖动），不参与页面排版 */
+.refresh-button-top-snip-hint {
+    position: fixed;
+    /* left/top 由 JS 计算；默认给一个兜底值 */
+    left: 50%;
+    top: 0px;
+    transform: translateX(-50%);
+    z-index: 10001;
+    background-color: rgba(17, 24, 39, 0.95);
+    color: #fff;
+    font-size: 11px;
+    border-radius: 4px;
+    white-space: nowrap;
+    padding: 4px 8px;
+    pointer-events: auto;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    display: none;
+    width: fit-content;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+}
+
+.refresh-button-top-snip-hint:active {
+    cursor: grabbing;
+}
+
+.refresh-button-top-snip-hint .refresh-left-snip-label {
+    font-weight: 800;
+    margin-right: 6px;
+}
+
+.refresh-button-top-snip-hint .refresh-left-snip-plus {
+    margin: 0 2px;
+    font-weight: 900;
+    opacity: 0.95;
+}
+
+.refresh-button-top-snip-hint code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 11px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0 4px;
+    border-radius: 3px;
+    color: #fff;
+}
+
+/* 刷新按钮提示框：循环向左轻微移动 */
+.refresh-tooltip-left-loop {
+    animation: refreshTooltipLeftLoop 1.4s ease-in-out infinite;
+}
+
+@keyframes refreshTooltipLeftLoop {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-6px); }
+}
+
+.refresh-button-tooltip::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+}
+
+/* tooltip 在按钮右侧：箭头指向左 */
+.refresh-button-tooltip[data-placement="right"]::before {
+    left: -6px;
+    right: auto;
+    border-right: 6px solid rgba(17, 24, 39, 0.95);
+    border-left: 0 solid transparent;
+}
+
+/* tooltip 在按钮左侧：箭头指向右 */
+.refresh-button-tooltip[data-placement="left"]::before {
+    right: -6px;
+    left: auto;
+    border-left: 6px solid rgba(17, 24, 39, 0.95);
+    border-right: 0 solid transparent;
 }
 
 .refresh-icon {
@@ -396,7 +527,8 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-x: visible; /* 允许刷新按钮右侧 tooltip 横向溢出显示 */
+    overflow-y: hidden; /* 纵向由 left-sidebar-scroll 控制滚动 */
     background-color: #fff;
     border-right: 1px solid #818181;
     z-index: 10;
@@ -1302,6 +1434,7 @@ body {
     gap: 8px;
     padding: 5px 0;
     margin-bottom: 0;
+    flex-wrap: wrap;
 }
 
 .la-volume-label {
@@ -1340,6 +1473,39 @@ body {
     color: #999;
     font-weight: normal;
     white-space: nowrap;
+}
+
+/* LA Volume：显示/不显示按钮（逻辑同 MMVD 的 dP/dt 显示开关） */
+#laVolumeInputItem {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+}
+
+#laVolumeInputItem .la-volume-display-btn {
+    padding: 4px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    background-color: #f5f5f5;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+#laVolumeInputItem .la-volume-display-btn.active {
+    border-color: #4a90e2;
+    background-color: #4a90e2;
+    color: #fff;
+    font-weight: 600;
+}
+
+#laVolumeInputItem .la-volume-display-btn:hover:not(.active) {
+    border-color: #4a90e2;
+    background-color: #e8f2ff;
+    color: #4a90e2;
 }
 
 /* 参考值样式 */

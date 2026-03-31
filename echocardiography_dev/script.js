@@ -517,6 +517,8 @@ let mdTemplates = {
 
 // 含辛普森测量按钮状态
 let simpsonEnabled = false;
+// 首次加载时：抑制脚本自动激活“含辛普森测量”（让按钮默认不激活）
+let suppressInitialSimpsonAutoActivation = true;
 
 // 辛普森数据缓存：按「疾病类型_参考范围」存储，切换疾病/参考/辛普森按钮时保留，刷新清空时清除
 let simpsonDataCache = {};
@@ -1578,6 +1580,7 @@ function updateEAFusionVisibility() {
                 eaFusionItem.style.display = 'none';
                 // 隐藏时清空EA融合的值
                 eaFusionInput.value = '';
+                eaFusionInput.style.color = '';
                 delete parameters['EA融合'];
                 // 重新启用 E、A、E/A 输入框
                 updateEAInputsState();
@@ -1603,6 +1606,7 @@ function updateEAInputsState() {
             // 更新E、E/A的颜色显示
             updateEColor();
             updateEAColor();
+            eaFusionInput.style.color = '';
             return;
         }
         
@@ -1616,6 +1620,7 @@ function updateEAInputsState() {
             // 禁用时重置颜色
             eInput.style.color = '';
             eAInput.style.color = '';
+            updateEAFusionColor();
         } else {
             // 如果 EA融合 为空，启用 E、A、E/A 输入框
             eInput.disabled = false;
@@ -1624,7 +1629,45 @@ function updateEAInputsState() {
             // 更新E、E/A的颜色显示
             updateEColor();
             updateEAColor();
+            updateEAFusionColor();
         }
+    }
+}
+
+// 检查 EA融合 值（单位 m/s）：当值 >= 1.3 时标红
+function updateEAFusionColor() {
+    const eaFusionInput = document.querySelector('input[data-param="EA融合"]');
+    if (!eaFusionInput) return;
+    
+    const eaFusionItem = eaFusionInput.closest('.other-param-item');
+    if (eaFusionItem && eaFusionItem.style.display === 'none') {
+        eaFusionInput.style.color = '';
+        return;
+    }
+    
+    // EA融合 输入框不需要像 E/E/A 一样禁用/启用联动，但兜底清理
+    if (eaFusionInput.disabled) {
+        eaFusionInput.style.color = '';
+        return;
+    }
+    
+    const raw = (eaFusionInput.value || '').toString().trim();
+    if (!raw) {
+        eaFusionInput.style.color = '';
+        return;
+    }
+    
+    // 兼容用户可能输入“≥1.3 / >1.3 / 1.3m/s”等情况
+    const cleaned = raw
+        .replace(/[＜＞<＜>=＝≤≥]/g, '')
+        .replace(/m\/s/ig, '')
+        .trim();
+    const num = parseFloat(cleaned);
+    
+    if (!isNaN(num) && num >= 1.3) {
+        eaFusionInput.style.color = 'red';
+    } else {
+        eaFusionInput.style.color = '';
     }
 }
 
@@ -1727,6 +1770,11 @@ function calculateEOverA() {
 function setupInputListeners() {
     document.querySelectorAll('.m-type-input, .other-param-input, .weight-input').forEach(input => {
         input.addEventListener('input', function() {
+            // 填写过程中不要有动画：一旦用户开始输入，停止提示框动效
+            window.__refreshTooltipAnimAllowed = false;
+            const tooltipEl = document.getElementById('refreshButtonTooltip');
+            if (tooltipEl) tooltipEl.classList.remove('refresh-tooltip-left-loop');
+
             const paramName = this.getAttribute('data-param');
             const value = this.value.trim();
             
@@ -1814,11 +1862,22 @@ function setupInputListeners() {
                 const dpdtItem = document.getElementById('dpdtInputItem');
                 if (dpdtItem) {
                     const showBtn = dpdtItem.querySelector('button[data-param="dp/dt显示"][data-value="显示"]');
-                    const allBtns = dpdtItem.querySelectorAll('button[data-param="dp/dt显示"]');
-                    if (showBtn && allBtns.length > 0) {
-                        allBtns.forEach(b => b.classList.remove('active'));
+                    if (showBtn) {
                         showBtn.classList.add('active');
                         parameters['dp/dt显示'] = '显示';
+                        generateTemplate();
+                    }
+                }
+            }
+
+            // LA Volume：当输入框有内容时，自动跳转为“显示”
+            if (paramName === 'LA Volume' && value) {
+                const laVolumeItem = document.getElementById('laVolumeInputItem');
+                if (laVolumeItem) {
+                    const showBtn = laVolumeItem.querySelector('button[data-param="LA Volume显示"][data-value="显示"]');
+                    if (showBtn) {
+                        showBtn.classList.add('active');
+                        parameters['LA Volume显示'] = '显示';
                         generateTemplate();
                     }
                 }
@@ -1870,13 +1929,7 @@ function setupInputListeners() {
                     referenceRange = 'M型';
                     selectedReferenceWeight = null;
 
-                    // 与参考范围切换一致：M型 默认激活含辛普森测量
-                    const simpsonButton = document.getElementById('simpsonButton');
-                    if (simpsonButton && !simpsonEnabled) {
-                        simpsonButton.classList.add('active');
-                        simpsonEnabled = true;
-                        toggleSimpsonInputs();
-                    }
+                    // 默认不自动激活含辛普森测量（仅用户点击时启用）
                 } else if (!Number.isNaN(weightValue) && weightValue > 3.0) {
                     const referenceRangeSelect = document.getElementById('referenceRangeSelect');
                     if (referenceRangeSelect && referenceRangeSelect.value !== '非M型') {
@@ -1886,13 +1939,7 @@ function setupInputListeners() {
                     referenceRange = '非M型';
                     selectedReferenceWeight = null;
 
-                    // 与参考范围切换一致：非M型 默认激活含辛普森测量
-                    const simpsonButton = document.getElementById('simpsonButton');
-                    if (simpsonButton && !simpsonEnabled) {
-                        simpsonButton.classList.add('active');
-                        simpsonEnabled = true;
-                        toggleSimpsonInputs();
-                    }
+                    // 默认不自动激活含辛普森测量（仅用户点击时启用）
                 }
                 
                 // #region agent log
@@ -1952,33 +1999,108 @@ function setupInputListeners() {
         });
     });
 
-    // dp/dt：显示开关（两按钮），仅影响 MMVD 所见是否输出 dp/dt 行
-    const dpdtBtns = document.querySelectorAll('#dpdtInputItem button[data-param="dp/dt显示"]');
-    if (dpdtBtns && dpdtBtns.length > 0) {
-        dpdtBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const value = btn.getAttribute('data-value') || '';
-                dpdtBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                if (value === '显示') {
-                    parameters['dp/dt显示'] = '显示';
-                } else {
-                    delete parameters['dp/dt显示'];
-                }
-                updateSpecialLogicInputColors();
-                generateTemplate();
-            });
+    // dp/dt：显示开关（单按钮），仅影响 MMVD 所见是否输出 dp/dt 行
+    const dpdtShowBtn = document.querySelector('#dpdtInputItem button[data-param="dp/dt显示"][data-value="显示"]');
+    if (dpdtShowBtn) {
+        // #region agent log BTN_dpdt_bind
+        fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'btn_debug',hypothesisId:'BTN1',location:'echocardiography_dev/script.js:setupInputListeners:dpdt_bind',message:'dp/dt 显示按钮绑定成功',data:{hasActive: dpdtShowBtn.classList.contains('active')},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        dpdtShowBtn.addEventListener('click', function() {
+            const willShow = !dpdtShowBtn.classList.contains('active');
+            dpdtShowBtn.classList.toggle('active', willShow);
+
+            if (willShow) {
+                parameters['dp/dt显示'] = '显示';
+            } else {
+                delete parameters['dp/dt显示'];
+            }
+            // #region agent log BTN_dpdt_click
+            fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'btn_debug',hypothesisId:'BTN2',location:'echocardiography_dev/script.js:dpdt_show_btn_click',message:'dp/dt 显示按钮点击',data:{willShow,newActive: dpdtShowBtn.classList.contains('active'),param: parameters['dp/dt显示'] || null},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            updateSpecialLogicInputColors();
+            generateTemplate();
         });
-        
-        // 默认“不显示”
-        const activeBtn = document.querySelector('#dpdtInputItem button[data-param="dp/dt显示"].active');
-        const activeVal = activeBtn ? (activeBtn.getAttribute('data-value') || '') : '';
-        if (activeVal !== '显示') {
-            delete parameters['dp/dt显示'];
-        }
+
+        // 默认未激活：不显示
+        dpdtShowBtn.classList.remove('active');
+        delete parameters['dp/dt显示'];
+    }
+
+    // LA Volume：显示开关（单按钮），仅影响所见是否输出 LA volume 行
+    const laVolumeShowBtn = document.querySelector('#laVolumeInputItem button[data-param="LA Volume显示"][data-value="显示"]');
+    if (laVolumeShowBtn) {
+        // #region agent log BTN_la_bind
+        fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'btn_debug',hypothesisId:'BTN3',location:'echocardiography_dev/script.js:setupInputListeners:la_bind',message:'LA Volume 显示按钮绑定成功',data:{hasActive: laVolumeShowBtn.classList.contains('active')},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        laVolumeShowBtn.addEventListener('click', function() {
+            const willShow = !laVolumeShowBtn.classList.contains('active');
+            laVolumeShowBtn.classList.toggle('active', willShow);
+
+            if (willShow) {
+                parameters['LA Volume显示'] = '显示';
+            } else {
+                delete parameters['LA Volume显示'];
+            }
+            // #region agent log BTN_la_click
+            fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'btn_debug',hypothesisId:'BTN4',location:'echocardiography_dev/script.js:la_show_btn_click',message:'LA Volume 显示按钮点击',data:{willShow,newActive: laVolumeShowBtn.classList.contains('active'),param: parameters['LA Volume显示'] || null},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            generateTemplate();
+        });
+
+        // 默认未激活：不显示
+        laVolumeShowBtn.classList.remove('active');
+        delete parameters['LA Volume显示'];
     }
 }
+
+// 强制处理“显示”开关点击（避免绑定时机/重复初始化导致的失效）
+// 说明：这些按钮在不同模块里可能被重置/重建，直接绑定 click 可能出现偶发失效；
+// 这里使用 capture 阶段统一接管，确保点击后参数与样式一定同步。
+document.addEventListener('click', function(e) {
+    const dpdtBtn = e.target.closest?.('button[data-param="dp/dt显示"][data-value="显示"]');
+    if (dpdtBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const willShow = !dpdtBtn.classList.contains('active');
+        dpdtBtn.classList.toggle('active', willShow);
+
+        if (willShow) {
+            parameters['dp/dt显示'] = '显示';
+        } else {
+            delete parameters['dp/dt显示'];
+        }
+
+        updateSpecialLogicInputColors();
+        generateTemplate();
+
+        // #region agent log BTN_dpdt_click_capture
+        fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'btn_capture',hypothesisId:'CAP1',location:'echocardiography_dev/script.js:dpdt_display_click_capture',message:'dp/dt 显示按钮点击（capture）',data:{willShow,activeNow: dpdtBtn.classList.contains('active'),param: parameters['dp/dt显示'] || null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        return;
+    }
+
+    const laBtn = e.target.closest?.('button[data-param="LA Volume显示"][data-value="显示"]');
+    if (laBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const willShow = !laBtn.classList.contains('active');
+        laBtn.classList.toggle('active', willShow);
+
+        if (willShow) {
+            parameters['LA Volume显示'] = '显示';
+        } else {
+            delete parameters['LA Volume显示'];
+        }
+
+        generateTemplate();
+
+        // #region agent log BTN_la_click_capture
+        fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'btn_capture',hypothesisId:'CAP2',location:'echocardiography_dev/script.js:la_volume_display_click_capture',message:'LA Volume 显示按钮点击（capture）',data:{willShow,activeNow: laBtn.classList.contains('active'),param: parameters['LA Volume显示'] || null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+    }
+}, true);
 
 // 设置 tooltip 提示功能
 function setupTooltips() {
@@ -2102,7 +2224,165 @@ function disableInputMemory() {
 function setupRefreshButton() {
     const refreshButton = document.getElementById('refreshButton');
     if (refreshButton) {
-        refreshButton.addEventListener('click', function() {
+        // 固定定位提示层：避免左侧栏 overflow 裁剪导致提示被遮挡
+        const tooltipEl = document.getElementById('refreshButtonTooltip');
+        if (tooltipEl && !window.__refreshButtonTooltipInitialized) {
+            window.__refreshButtonTooltipInitialized = true;
+
+            const topHintEl = document.getElementById('refreshButtonTopSnipHint');
+            let snipHintUserDragged = false;
+
+            const tooltipText = refreshButton.getAttribute('data-tooltip') || refreshButton.getAttribute('title') || '点击此处刷新页面';
+            tooltipEl.textContent = tooltipText;
+
+            if (topHintEl) {
+                // 置顶展示：快速截图快捷键（按键样式）
+                topHintEl.innerHTML = `
+                    <span class="refresh-left-snip-label">快速截图：</span>
+                    <code>Shift</code><span class="refresh-left-snip-plus">+</span>
+                    <code>Win</code><span class="refresh-left-snip-plus">+</span>
+                    <code>S</code>
+                `.trim();
+            }
+
+            function updateRefreshTooltipPosition() {
+                if (!refreshButton || !tooltipEl) return;
+
+                const rect = refreshButton.getBoundingClientRect();
+
+                // 先确保已显示，方便拿到真实宽高
+                tooltipEl.style.display = 'block';
+                tooltipEl.style.visibility = 'hidden';
+                const tRect = tooltipEl.getBoundingClientRect();
+                tooltipEl.style.visibility = 'visible';
+
+                const GAP = 8;
+                const VIEW_PAD = 8;
+
+                // 优先放在按钮右侧
+                let placement = 'right';
+                let left = rect.right + GAP;
+                if (left + tRect.width > window.innerWidth - VIEW_PAD) {
+                    // 若右侧放不下，就退到按钮左侧
+                    left = rect.left - tRect.width - GAP;
+                    placement = 'left';
+                }
+                left = Math.max(VIEW_PAD, left);
+
+                tooltipEl.dataset.placement = placement;
+
+                // 垂直居中对齐按钮
+                let top = rect.top + rect.height / 2 - tRect.height / 2;
+                top = Math.max(VIEW_PAD, Math.min(top, window.innerHeight - tRect.height - VIEW_PAD));
+
+                tooltipEl.style.left = `${left}px`;
+                tooltipEl.style.top = `${top}px`;
+
+                if (topHintEl) {
+                    topHintEl.style.display = 'block';
+                    topHintEl.style.visibility = 'visible';
+                }
+            }
+
+            updateRefreshTooltipPosition();
+
+            // 默认悬浮位置：放在右侧栏顶部水平居中（用户拖动后不再自动改变）
+            if (topHintEl) {
+                const positionTopHintDefault = () => {
+                    if (!topHintEl) return;
+                    if (snipHintUserDragged) return;
+
+                    const rightSidebar = document.getElementById('rightSidebar');
+                    const baseRect = rightSidebar ? rightSidebar.getBoundingClientRect() : refreshButton.getBoundingClientRect();
+
+                    // 确保可测量宽高
+                    topHintEl.style.display = 'block';
+                    topHintEl.style.visibility = 'hidden';
+                    const hRect = topHintEl.getBoundingClientRect();
+                    topHintEl.style.visibility = 'visible';
+
+                    const halfW = hRect.width / 2;
+                    let centerX = baseRect.left + baseRect.width / 2;
+                    centerX = Math.max(halfW + 6, Math.min(window.innerWidth - (halfW + 6), centerX));
+
+                    // 与顶栏同水平：对齐 refreshButton 的垂直中心
+                    const refreshRect = refreshButton.getBoundingClientRect();
+                    let top = refreshRect.top + refreshRect.height / 2 - hRect.height / 2;
+                    top = Math.max(6, Math.min(top, window.innerHeight - hRect.height - 6));
+
+                    topHintEl.style.left = `${centerX}px`;
+                    topHintEl.style.top = `${top}px`;
+                };
+
+                positionTopHintDefault();
+
+                // 可手动拖动显示位置：鼠标/触控拖拽
+                topHintEl.addEventListener('pointerdown', function(e) {
+                    if (!topHintEl) return;
+                    e.stopPropagation();
+                    e.preventDefault();
+
+                    snipHintUserDragged = true;
+
+                    // 当前的 left/top 是中心点坐标（因为 CSS translateX(-50%)）
+                    const startX = e.clientX;
+                    const startY = e.clientY;
+                    const startLeft = parseFloat(topHintEl.style.left || '0');
+                    const startTop = parseFloat(topHintEl.style.top || '0');
+
+                    const rect = topHintEl.getBoundingClientRect();
+                    const halfW = rect.width / 2;
+                    const hintH = rect.height;
+
+                    topHintEl.setPointerCapture(e.pointerId);
+
+                    function clampLeft(v) {
+                        return Math.max(halfW + 6, Math.min(window.innerWidth - (halfW + 6), v));
+                    }
+                    function clampTop(v) {
+                        return Math.max(6, Math.min(window.innerHeight - hintH - 6, v));
+                    }
+
+                    const onMove = (ev) => {
+                        const dx = ev.clientX - startX;
+                        const dy = ev.clientY - startY;
+                        topHintEl.style.left = `${clampLeft(startLeft + dx)}px`;
+                        topHintEl.style.top = `${clampTop(startTop + dy)}px`;
+                    };
+
+                    const onUp = (ev) => {
+                        try { topHintEl.releasePointerCapture(ev.pointerId); } catch (_) {}
+                        window.removeEventListener('pointermove', onMove);
+                        window.removeEventListener('pointerup', onUp);
+                        window.removeEventListener('pointercancel', onUp);
+                    };
+
+                    window.addEventListener('pointermove', onMove, { passive: false });
+                    window.addEventListener('pointerup', onUp, { passive: true });
+                    window.addEventListener('pointercancel', onUp, { passive: true });
+                }, { passive: false });
+            }
+
+            // 给一次布局/换行的余量
+            // 让提示框浮动常显（不拦截点击/输入：pointer-events none）
+            tooltipEl.style.display = 'block';
+            tooltipEl.style.visibility = 'visible';
+            // 默认不播放动效：仅在点击“复制按钮”后触发
+            tooltipEl.classList.remove('refresh-tooltip-left-loop');
+            // 动效控制开关：只有点击“复制按钮”才允许开启
+            window.__refreshTooltipAnimAllowed = false;
+            setTimeout(updateRefreshTooltipPosition, 200);
+            setTimeout(updateRefreshTooltipPosition, 500);
+
+            window.addEventListener('resize', updateRefreshTooltipPosition);
+            window.addEventListener('scroll', updateRefreshTooltipPosition, true);
+        }
+
+        refreshButton.addEventListener('click', async function() {
+            // 刷新开始新一轮填写：停止提示框动效
+            window.__refreshTooltipAnimAllowed = false;
+            tooltipEl?.classList.remove('refresh-tooltip-left-loop');
+
             // 清空 parameters 对象（所见/结论模板依赖此数据）
             Object.keys(parameters).forEach(k => delete parameters[k]);
             selectedReferenceWeight = null;
@@ -2128,8 +2408,39 @@ function setupRefreshButton() {
             delete parameters['节律不齐'];
             // 激活"正常"（健康），并更新模板
             handleDiseaseTypeChange('Normal');
-            document.getElementById('guideCard')?.classList.add('visible');
-            document.getElementById('guideCard')?.classList.remove('expanded');
+            // 刷新后只显示第一层
+            document.getElementById('guideCard')?.classList.remove('visible', 'expanded');
+
+            // 刷新后：所有“显示”开关默认未激活
+            const dpdtShowBtn = document.querySelector('#dpdtInputItem button[data-param="dp/dt显示"][data-value="显示"]');
+            if (dpdtShowBtn) dpdtShowBtn.classList.remove('active');
+            delete parameters['dp/dt显示'];
+
+            const laVolumeShowBtn = document.querySelector('#laVolumeInputItem button[data-param="LA Volume显示"][data-value="显示"]');
+            if (laVolumeShowBtn) laVolumeShowBtn.classList.remove('active');
+            delete parameters['LA Volume显示'];
+
+            // 刷新后：清空上轮计算后的显示值（不依赖 input 事件触发）
+            calculateLAVi();
+            calculateEDVI();
+            calculateESVI();
+            calculateLVDDN();
+
+            // 刷新后默认不激活“含辛普森测量”
+            const simpsonButton = document.getElementById('simpsonButton');
+            simpsonEnabled = false;
+            if (simpsonButton) simpsonButton.classList.remove('active');
+            toggleSimpsonInputs();
+
+            // 确保模板使用非辛普森版本
+            try {
+                if (selectedDiseaseType && selectedReferenceRange) {
+                    await loadMDTemplateNew(selectedDiseaseType, selectedReferenceRange, true, false);
+                }
+            } catch (_) {}
+            generateTemplate();
+
+            // 中央截图快捷键提示已删除：不再重置/显示
         });
     }
 }
@@ -2258,7 +2569,8 @@ function setupGuide() {
     if (!trigger || !card || !body) return;
     const sorted = [...GUIDE_ITEMS].sort((a, b) => (b.date > a.date ? 1 : -1));
     body.innerHTML = sorted.map(i => `<div class="guide-item"><div class="guide-item-date">${i.date}</div>${i.content}</div>`).join('');
-    card.classList.add('visible');
+    // 默认/刷新后只显示第一层：不展示第二/三层卡片内容
+    card.classList.remove('visible', 'expanded');
     trigger.addEventListener('click', function() {
         if (card.classList.contains('visible')) {
             card.classList.remove('visible', 'expanded');
@@ -2310,6 +2622,9 @@ function setupOCR() {
     const ocrStatus = document.getElementById('ocrStatus');
 
     const canUseTesseract = typeof window.Tesseract !== 'undefined';
+    // #region agent log H1_tesseract_loaded_check
+    fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'init',hypothesisId:'H1',location:'echocardiography_dev/script.js:setupOCR:tesseract_loaded_check',message:'OCR library presence check',data:{canUseTesseract: !!canUseTesseract},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!canUseTesseract) {
         if (ocrStatus) ocrStatus.textContent = 'OCR库未加载（请检查网络/CDN）';
         return;
@@ -2325,6 +2640,49 @@ function setupOCR() {
     function setStatus(text) {
         if (ocrStatus) ocrStatus.textContent = text || '';
     }
+
+    // #region OCR预热：加速首次识别（避免冷启动模型/worker初始化）
+    let __ocrWarmPromise = null;
+    function prewarmOcrEngine() {
+        if (__ocrWarmPromise) return __ocrWarmPromise;
+        __ocrWarmPromise = (async () => {
+            try {
+                // #region agent log H_WARM_START
+                fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'warm',hypothesisId:'H_WARM_START',location:'echocardiography_dev/script.js:prewarmOcrEngine:start',message:'OCR warmup started',data:{},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+                if (ocrStatus) ocrStatus.textContent = 'OCR模块预加载中…';
+                // 用一个极小的空白 canvas 触发一次 recognize，让 Tesseract 先完成语言/worker初始化
+                const canvas = document.createElement('canvas');
+                canvas.width = 64;
+                canvas.height = 32;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                // #region agent log H_WARM_RECOGNIZE_BEFORE
+                fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'warm',hypothesisId:'H_WARM_RECOGNIZE_BEFORE',location:'echocardiography_dev/script.js:prewarmOcrEngine:before_recognize',message:'Warmup calling Tesseract.recognize',data:{w:canvas.width,h:canvas.height},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+                await window.Tesseract.recognize(canvas, 'eng', {
+                    tessedit_pageseg_mode: 6,
+                    logger: () => {}
+                });
+                // #region agent log H_WARM_DONE
+                fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'warm',hypothesisId:'H_WARM_DONE',location:'echocardiography_dev/script.js:prewarmOcrEngine:done',message:'OCR warmup recognize resolved',data:{},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+            } catch (_) {
+                // 预热失败也不影响后续识别
+                // #region agent log H_WARM_FAIL
+                fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'warm',hypothesisId:'H_WARM_FAIL',location:'echocardiography_dev/script.js:prewarmOcrEngine:catch',message:'OCR warmup failed/blocked',data:{},timestamp:Date.now()})}).catch(()=>{});
+                // #endregion
+            } finally {
+                // 预热结束后恢复状态文案
+                setStatus('可直接粘贴截图到页面，支持自动识别和回填');
+            }
+        })();
+        return __ocrWarmPromise;
+    }
+    // 页面打开后立即开始预热（不阻塞渲染）
+    prewarmOcrEngine();
+    // #endregion
 
     function extractFirstImageFromClipboardEvent(e) {
         const items = e.clipboardData?.items;
@@ -2487,10 +2845,21 @@ function setupOCR() {
         return map[k] || null;
     }
 
-    function parseValue(rawValue) {
+    function parseValue(rawValue, paramKey = '') {
         if (!rawValue) return null;
+        const originalRaw = String(rawValue);
+        const hasRealDigits = /\d/.test(originalRaw);
+        let raw = originalRaw;
+
+        // 数字字母错读：OCR 常把数字里的 5/1/0 识成字母（例如 Sl、Im）
+        // 注意：这里发生在“正则捕获的数值片段”上，不会影响到字段名/单位文本。
+        raw = raw
+            .replace(/[sS]/g, '5')
+            .replace(/[oO]/g, '0')
+            .replace(/[iIlL]/g, '1');
+
         // 允许：5.2 / 5,2 / 5·2 / 52 等；·、．视为小数点
-        const cleaned = rawValue
+        const cleaned = raw
             .replace(/[,，·．]/g, '.')
             .replace(/[^\d.]+/g, ' ')
             .trim()
@@ -2498,6 +2867,17 @@ function setupOCR() {
         if (!cleaned) return null;
         let num = Number.parseFloat(cleaned);
         if (Number.isNaN(num)) return null;
+
+        // 若原始值完全不含数字（例如 Sl -> 51），对于 EDV/ESV 取首位更稳妥
+        if ((paramKey === 'EDV' || paramKey === 'ESV') && !hasRealDigits && !cleaned.includes('.') && cleaned.length >= 2) {
+            num = Number.parseFloat(cleaned[0]);
+        }
+
+        // IVSs：有时被识成 36% 这类“两位数缺小数点”的形式，推断为除以 10
+        if (paramKey === 'IVSs' && !cleaned.includes('.') && num >= 20 && num <= 99) {
+            num = Math.round((num / 10) * 100) / 100;
+        }
+
         // 小数点丢失：746→7.46、1090→10.90（心超数值多为 1–30 mm / 1–100%）
         if (!/\./.test(cleaned) && /^\d{3,4}$/.test(cleaned)) {
             const n = num;
@@ -2525,6 +2905,8 @@ function setupOCR() {
             .replace(/舒张期左心室直径/gi, 'LVDd')
             .replace(/舒张末期左心室直径/gi, 'LVDd')
             .replace(/\bLVIDd\b/gi, 'LVDd')
+            // OCR 常见错读：Wid -> LVDd（示意图里出现）
+            .replace(/\bWid\b/gi, 'LVDd')
             // LVWd（含 LVFWd）
             .replace(/舒张末期左心室游离壁厚度/gi, 'LVWd')
             .replace(/舒张期左心室游离壁厚度/gi, 'LVWd')
@@ -2542,13 +2924,23 @@ function setupOCR() {
             .replace(/收缩末期左心室游离壁厚度/gi, 'LVWs')
             .replace(/收缩期左心室游离壁厚度/gi, 'LVWs')
             .replace(/\bLVFWs\b/gi, 'LVWs')
+            // OCR 常见错读：LPWs -> LVWs（示意图里出现）
+            .replace(/\bLPWs\b/gi, 'LVWs')
+            .replace(/\bLPW[sS]\b/gi, 'LVWs')
+            // OCR 常见拼写：LVPWThck -> LVPWs（用于厚度类字段兜底）
+            .replace(/LVPWThck/gi, 'LVPWs')
             // EDV（Teich）
             .replace(/EDV\(teich\)/gi, 'EDV')
+            // 常见 OCR 误识：EDviTeich / EDV i Teich / EDViTeich
+            .replace(/EDV\s*[iI]\s*Teich\)?/gi, 'EDV')
             .replace(/舒张末期容积（?ml）?/gi, 'EDV')
             .replace(/舒张末期左心室容量/gi, 'EDV')
             .replace(/舒张期左心室容量/gi, 'EDV')
             // ESV（Teich）
             .replace(/ESV\(teich\)/gi, 'ESV')
+            // 常见 OCR 误识：ESViTeich / ESMiTeich -> ESV
+            .replace(/ESV\s*[iI]\s*Teich\)?/gi, 'ESV')
+            .replace(/ESM\s*[iI]\s*Teich\)?/gi, 'ESV')
             .replace(/收缩末期容积（?ml）?/gi, 'ESV')
             .replace(/收缩末期左心室容量/gi, 'ESV')
             .replace(/收缩期左心室容量/gi, 'ESV')
@@ -2572,6 +2964,8 @@ function setupOCR() {
             .replace(/\bLVPW[dD]\b/g, 'LVPWd')
             .replace(/\bLVPW[sS]\b/g, 'LVPWs')
             // IVSs：s 易被识成 5、空格、点等
+            .replace(/\bIVSTack\b/gi, 'IVSs')
+            .replace(/\bIVS\s*Tack\b/gi, 'IVSs')
             .replace(/\bIVS5\b/gi, 'IVSs')
             .replace(/\bIVSS\b/g, 'IVSs')
             .replace(/\bIVS\s+s\b/gi, 'IVSs')
@@ -2587,18 +2981,20 @@ function setupOCR() {
         // IVSd、LVDd、LVWd、IVSs、LVDs、LVWs、EDV（Teich）、ESV（Teich）、FS、EF（Teich）
         // 规则：在字段名（或同义词已统一为字段名后）后面找到出现的第一个数字
         const patterns = [
-            { key: 'IVSd',  re: /\bIVSd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'LVIDd', re: /\bLVIDd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'LVDd',  re: /\bLVDd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'LVPWd', re: /\bLVPWd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'LVWd',  re: /\bLVWd\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'IVSs',  re: /\bIVSs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'LVIDs', re: /\bLVIDs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'LVDs',  re: /\bLVDs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'LVPWs', re: /\bLVPWs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'LVWs',  re: /\bLVWs\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'EDV',   re: /\bEDV\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'ESV',   re: /\bESV\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
+            // 厚度/腔径：允许数字字母错读（例如 S436、1VSTack -> IVSs 的数字部分）
+            { key: 'IVSd',  re: /\bIVSd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'LVIDd', re: /\bLVIDd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'LVDd',  re: /\bLVDd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'LVPWd', re: /\bLVPWd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'LVWd',  re: /\bLVWd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'IVSs',  re: /\bIVSs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'LVIDs', re: /\bLVIDs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'LVDs',  re: /\bLVDs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'LVPWs', re: /\bLVPWs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'LVWs',  re: /\bLVWs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            // EDV/ESV：同样允许数字字母错读（Sl、Im 等）
+            { key: 'EDV',   re: /\bEDV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'ESV',   re: /\bESV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
             { key: 'FS',    re: /\bFS\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
             { key: 'EF',    re: /\bEF\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i }
         ];
@@ -2606,7 +3002,7 @@ function setupOCR() {
         for (const p of patterns) {
             const m = fixed.match(p.re);
             if (!m) continue;
-            const valueNum = parseValue(m[1]);
+            const valueNum = parseValue(m[1], p.key);
             if (valueNum === null) continue;
             // 先用 mapKeyToParam 做一次映射（处理 LVIDd/LVFWs 等），否则直接用 key 自身
             const mapped = mapKeyToParam(p.key) || mapKeyToParam(p.key.toUpperCase());
@@ -2635,13 +3031,36 @@ function setupOCR() {
         return written;
     }
 
+    let __ocrRunCounter = 0;
     async function runOcrFromFile(file) {
         if (!file) return;
+        const runId = `ocr_${++__ocrRunCounter}`;
+        const t0 = performance.now();
+        // #region agent log H1H2_run_start
+        fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId,hypothesisId:'H1',location:'echocardiography_dev/script.js:runOcrFromFile:start',message:'OCR run started',data:{runId,fileSize:file?.size||null,fileType:file?.type||null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        // #region agent log H_RUN_START
+        fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId,hypothesisId:'H_RUN_START',location:'echocardiography_dev/script.js:runOcrFromFile:start',message:'OCR run entered',data:{fileSize:file?.size||null,fileType:file?.type||null,hasWarm:!!__ocrWarmPromise},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        // 重要：不要等待 warmup Promise，避免 warmup 卡死导致粘贴 OCR 永无响应
+        if (__ocrWarmPromise) {
+            // #region agent log H_WARM_SKIP_WAIT
+            fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId,hypothesisId:'H_WARM_SKIP_WAIT',location:'echocardiography_dev/script.js:runOcrFromFile:skip_warm_wait',message:'Skipping await warmup Promise to prevent hang',data:{},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+        }
         setBusy(true);
         setStatus('OCR预处理中…');
         try {
+            const pre0 = performance.now();
             const preprocessed = await preprocessImageForOcr(file);
+            const pre1 = performance.now();
+            const light0 = performance.now();
             const lightProcessed = await preprocessImageLight(file);
+            const light1 = performance.now();
+            // #region agent log H2_preprocess_done
+            fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId,hypothesisId:'H2',location:'echocardiography_dev/script.js:runOcrFromFile:preprocess_done',message:'Preprocess finished',data:{preprocessHeavyMs:Math.round(pre1-pre0),preprocessLightMs:Math.round(light1-light0)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+
             setStatus('OCR识别中…（可稍等几秒）');
             const opts = {
                 tessedit_pageseg_mode: 6,
@@ -2651,14 +3070,28 @@ function setupOCR() {
                     }
                 }
             };
+            const rec0 = performance.now();
             const [{ data: d1 }, { data: d2 }] = await Promise.all([
                 window.Tesseract.recognize(preprocessed, 'eng', opts),
                 window.Tesseract.recognize(lightProcessed, 'eng', opts)
             ]);
+            const rec1 = performance.now();
+            // #region agent log H1H3_recognize_done
+            fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId,hypothesisId:'H1',location:'echocardiography_dev/script.js:runOcrFromFile:recognize_done',message:'Tesseract recognize finished',data:{recognizeMs:Math.round(rec1-rec0),textLen1:(d1?.text||'').length,textLen2:(d2?.text||'').length},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+
+            const parse0 = performance.now();
             const p1 = parseOcrToParamValues(d1?.text || '');
             const p2 = parseOcrToParamValues(d2?.text || '');
             const paramValues = { ...p1, ...p2 };
             const written = writeParamsToInputs(paramValues);
+            const parse1 = performance.now();
+            // #region agent log H4_parse_write_done
+            fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId,hypothesisId:'H4',location:'echocardiography_dev/script.js:runOcrFromFile:parse_write_done',message:'Parse+write finished',data:{paramCount:Object.keys(paramValues).length,written,parseWriteMs:Math.round(parse1-parse0),totalMs:Math.round(performance.now()-t0)},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+
+            // OCR结束后不再自动隐藏：让预览图片保持显示
+
             if (written > 0) {
                 setStatus(`已回填 ${written} 项：${Object.keys(paramValues).join('、')}`);
             } else {
@@ -2667,6 +3100,7 @@ function setupOCR() {
         } catch (err) {
             console.error('OCR失败:', err);
             setStatus('OCR失败（请换更清晰/更小范围的截图再试）');
+            // OCR失败也不再自动隐藏：允许用户查看预处理结果
         } finally {
             setBusy(false);
         }
@@ -2674,9 +3108,17 @@ function setupOCR() {
 
     // 粘贴：直接从剪贴板取图片
     document.addEventListener('paste', async (e) => {
+        // #region agent log H_PASTE_EVENT
+        try {
+            fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'paste',hypothesisId:'H_PASTE_EVENT',location:'echocardiography_dev/script.js:paste_handler',message:'Paste event fired',data:{hasClipboardData:!!e.clipboardData,types:Array.from(e.clipboardData?.types||[])},timestamp:Date.now()})}).catch(()=>{});
+        } catch (_) {}
+        // #endregion
         const img = extractFirstImageFromClipboardEvent(e);
         if (!img) return;
         e.preventDefault();
+        // #region agent log H_PASTE_HAS_IMAGE
+        fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'paste',hypothesisId:'H_PASTE_HAS_IMAGE',location:'echocardiography_dev/script.js:paste_handler:has_image',message:'Extracted image from clipboard',data:{fileSize:img?.size||null,fileType:img?.type||null},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         await runOcrFromFile(img);
     });
 
@@ -2782,14 +3224,7 @@ function handleDiseaseTypeChange(diseaseType) {
                 setHeartRateDefault();
                 updateReferenceValues();
                 updateWeightReferenceDisplay();
-                // 自动激活含辛普森测量按钮（因为选择了非M型）
-                const simpsonButton = document.getElementById('simpsonButton');
-                if (simpsonButton && !simpsonEnabled) {
-                    simpsonButton.classList.add('active');
-                    simpsonEnabled = true;
-                    // 显示辛普森输入框
-                    toggleSimpsonInputs();
-                }
+                // 默认不自动激活含辛普森测量（仅用户点击时启用）
             }
             // HCM、RCM、TOF → 默认选择"猫"
             else if (selectedDiseaseType === 'HCM' || selectedDiseaseType === 'RCM' || selectedDiseaseType === 'TOF') {
@@ -2808,15 +3243,8 @@ function handleDiseaseTypeChange(diseaseType) {
     
     // 如果当前选择的参考范围是M型、非M型、金毛，自动激活含辛普森测量按钮
     const simpsonButton = document.getElementById('simpsonButton');
-    if (simpsonButton && selectedReferenceRange) {
-        if (selectedReferenceRange === 'M型' || selectedReferenceRange === '非M型' || selectedReferenceRange === '金毛') {
-            if (!simpsonEnabled) {
-                simpsonButton.classList.add('active');
-                simpsonEnabled = true;
-                // 显示辛普森输入框
-                toggleSimpsonInputs();
-            }
-        } else if (selectedReferenceRange === '猫' || selectedReferenceRange === '猫心超（含体重）') {
+        if (!suppressInitialSimpsonAutoActivation && simpsonButton && selectedReferenceRange) {
+        if (selectedReferenceRange === '猫' || selectedReferenceRange === '猫心超（含体重）') {
             // 选择猫或猫心超（含体重）时，默认不激活含辛普森测量
             if (simpsonEnabled) {
                 simpsonButton.classList.remove('active');
@@ -2878,19 +3306,17 @@ function handleDiseaseTypeChange(diseaseType) {
         if (dpdtItem) {
             if (selectedDiseaseType === 'MMVD') {
                 dpdtItem.style.display = 'flex';
+                const dpdtShowBtn = dpdtItem.querySelector('button[data-param="dp/dt显示"][data-value="显示"]');
+                const shouldShow = parameters['dp/dt显示'] === '显示';
+                if (dpdtShowBtn) dpdtShowBtn.classList.toggle('active', shouldShow);
             } else {
                 dpdtItem.style.display = 'none';
                 delete parameters['dp/dt'];
                 delete parameters['dp/dt显示'];
                 const dpdtInput = dpdtItem.querySelector('input[data-param="dp/dt"]');
                 if (dpdtInput) dpdtInput.value = '';
-                // 默认：不显示
-                const dpdtBtns = dpdtItem.querySelectorAll('button[data-param="dp/dt显示"]');
-                if (dpdtBtns && dpdtBtns.length > 0) {
-                    dpdtBtns.forEach(b => b.classList.remove('active'));
-                    const notShowBtn = dpdtItem.querySelector('button[data-param="dp/dt显示"][data-value="不显示"]');
-                    if (notShowBtn) notShowBtn.classList.add('active');
-                }
+                const dpdtShowBtn = dpdtItem.querySelector('button[data-param="dp/dt显示"][data-value="显示"]');
+                if (dpdtShowBtn) dpdtShowBtn.classList.remove('active');
             }
             updateSpecialLogicInputColors();
         }
@@ -2986,23 +3412,10 @@ if (referenceRangeSelect) {
         // 更新含辛普森测量按钮的显示状态
         updateSimpsonButtonVisibility();
         
-        // 当选择M型、非M型、金毛时，自动激活含辛普森测量按钮
+        // 当选择M型、非M型、金毛时，自动激活含辛普森测量按钮（首次加载抑制）
         const simpsonButton = document.getElementById('simpsonButton');
-        if (simpsonButton) {
-            if (selectedReferenceRange === 'M型' || selectedReferenceRange === '非M型' || selectedReferenceRange === '金毛') {
-                if (!simpsonEnabled) {
-                    simpsonButton.classList.add('active');
-                    simpsonEnabled = true;
-                    // 显示辛普森输入框
-                    toggleSimpsonInputs();
-                    // 重新加载当前选择的模版（使用辛普森版本）
-                    if (selectedDiseaseType && selectedReferenceRange) {
-                        loadMDTemplateNew(selectedDiseaseType, selectedReferenceRange, true, true).then(() => {
-                            generateTemplate();
-                        });
-                    }
-                }
-            } else if (selectedReferenceRange === '猫' || selectedReferenceRange === '猫心超（含体重）') {
+        if (simpsonButton && !suppressInitialSimpsonAutoActivation) {
+            if (selectedReferenceRange === '猫' || selectedReferenceRange === '猫心超（含体重）') {
                 // 选择猫或猫心超（含体重）时，默认不激活含辛普森测量
                 if (simpsonEnabled) {
                     simpsonButton.classList.remove('active');
@@ -4316,11 +4729,13 @@ const templateConfig = {
 
         // =========================
         // 规则生成（不依赖 Markdown 模板）
-        // 当前覆盖：Normal（犬） + MMVD（犬）→ 使用与 Normal 一致的规则框架
+        // 当前覆盖：Normal/MMVD（犬） + Normal（猫）
+        // - “健康、猫”的所见/结论生成同 M 型：走同一套规则生成分支
         // =========================
         const isDogRuleBase =
             (diseaseType === 'Normal' || diseaseType === 'MMVD' || !diseaseType) &&
-            (referenceRange === 'M型' || referenceRange === '非M型' || referenceRange === '金毛');
+            (referenceRange === 'M型' || referenceRange === '非M型' || referenceRange === '金毛'
+                || referenceRange === '猫' || referenceRange === '猫心超（含体重）');
 
         if (isDogRuleBase) {
             const formatValue = (value, isInteger = false) => {
@@ -4441,7 +4856,7 @@ const templateConfig = {
                         : (get('体重') ? `（参考值: ${get('体重')}kg）` : ''));
 
             let findings = '';
-            findings += `犬侧卧位扫查:\n`;
+            findings += `${animalType}侧卧位扫查:\n`;
             findings += `  1.M-MODE/2D (mm) ${weightText}\n`;
 
             const renderLeftRight = (leftText, rightText) => {
@@ -4469,7 +4884,13 @@ const templateConfig = {
                         edvText = `${edvBase}/${edvSimpPart}（辛普森）`;
                         esvText = `${esvBase}/${esvSimpPart}（辛普森）`;
                     }
-                    findings += `    ${padToDisplayWidth(edvText, colWidth + 1)}${esvText}\n`;
+                    const leftTargetWidth = colWidth + 1;
+                    const leftRawWidth = stringDisplayWidth(edvText);
+                    const leftIsPadded = leftRawWidth < leftTargetWidth;
+                    // #region agent log H_EDV_ESV_align_width
+                    fetch('http://127.0.0.1:7372/ingest/713562ff-109f-4be9-9a0b-4a7786507c16',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9471bf'},body:JSON.stringify({sessionId:'9471bf',runId:'preAlign',hypothesisId:'H1',location:'echocardiography_dev/script.js:generateFindings:EDV_ESV',message:'EDV/ESV alignment widths',data:{simpsonEnabled,edvText,esvText,leftTargetWidth,leftRawWidth,leftIsPadded,indentPrefix:'    ',colWidth},timestamp:Date.now()})}).catch(()=>{});
+                    // #endregion
+                    findings += `    ${padToDisplayWidth(edvText, leftTargetWidth)}${esvText}\n`;
                     continue;
                 }
 
@@ -4535,9 +4956,10 @@ const templateConfig = {
             findings += `    ${formatParamWithRef('AO', get('AO', ''), 'AO')}\n`;
             findings += `    ${formatParamWithRef('LA', get('LA', ''), 'LA')}\n`;
             findings += `    LA/AO:  ${formatValue(get('LA/AO', ''))}\n`;
+            const laVolumeDisplay = (get('LA Volume显示', '不显示') || '').toString().trim();
             const lavi = get('LAVi', '');
-            if (lavi) {
-                findings += `    LA Volume:  ${formatValue(lavi)}ml/kg\n`;
+            if (laVolumeDisplay === '显示') {
+                findings += `    LA volume：${lavi ? formatValue(lavi) : ''}ml/kg；\n`;
             }
             findings += `\n`;
 
@@ -4567,15 +4989,24 @@ const templateConfig = {
                 findings += `  3.彩色多普勒检查  各瓣口未见明显反流、湍流；\n`;
             }
 
-            // 频谱多普勒 + E/A、E/E'
+            // 频谱多普勒 + E/A、E/E'（猫参考值且选择 EA融合 时只显示 EA融合）
             findings += `    频谱多普勒检查  VPA: ${get('VPA', '')}m/s；  VAO: ${get('VAO', '')}m/s；\n`;
-            findings += `    E: ${get('E', '')}m/s，A: ${get('A', '')}m/s，E/A${get('E/A', '')}； E/E': ${get("E/E'", '')}；\n`;
+            const eaFusionInFindings = get('EA融合', '');
+            const isCatReferenceInFindings =
+                referenceRange === '猫' || referenceRange === '猫心超（含体重）';
+            if (isCatReferenceInFindings && eaFusionInFindings) {
+                findings += `    EA融合: ${eaFusionInFindings}m/s；\n`;
+            } else {
+                const eEText = (get("E/E'", '') || '').toString().trim();
+                const eEPart = eEText ? `； E/E': ${eEText}；` : '';
+                findings += `    E: ${get('E', '')}m/s，A: ${get('A', '')}m/s，E/A${get('E/A', '')}；${eEPart}\n`;
+            }
 
-            // MMVD：在 E/A 行下一行展示 dp/dt（输入为空则不显示）
+            // MMVD：在 E/A 行下一行展示 dp/dt（由 dp/dt 显示开关控制）
             if (diseaseType === 'MMVD') {
                 const dpdtDisplay = (get('dp/dt显示', '不显示') || '').toString().trim();
                 const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
-                if (dpdtDisplay === '显示' && dpdtRaw) {
+                if (dpdtDisplay === '显示') {
                     findings += `    dP/dt：${formatValue(dpdtRaw)}mmHg/s\n`;
                 }
             }
@@ -4599,28 +5030,28 @@ const templateConfig = {
             if (isTagActive('二尖瓣反流') && !mitralUnknown) {
                 const mitralVel = get('二尖瓣反流速', '');
                 const mitralDp = get('二尖瓣压力差', '');
-                const velText = mitralVel ? formatValue(mitralVel) : 'm/s';
+                const velText = mitralVel ? `${formatValue(mitralVel)}m/s` : 'm/s';
                 const dpText = mitralDp ? `${formatValue(mitralDp)}mmHg` : 'mmHg';
                 velocityLines.push(`    二尖瓣反流速：${velText}（${dpText}）；`);
             }
             if (isTagActive('三尖瓣反流') && !tricuspidUnknown) {
                 const tricuspidVel = get('三尖瓣反流速', '');
                 const tricuspidDp = get('三尖瓣压力差', '');
-                const velText = tricuspidVel ? formatValue(tricuspidVel) : 'm/s';
+                const velText = tricuspidVel ? `${formatValue(tricuspidVel)}m/s` : 'm/s';
                 const dpText = tricuspidDp ? `${formatValue(tricuspidDp)}mmHg` : 'mmHg';
                 velocityLines.push(`    三尖瓣反流速：${velText}（${dpText}）；`);
             }
             if (isTagActive('肺动脉瓣反流') && !pulmonaryUnknown) {
                 const pulmonaryVel = get('肺动脉瓣反流速', '');
                 const pulmonaryDp = get('肺动脉瓣压力差', '');
-                const velText = pulmonaryVel ? formatValue(pulmonaryVel) : 'm/s';
+                const velText = pulmonaryVel ? `${formatValue(pulmonaryVel)}m/s` : 'm/s';
                 const dpText = pulmonaryDp ? `${formatValue(pulmonaryDp)}mmHg` : 'mmHg';
                 velocityLines.push(`    肺动脉瓣反流速：${velText}（${dpText}）；`);
             }
             if (isTagActive('主动脉瓣反流') && !aorticUnknown) {
                 const aorticVel = get('主动脉瓣反流速', '');
                 const aorticDp = get('主动脉瓣压力差', '');
-                const velText = aorticVel ? formatValue(aorticVel) : 'm/s';
+                const velText = aorticVel ? `${formatValue(aorticVel)}m/s` : 'm/s';
                 const dpText = aorticDp ? `${formatValue(aorticDp)}mmHg` : 'mmHg';
                 velocityLines.push(`    主动脉瓣反流速：${velText}（${dpText}）；`);
             }
@@ -4743,6 +5174,39 @@ const templateConfig = {
                 findings = findings.trimEnd() + '\n';
                 // 清理多余的连续空白行（超过2个换行符的，保留为2个）
                 findings = findings.replace(/\n{3,}/g, '\n\n');
+                
+                // 猫参考值 + EA融合：所见只显示 EA融合，不显示 E/A 与 E/E'
+                const isCatRefForMD =
+                    referenceRange === '猫' || referenceRange === '猫心超（含体重）';
+                const eaFusionForMD = get('EA融合', '');
+                if (isCatRefForMD && eaFusionForMD) {
+                    findings = findings.replace(
+                        /^\s*E:\s*[^\n]*m\/s，A:\s*[^\n]*m\/s，E\/A[^\n]*；\s*E\/E':\s*[^\n]*；\s*$/m,
+                        `    EA融合: ${eaFusionForMD}m/s；`
+                    );
+                }
+                // 若猫参考范围下，E/E' 未填写数值，则不显示 E/E' 相关片段
+                if (isCatRefForMD && !((get("E/E'", '') || '').toString().trim())) {
+                    // 移除模板中可能出现的：E/E': xxx；
+                    findings = findings.replace(/\s*E\/E':\s*[^；\n;]*[；;]/g, '');
+                    // 清理可能残留的重复分号
+                    findings = findings.replace(/；\s*；/g, '；');
+                }
+
+                // LA Volume 显示开关（MD 模板中也要生效）
+                const laVolumeDisplayForMD = (get('LA Volume显示', '不显示') || '').toString().trim();
+                const laviRawForMD = get('LAVi', '');
+                const laviNumForMD = laviRawForMD ? parseFloat(laviRawForMD) : NaN;
+                const laviFormattedForMD = (!Number.isNaN(laviNumForMD)) ? laviNumForMD.toFixed(2) : '';
+
+                if (laVolumeDisplayForMD === '显示') {
+                    findings = findings.replace(
+                        /^(\s*)LA Volume:\s*.*ml\/kg\s*$/m,
+                        `$1LA volume：${laviFormattedForMD}ml/kg；`
+                    );
+                } else {
+                    findings = findings.replace(/^(\s*)LA Volume:\s*.*ml\/kg\s*$/m, '');
+                }
                 return findings;
             }
             // 如果没有找到"# 所见"标记，返回整个模板（去除"# 结论"之后的内容）
@@ -5040,16 +5504,24 @@ const templateConfig = {
         let dopplerLine = '';
         if (vpa) dopplerLine += `VPA: ${formatValue(vpa)} `;
         if (vao) dopplerLine += `VAO: ${formatValue(vao)} `;
-        if (e) dopplerLine += `E: ${formatValue(e)} m/s `;
-        if (a) dopplerLine += `A: ${formatValue(a)} m/s `;
-        if (eA) dopplerLine += `E/A: ${formatValue(eA)} `;
-        if (eaFusion) dopplerLine += `EA融合: ${formatValue(eaFusion)} `;
-        if (eE) dopplerLine += `E/E': ${formatValue(eE)}`;
+
+        // 猫参考值选择 EA融合 时：所见只显示 EA融合，不显示 E、A、E/A（并隐藏 E/E'）
+        // 说明：页面层面会禁用 E/A 输入，但这里仍做兜底，避免旧值/参数残留导致渲染错误。
+        const isCatReference =
+            referenceRange === '猫' || referenceRange === '猫心超（含体重）';
+        if (eaFusion && isCatReference) {
+            dopplerLine += `EA融合: ${formatValue(eaFusion)}m/s `;
+        } else {
+            if (e) dopplerLine += `E: ${formatValue(e)} m/s `;
+            if (a) dopplerLine += `A: ${formatValue(a)} m/s `;
+            if (eA) dopplerLine += `E/A: ${formatValue(eA)} `;
+            if (eE) dopplerLine += `E/E': ${formatValue(eE)}`;
+        }
         
         if (dopplerLine) {
             findings += `     ${dopplerLine.trim()}\n`;
         } else {
-            findings += `     E: m/s A: m/s E/A: ； E/E': \n`;
+            findings += `     E: m/s A: m/s E/A: ；\n`;
         }
         
         // 添加动态标签参数
@@ -5127,7 +5599,8 @@ const templateConfig = {
         // =========================
         const isDogRuleBase =
             (diseaseType === 'Normal' || diseaseType === 'MMVD' || !diseaseType) &&
-            (referenceRange === 'M型' || referenceRange === '非M型' || referenceRange === '金毛');
+            (referenceRange === 'M型' || referenceRange === '非M型' || referenceRange === '金毛'
+                || referenceRange === '猫' || referenceRange === '猫心超（含体重）');
 
         if (isDogRuleBase) {
             const isTagActive = (tagName) => {
@@ -5251,7 +5724,7 @@ const templateConfig = {
                         return `${v.label}${sev || ''}反流`;
                     });
                     conclusion += `  1.${parts.join('、')}。\n`;
-                    conclusion += '  2.心脏各腔室大小、室壁厚度未见明显异常。\n';
+                    conclusion += '  2.心脏各腔室大小未见明显异常。\n';
                 } else {
                     // 情况 2：存在追加结论 → 每个瓣口单独一行，按 regurgTags 顺序编号
                     let index = 1;
@@ -5290,7 +5763,7 @@ const templateConfig = {
                     }
 
                     // 血流结论之后，再给一行腔室/室壁总结
-                    conclusion += `  ${index}.心脏各腔室大小、室壁厚度未见明显异常。\n`;
+                    conclusion += `  ${index}.心脏各腔室大小未见明显异常。\n`;
                 }
             } else {
                 // 既未勾选“各瓣口血流正常”，也无具体反流标签时，兜底按正常处理
@@ -5333,7 +5806,7 @@ const templateConfig = {
 
             // MMVD 特定：若没有“容量/结构”异常，仍要保证第 2 行为腔室/室壁总结
             if (!addedChamberSummary && diseaseType === 'MMVD' && mmvdNeedsDefaultChamberSummary) {
-                conclusion += `  ${idx}.心脏各腔室大小、室壁厚度未见明显异常。\n`;
+                conclusion += `  ${idx}.心脏各腔室大小未见明显异常。\n`;
             }
             
             // ===== 第 2 部分：左心室收缩 / 舒张功能 =====
@@ -5343,6 +5816,11 @@ const templateConfig = {
                 .split('\n')
                 .filter(l => /^\s*\d+\./.test(l)).length + 1;
 
+            const eaFusion = get('EA融合', '');
+            const isCatReference =
+                referenceRange === '猫' || referenceRange === '猫心超（含体重）';
+            const hasEAFusion = isCatReference && eaFusion;
+
             const eAValue = get('E/A', '') || '';
             const eOverEValue = get("E/E'", '') || '';
             const esviRaw = get('ESVI', '');
@@ -5350,18 +5828,23 @@ const templateConfig = {
 
             // 舒张功能判断（readme 规则补全：E/A > 2 => 舒张功能失代偿）
             let diastolicStatus = '未见明显异常';
-            const eAClean = eAValue.replace(/[＜<]/g, '<').replace(/[＞>]/g, '>');
-            // 约定：calculateEOverA 输出一般为 '＜1'、'＞1'、'＞2'
-            if (eAClean.indexOf('>2') !== -1) {
-                diastolicStatus = '失代偿';
-            } else if (eAClean.indexOf('<1') !== -1) {
-                diastolicStatus = '下降';
-            }
+            if (hasEAFusion) {
+                // 猫参考值 + EA融合：舒张功能评估受限
+                diastolicStatus = '评估受限';
+            } else {
+                const eAClean = eAValue.replace(/[＜<]/g, '<').replace(/[＞>]/g, '>');
+                // 约定：calculateEOverA 输出一般为 '＜1'、'＞1'、'＞2'
+                if (eAClean.indexOf('>2') !== -1) {
+                    diastolicStatus = '失代偿';
+                } else if (eAClean.indexOf('<1') !== -1) {
+                    diastolicStatus = '下降';
+                }
 
-            const eOverENum = eOverEValue ? parseFloat(eOverEValue) : NaN;
-            // 若已是失代偿，则不再覆盖；否则 E/E' > 11 => 下降
-            if (diastolicStatus !== '失代偿' && !Number.isNaN(eOverENum) && eOverENum > 11) {
-                diastolicStatus = '下降';
+                const eOverENum = eOverEValue ? parseFloat(eOverEValue) : NaN;
+                // 若已是失代偿，则不再覆盖；否则 E/E' > 11 => 下降
+                if (diastolicStatus !== '失代偿' && !Number.isNaN(eOverENum) && eOverENum > 11) {
+                    diastolicStatus = '下降';
+                }
             }
 
             // 收缩功能判断（基于 ESVI）
@@ -5387,7 +5870,12 @@ const templateConfig = {
 
             // 组合结论句（readme 示例：舒张功能失代偿时用“收缩尚可，舒张功能失代偿”）
             let funcLine = '';
-            if (diastolicStatus === '失代偿') {
+            if (diastolicStatus === '评估受限') {
+                const systolicText = (systolicStatus === '未见明显异常')
+                    ? '左心室收缩功能尚可'
+                    : `左心室收缩功能${systolicStatus}`;
+                funcLine = `  ${nextIndex}.${systolicText}，舒张功能评估受限。`;
+            } else if (diastolicStatus === '失代偿') {
                 const systolicText = (systolicStatus === '未见明显异常')
                     ? '左心室收缩功能尚可'
                     : `左心室收缩功能${systolicStatus}`;
@@ -5526,12 +6014,15 @@ async function generateTemplate() {
     }
 
     // 先尝试加载所需的模版（如果还没有加载）
+    // “健康、猫”的所见/结论走规则生成，不再依赖 Markdown 基础模板（避免走旧模板逻辑）
+    const shouldSkipMarkdownBaseTemplateLoad =
+        diseaseType === 'Normal' && (referenceRange === '猫' || referenceRange === '猫心超（含体重）');
     const templateKey = `${diseaseType}_${referenceRange}_${simpsonEnabled ? 'simpson' : 'normal'}`;
-    if (!mdTemplates[templateKey]) {
+    if (!shouldSkipMarkdownBaseTemplateLoad && !mdTemplates[templateKey]) {
         await loadMDTemplateNew(diseaseType, referenceRange, false, simpsonEnabled);
     }
     // 如果模板已缓存但内容仍是旧版本（没有新占位符），自动强制重载一次，确保修改立即生效
-    if (mdTemplates[templateKey] && !mdTemplates[templateKey].includes('{瓣口血流结论}')) {
+    if (!shouldSkipMarkdownBaseTemplateLoad && mdTemplates[templateKey] && !mdTemplates[templateKey].includes('{瓣口血流结论}')) {
         // 仅对本次新增占位符做兼容性重载，避免对所有场景产生额外网络开销
         const maybeOld = mdTemplates[templateKey].includes('各瓣口血流未见明显异常');
         if (maybeOld) {
@@ -5591,6 +6082,9 @@ document.addEventListener('DOMContentLoaded', function() {
     updateEColor();
     updateEAColor();
     
+    // 页面加载时检查 EA融合 的颜色显示
+    updateEAFusionColor();
+
     // 页面加载时检查辛普森输入框的显示状态
     toggleSimpsonInputs();
     
@@ -5618,6 +6112,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // 如果按钮不存在，直接调用处理函数
         handleDiseaseTypeChange('Normal');
     }
+
+    // 初次加载完成：允许之后的自动逻辑，但本需求要求“默认不激活”
+    suppressInitialSimpsonAutoActivation = false;
+    simpsonEnabled = false;
+    const initSimpsonButton = document.getElementById('simpsonButton');
+    if (initSimpsonButton) initSimpsonButton.classList.remove('active');
+    toggleSimpsonInputs();
     
     // 复制功能
     // 为每个按钮保存原始内容和定时器
@@ -5700,12 +6201,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (copyFindingsBtn && findingsText) {
         copyFindingsBtn.addEventListener('click', function() {
+            // 点击复制后开始左右移动提示
+            window.__refreshTooltipAnimAllowed = true;
+            const tooltipEl = document.getElementById('refreshButtonTooltip');
+            if (tooltipEl && window.__refreshTooltipAnimAllowed) tooltipEl.classList.add('refresh-tooltip-left-loop');
             copyToClipboard(findingsText.value, copyFindingsBtn);
         });
     }
 
     if (copyConclusionBtn && conclusionText) {
         copyConclusionBtn.addEventListener('click', function() {
+            // 点击复制后开始左右移动提示
+            window.__refreshTooltipAnimAllowed = true;
+            const tooltipEl = document.getElementById('refreshButtonTooltip');
+            if (tooltipEl && window.__refreshTooltipAnimAllowed) tooltipEl.classList.add('refresh-tooltip-left-loop');
             copyToClipboard(conclusionText.value, copyConclusionBtn);
         });
     }
