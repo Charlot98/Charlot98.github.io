@@ -2692,11 +2692,11 @@ function setupRefreshButton() {
             if (simpsonButton) simpsonButton.classList.remove('active');
             toggleSimpsonInputs();
 
-            // 与首次进入页面一致：默认开启「右心高阶」
-            rightHeartAdvancedEnabled = true;
+            // 与首次进入页面一致：默认不激活「右心高阶」
+            rightHeartAdvancedEnabled = false;
             const rightHeartBtn = document.getElementById('rightHeartAdvancedButton');
-            if (rightHeartBtn) rightHeartBtn.classList.add('active');
-            parameters['右心高阶'] = '是';
+            if (rightHeartBtn) rightHeartBtn.classList.remove('active');
+            delete parameters['右心高阶'];
             toggleRightHeartAdvancedInputs();
 
             // 确保模板使用非辛普森版本
@@ -6855,11 +6855,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (initSimpsonButton) initSimpsonButton.classList.remove('active');
     toggleSimpsonInputs();
 
-    // 默认开启「右心高阶」：左侧显示右心相关输入，右侧栏所见含右心占位行（数值可为空）
-    rightHeartAdvancedEnabled = true;
+    // 默认不激活「右心高阶」
+    rightHeartAdvancedEnabled = false;
     const rhInitBtn = document.getElementById('rightHeartAdvancedButton');
-    if (rhInitBtn) rhInitBtn.classList.add('active');
-    parameters['右心高阶'] = '是';
+    if (rhInitBtn) rhInitBtn.classList.remove('active');
+    delete parameters['右心高阶'];
     toggleRightHeartAdvancedInputs();
     calculateTapseOverAo();
     generateTemplate();
