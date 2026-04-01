@@ -1538,6 +1538,11 @@ function updateLAOverAOColor() {
 // readme 2.2：PA/Ao = PA / AO（2）；AO（2）为空时用主动脉 AO；保留 2 位小数（仅「右心高阶」开启时生效）
 function calculatePAOverAo() {
     if (!rightHeartAdvancedEnabled) return;
+    const paAoInputEarly = document.querySelector('input[data-param="PA/Ao"]');
+    if (paAoInputEarly && paAoInputEarly.dataset.paAoManual === '1') {
+        updatePAOverAoColor();
+        return;
+    }
     const paInput = document.querySelector('input[data-param="PA"]');
     const ao2Input = document.querySelector('input[data-param="AO2"]');
     const aoInput = document.querySelector('input[data-param="AO"]');
@@ -1853,7 +1858,7 @@ function calculateEOverA() {
     updateEAColor();
 }
 
-// 自动计算 E/E'（E/E' 只读展示；E′ 在气泡内输入，与 PA/Ao 逻辑类似）
+// 自动计算 E/E'（E′ 在气泡内输入；主框可手动覆盖）
 function calculateEOverEPrime() {
     const eInput = document.querySelector('input[data-param="E"]');
     const ePrimeInput = document.querySelector('input[data-param="E\'"]');
@@ -1861,6 +1866,7 @@ function calculateEOverEPrime() {
 
     if (!eInput || !ePrimeInput || !eOverEInput) return;
     if (eOverEInput.disabled) return;
+    if (eOverEInput.dataset.eeManual === '1') return;
 
     const eValue = parseFloat((eInput.value || '').trim());
     const ePrimeValue = parseFloat((ePrimeInput.value || '').trim());
@@ -1875,13 +1881,26 @@ function calculateEOverEPrime() {
     }
 }
 
-/** AT/ET 只读：由气泡内 AT、ET 计算 AT÷ET，保留 2 位小数；比值≤0.30 标红 */
+/** AT/ET：由气泡内 AT、ET 自动计算；主框可手动覆盖。比值≤0.30 标红 */
 function calculateAtOverEt() {
     const atInput = document.querySelector('input[data-param="AT"]');
     const etInput = document.querySelector('input[data-param="ET"]');
     const atetInput = document.getElementById('atetRatioInput');
     if (!atInput || !etInput || !atetInput) return;
     if (atetInput.disabled) return;
+
+    if (atetInput.dataset.atetManual === '1') {
+        const raw = (atetInput.value || '').trim();
+        const n = parseFloat(raw);
+        if (raw) {
+            parameters['AT/ET'] = raw;
+            atetInput.style.color = (!isNaN(n) && n <= 0.30) ? 'red' : '';
+        } else {
+            delete parameters['AT/ET'];
+            atetInput.style.color = '';
+        }
+        return;
+    }
 
     const at = parseFloat((atInput.value || '').trim());
     const et = parseFloat((etInput.value || '').trim());
@@ -1913,14 +1932,43 @@ function setupInputListeners() {
             const paramName = this.getAttribute('data-param');
             const value = this.value.trim();
 
-            if (!(paramName === 'AT/ET' && this.readOnly) && !(paramName === 'RPAD' && this.readOnly)) {
-                if (value) {
-                    parameters[paramName] = value;
-                } else {
-                    delete parameters[paramName];
-                }
+            // 源字段变化时解除「主框手动覆盖」，以便重新自动计算
+            if (paramName === 'PA' || paramName === 'AO2' || paramName === 'AO') {
+                const el = document.getElementById('paAoRatioInput');
+                if (el) delete el.dataset.paAoManual;
             }
-            
+            if (paramName === '舒张直径' || paramName === '收缩直径') {
+                const el = document.getElementById('rpadRatioInput');
+                if (el) delete el.dataset.rpadManual;
+            }
+            if (paramName === 'AT' || paramName === 'ET') {
+                const el = document.getElementById('atetRatioInput');
+                if (el) delete el.dataset.atetManual;
+            }
+            if (paramName === 'E' || paramName === "E'") {
+                const el = document.getElementById('eePrimeRatioInput');
+                if (el) delete el.dataset.eeManual;
+            }
+
+            if (value) {
+                parameters[paramName] = value;
+            } else {
+                delete parameters[paramName];
+            }
+
+            if (paramName === 'PA/Ao') {
+                this.dataset.paAoManual = '1';
+            }
+            if (paramName === 'RPAD') {
+                this.dataset.rpadManual = '1';
+            }
+            if (paramName === 'AT/ET') {
+                this.dataset.atetManual = '1';
+            }
+            if (paramName === "E/E'") {
+                this.dataset.eeManual = '1';
+            }
+
             // 如果体重变化，自动计算LVDDN
             if (paramName === '体重') {
                 calculateLVDDN();
@@ -2055,7 +2103,11 @@ function setupInputListeners() {
             if (paramName === 'RPAD') {
                 updateRPADColor();
             }
-            
+
+            if (paramName === 'AT/ET') {
+                calculateAtOverEt();
+            }
+
             // 如果反流速变化，计算压力差并更新颜色
             if (['二尖瓣反流速', '三尖瓣反流速', '肺动脉瓣反流速', '主动脉瓣反流速'].includes(paramName)) {
                 updateRegurgitationPressure(paramName, value);
@@ -2656,6 +2708,7 @@ function setupRefreshButton() {
             // 清空所有输入框
             document.querySelectorAll('input[type="text"]').forEach(el => { el.value = ''; });
             document.querySelectorAll('textarea').forEach(el => { el.value = ''; });
+            clearRatioBubbleManualFlags();
             // 清空所有下拉框
             document.querySelectorAll('select').forEach(el => { el.selectedIndex = 0; });
             // 取消所有反流程度按钮的激活状态
@@ -4031,13 +4084,17 @@ function getSPrimeRefRangeFromWeight(weightStr) {
     };
 }
 
-/** readme 2.4：RPAD = (舒张直径 − 收缩直径) / 收缩直径 × 100；≤30% 标红 */
+/** readme 2.4：RPAD = (舒张直径 − 收缩直径) / 收缩直径 × 100；≤30% 标红；主框可手动覆盖 */
 function calculateRPAD() {
     if (!rightHeartAdvancedEnabled) return;
     const dIn = document.querySelector('input[data-param="舒张直径"]');
     const sIn = document.querySelector('input[data-param="收缩直径"]');
     const rIn = document.querySelector('input[data-param="RPAD"]');
     if (!dIn || !sIn || !rIn) return;
+    if (rIn.dataset.rpadManual === '1') {
+        updateRPADColor();
+        return;
+    }
     const d = parseFloat(dIn.value.trim());
     const s = parseFloat(sIn.value.trim());
     rIn.style.color = '';
@@ -4063,6 +4120,18 @@ function updateRPADColor() {
     if (!isNaN(n) && n <= 30) {
         rIn.style.color = 'red';
     }
+}
+
+/** 刷新页面或关闭右心高阶时清除 PA/Ao、RPAD、AT/ET、E/E′ 主框的手动覆盖标记 */
+function clearRatioBubbleManualFlags() {
+    const pa = document.getElementById('paAoRatioInput');
+    if (pa) delete pa.dataset.paAoManual;
+    const rp = document.getElementById('rpadRatioInput');
+    if (rp) delete rp.dataset.rpadManual;
+    const at = document.getElementById('atetRatioInput');
+    if (at) delete at.dataset.atetManual;
+    const ee = document.getElementById('eePrimeRatioInput');
+    if (ee) delete ee.dataset.eeManual;
 }
 
 /** TAPSE/AO = TAPSE(mm) ÷ AO(mm)，左侧展示 2 位小数；依赖主 AO（2. 瓣膜区） */
@@ -4154,6 +4223,7 @@ function toggleRightHeartAdvancedInputs() {
             if (el) el.value = '';
             delete parameters[p];
         });
+        clearRatioBubbleManualFlags();
     }
 }
 

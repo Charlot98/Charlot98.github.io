@@ -909,8 +909,8 @@ body {
 }
 
 .heart-rate-section .input-with-unit-suffix.heart-rate-input-wrap {
-    width: 100px;
-    min-width: 100px;
+    width: 180px;
+    min-width: 180px;
     flex-shrink: 0;
 }
 
@@ -1021,10 +1021,10 @@ body {
     width: 100%;
 }
 
-/* PA/Ao 比值为自动计算，只读样式 */
-#paAoRatioInput[readonly] {
+/* PA/Ao 比值：默认灰底，可手动输入或点击展开气泡 */
+#paAoRatioInput {
     background-color: #f8f9fa;
-    cursor: pointer;
+    cursor: text;
 }
 
 /* PA、AO（2）气泡：聚焦 PA/Ao 或气泡内输入时显示 */
@@ -1125,9 +1125,9 @@ body {
     width: 100%;
 }
 
-#rpadRatioInput[readonly] {
+#rpadRatioInput {
     background-color: #f8f9fa;
-    cursor: pointer;
+    cursor: text;
 }
 
 .rpad-bubble {
@@ -1251,9 +1251,9 @@ body {
     width: 100%;
 }
 
-#atetRatioInput[readonly] {
+#atetRatioInput {
     background-color: #f8f9fa;
-    cursor: pointer;
+    cursor: text;
 }
 
 .atet-bubble {
@@ -1412,18 +1412,20 @@ body {
     width: 100%;
 }
 
-#eePrimeRatioInput[readonly] {
+#eePrimeRatioInput {
     background-color: #f8f9fa;
-    cursor: pointer;
+    cursor: text;
 }
 
+/* 末列向右易超出左栏被裁剪：右对齐锚点，向左展开 */
 .ee-prime-bubble {
     position: absolute;
-    left: 0;
+    left: auto;
+    right: 0;
     top: calc(100% + 4px);
     min-width: 220px;
     max-width: min(100vw - 24px, 300px);
-    z-index: 120;
+    z-index: 200;
     padding: 0;
     margin: 0;
     background: #fff;
@@ -2528,9 +2530,9 @@ body {
     background-color: #fff0f2;
 }
 
-#paAoAdvancedRow #paAoRatioInput[readonly],
-#rpadAdvancedRow #rpadRatioInput[readonly],
-.vpa-vao-wrap.right-heart-advanced #atetRatioInput[readonly] {
+#paAoAdvancedRow #paAoRatioInput,
+#rpadAdvancedRow #rpadRatioInput,
+.vpa-vao-wrap.right-heart-advanced #atetRatioInput {
     background-color: #fff0f2;
 }
 
