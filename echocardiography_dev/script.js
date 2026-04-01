@@ -517,6 +517,8 @@ let mdTemplates = {
 
 // 含辛普森测量按钮状态
 let simpsonEnabled = false;
+// 右心高阶测量（后续 TAPSE / PA/Ao 等字段依赖此开关）
+let rightHeartAdvancedEnabled = false;
 // 首次加载时：抑制脚本自动激活“含辛普森测量”（让按钮默认不激活）
 let suppressInitialSimpsonAutoActivation = true;
 
@@ -651,6 +653,10 @@ function updateSimpsonButtonVisibility() {
     if (simpsonButton) {
         // 按钮始终显示
             simpsonButton.style.display = 'block';
+    }
+    const rightHeartBtn = document.getElementById('rightHeartAdvancedButton');
+    if (rightHeartBtn) {
+        rightHeartBtn.style.display = 'block';
     }
 }
 
@@ -867,6 +873,38 @@ function updateWeightReferenceDisplay() {
     weightReferenceDisplay.textContent = '';
 }
 
+/** 体重公式类参考（TAPSE、FAC）：括号格式与 IVSd 等 CSV 参考值一致，由 updateReferenceValues 统一刷新 */
+function updateFormulaReferenceSpans() {
+    const weight = selectedReferenceWeight !== null ? selectedReferenceWeight.toString() : parameters['体重'];
+    const weightStr = weight != null ? String(weight).trim() : '';
+
+    document.querySelectorAll('.reference-value[data-ref-source="formula"]').forEach((span) => {
+        const formula = span.getAttribute('data-formula');
+        if (formula === 'tapse') {
+            const { str, min, max } = getTapseRefRangeFromWeight(weightStr);
+            if (str && min != null && max != null) {
+                span.textContent = `(${min.toFixed(2)}-${max.toFixed(2)})`;
+            } else {
+                span.textContent = '';
+            }
+        } else if (formula === 'fac') {
+            const { str, min, max } = getFACRefRangeFromWeight(weightStr);
+            if (str && min != null && max != null) {
+                span.textContent = `（${min.toFixed(2)}-${max.toFixed(2)}）`;
+            } else {
+                span.textContent = '';
+            }
+        } else if (formula === 'sprime') {
+            const { str, min, max } = getSPrimeRefRangeFromWeight(weightStr);
+            if (str && min != null && max != null) {
+                span.textContent = `(${min.toFixed(2)}-${max.toFixed(2)})`;
+            } else {
+                span.textContent = '';
+            }
+        }
+    });
+}
+
 // 更新参数标签旁的参考值显示
 function updateReferenceValues() {
     const referenceRange = selectedReferenceRange;
@@ -890,14 +928,6 @@ function updateReferenceValues() {
         referenceData = breedReferenceData['兔'];
     }
     
-    // 如果没有参考数据，清除显示
-    if (!referenceData) {
-        document.querySelectorAll('.reference-value').forEach(span => {
-            span.textContent = '';
-        });
-        return;
-    }
-    
     // 参数名映射（将CSV列名映射到标准参数名）
     // 标准参数名 -> CSV列名（反向映射，支持多种可能的列名）
     const standardToCsvMap = {
@@ -911,8 +941,12 @@ function updateReferenceValues() {
         'Ao': ['Ao', 'AO']  // 支持Ao和AO两种写法
     };
     
-    // 更新每个参数的参考值显示
-    document.querySelectorAll('.reference-value').forEach(span => {
+    // 更新 CSV 来源的参考值（不含体重公式类，如 TAPSE / FAC）
+    document.querySelectorAll('.reference-value:not([data-ref-source="formula"])').forEach(span => {
+        if (!referenceData) {
+            span.textContent = '';
+            return;
+        }
         const csvKey = span.getAttribute('data-csv-key');
         const paramName = span.getAttribute('data-param');
         
@@ -953,6 +987,8 @@ function updateReferenceValues() {
             span.textContent = '';
         }
     });
+
+    updateFormulaReferenceSpans();
     
     // 更新IVSd和LVWs的颜色显示
     updateIVSdAndLVWsColor();
@@ -1168,6 +1204,9 @@ function updateSpecialLogicInputColors() {
     }
     
     // E: ≥ 1.3 标红（由updateEColor函数处理，这里不需要重复处理）
+
+    // TAPSE/Ao 显示区：与其它标红逻辑一并刷新（避免仅依赖 input 时偶发不同步）
+    calculateTapseOverAo();
 }
 
 // 更新所有输入框的颜色（兼容旧函数名）
@@ -1496,6 +1535,55 @@ function updateLAOverAOColor() {
     }
 }
 
+// readme 2.2：PA/Ao = PA / AO（2）；AO（2）为空时用主动脉 AO；保留 2 位小数（仅「右心高阶」开启时生效）
+function calculatePAOverAo() {
+    if (!rightHeartAdvancedEnabled) return;
+    const paInput = document.querySelector('input[data-param="PA"]');
+    const ao2Input = document.querySelector('input[data-param="AO2"]');
+    const aoInput = document.querySelector('input[data-param="AO"]');
+    const paAoInput = document.querySelector('input[data-param="PA/Ao"]');
+    if (!paInput || !paAoInput) return;
+
+    const paValue = parseFloat(paInput.value.trim());
+    const ao2Raw = ao2Input ? ao2Input.value.trim() : '';
+    const aoFallback = aoInput ? parseFloat(aoInput.value.trim()) : NaN;
+
+    let denom = NaN;
+    if (ao2Raw !== '') {
+        const ao2 = parseFloat(ao2Raw);
+        if (!isNaN(ao2) && ao2 !== 0) {
+            denom = ao2;
+        }
+    } else if (!isNaN(aoFallback) && aoFallback !== 0) {
+        denom = aoFallback;
+    }
+
+    paAoInput.style.color = '';
+
+    if (!isNaN(paValue) && !isNaN(denom) && denom !== 0) {
+        const ratio = (paValue / denom).toFixed(2);
+        paAoInput.value = ratio;
+        parameters['PA/Ao'] = ratio;
+        const n = parseFloat(ratio);
+        if (!isNaN(n) && n >= 1.1) {
+            paAoInput.style.color = 'red';
+        }
+    } else {
+        paAoInput.value = '';
+        delete parameters['PA/Ao'];
+    }
+}
+
+function updatePAOverAoColor() {
+    const paAoInput = document.querySelector('input[data-param="PA/Ao"]');
+    if (!paAoInput) return;
+    paAoInput.style.color = '';
+    const n = parseFloat(paAoInput.value.trim());
+    if (!isNaN(n) && n >= 1.1) {
+        paAoInput.style.color = 'red';
+    }
+}
+
 // 自动计算 LA/AO 函数
 function calculateLAOverAO() {
     const laInput = document.querySelector('input[data-param="LA"]');
@@ -1765,6 +1853,53 @@ function calculateEOverA() {
     updateEAColor();
 }
 
+// 自动计算 E/E'（E/E' 只读展示；E′ 在气泡内输入，与 PA/Ao 逻辑类似）
+function calculateEOverEPrime() {
+    const eInput = document.querySelector('input[data-param="E"]');
+    const ePrimeInput = document.querySelector('input[data-param="E\'"]');
+    const eOverEInput = document.querySelector('input[data-param="E/E\'"]');
+
+    if (!eInput || !ePrimeInput || !eOverEInput) return;
+    if (eOverEInput.disabled) return;
+
+    const eValue = parseFloat((eInput.value || '').trim());
+    const ePrimeValue = parseFloat((ePrimeInput.value || '').trim());
+
+    if (!isNaN(eValue) && !isNaN(ePrimeValue) && ePrimeValue !== 0) {
+        const eOverEValue = (eValue / ePrimeValue).toFixed(2);
+        eOverEInput.value = eOverEValue;
+        parameters["E/E'"] = eOverEValue;
+    } else {
+        eOverEInput.value = '';
+        delete parameters["E/E'"];
+    }
+}
+
+/** AT/ET 只读：由气泡内 AT、ET 计算 AT÷ET，保留 2 位小数；比值≤0.30 标红 */
+function calculateAtOverEt() {
+    const atInput = document.querySelector('input[data-param="AT"]');
+    const etInput = document.querySelector('input[data-param="ET"]');
+    const atetInput = document.getElementById('atetRatioInput');
+    if (!atInput || !etInput || !atetInput) return;
+    if (atetInput.disabled) return;
+
+    const at = parseFloat((atInput.value || '').trim());
+    const et = parseFloat((etInput.value || '').trim());
+
+    if (!isNaN(at) && !isNaN(et) && et !== 0) {
+        const ratio = at / et;
+        const str = ratio.toFixed(2);
+        atetInput.value = str;
+        parameters['AT/ET'] = str;
+        const n = parseFloat(str);
+        atetInput.style.color = (!isNaN(n) && n <= 0.30) ? 'red' : '';
+    } else {
+        atetInput.value = '';
+        atetInput.style.color = '';
+        delete parameters['AT/ET'];
+    }
+}
+
 // 输入框值变化时更新参数（支持所有类型的输入框和选择框）
 // 使用事件委托，确保在DOM加载后也能正常工作
 function setupInputListeners() {
@@ -1777,16 +1912,19 @@ function setupInputListeners() {
 
             const paramName = this.getAttribute('data-param');
             const value = this.value.trim();
-            
-            if (value) {
-                parameters[paramName] = value;
-            } else {
-                delete parameters[paramName];
+
+            if (!(paramName === 'AT/ET' && this.readOnly) && !(paramName === 'RPAD' && this.readOnly)) {
+                if (value) {
+                    parameters[paramName] = value;
+                } else {
+                    delete parameters[paramName];
+                }
             }
             
             // 如果体重变化，自动计算LVDDN
             if (paramName === '体重') {
                 calculateLVDDN();
+                updateReferenceValues();
             }
             
             // 如果LVDd变化，自动计算LVDDN（不再自动计算EDV/FS）
@@ -1823,6 +1961,19 @@ function setupInputListeners() {
             // 如果LA或AO变化，自动计算LA/AO
             if (paramName === 'LA' || paramName === 'AO') {
                 calculateLAOverAO();
+                calculatePAOverAo();
+            }
+
+            if (paramName === 'TAPSE' || paramName === 'AO') {
+                calculateTapseOverAo();
+            }
+
+            if (paramName === 'PA' || paramName === 'AO2') {
+                calculatePAOverAo();
+            }
+
+            if (paramName === '舒张直径' || paramName === '收缩直径') {
+                calculateRPAD();
             }
             
             // 如果LA Volume或体重变化，自动计算LAVi
@@ -1838,6 +1989,15 @@ function setupInputListeners() {
             // 如果E或A变化，自动计算E/A
             if (paramName === 'E' || paramName === 'A') {
                 calculateEOverA();
+            }
+
+            // 如果E或E'变化，自动计算E/E'
+            if (paramName === 'E' || paramName === "E'") {
+                calculateEOverEPrime();
+            }
+
+            if (paramName === 'AT' || paramName === 'ET') {
+                calculateAtOverEt();
             }
             
             // 如果E值变化，更新颜色显示
@@ -1886,6 +2046,14 @@ function setupInputListeners() {
             // 如果LA/AO变化，检查并更新颜色显示
             if (paramName === 'LA/AO') {
                 updateLAOverAOColor();
+            }
+
+            if (paramName === 'PA/Ao') {
+                updatePAOverAoColor();
+            }
+
+            if (paramName === 'RPAD') {
+                updateRPADColor();
             }
             
             // 如果反流速变化，计算压力差并更新颜色
@@ -1997,6 +2165,12 @@ function setupInputListeners() {
                 generateTemplate();
             }
         });
+        input.addEventListener('change', function() {
+            const pn = this.getAttribute('data-param');
+            if (pn === 'TAPSE' || pn === 'AO') {
+                calculateTapseOverAo();
+            }
+        });
     });
 
     // dp/dt：显示开关（单按钮），仅影响 MMVD 所见是否输出 dp/dt 行
@@ -2051,6 +2225,86 @@ function setupInputListeners() {
         laVolumeShowBtn.classList.remove('active');
         delete parameters['LA Volume显示'];
     }
+}
+
+// 左侧栏单位：在带 .input-with-unit-suffix 的输入框内常显（.unit-suffix），不再用 placeholder 显示单位（保留辛普森输入框 placeholder「辛普森」）
+function setLeftSidebarInputPlaceholders() {
+    const leftSidebar = document.querySelector('.left-sidebar');
+    if (!leftSidebar) return;
+
+    const unitPlaceholderMap = {
+        '体重': 'kg',
+        'IVSd': 'mm',
+        'LVDd': 'mm',
+        'LVPWd': 'mm',
+        'IVSs': 'mm',
+        'LVDs': 'mm',
+        'LVPWs': 'mm',
+        'EDV': 'ml',
+        'ESV': 'ml',
+        'EDVI': 'ml/m2',
+        'ESVI': 'ml/m2',
+        'FS': '%',
+        'TAPSE': 'mm',
+        'EF': '%',
+        '二尖瓣前叶厚度': 'mm',
+        'AO': 'mm',
+        'LA': 'mm',
+        'LA/AO': '',
+        'PA': 'mm',
+        'AO2': 'mm',
+        'PA/Ao': '',
+        'FAC': '%',
+        '舒张直径': 'mm',
+        '收缩直径': 'mm',
+        'RPAD': '%',
+        'LA Volume': 'ml',
+        'VPA': 'm/s',
+        'VAO': 'm/s',
+        'VTI': 'cm',
+        'AT': 'ms',
+        'ET': 'ms',
+        'AT/ET': '',
+        'E（TV）': 'm/s',
+        'A（TV）': 'm/s',
+        'E/A（TV）': '',
+        "S'": 'cm/s',
+        'GS': '%',
+        'FWS': '%',
+        'E': 'm/s',
+        'A': 'm/s',
+        "E'": 'm/s',
+        'E/A': '',
+        "E/E'": '',
+        'EA融合': 'm/s',
+        'dp/dt': 'mmHg/s',
+        '二尖瓣反流速': 'm/s',
+        '三尖瓣反流速': 'm/s',
+        '肺动脉瓣反流速': 'm/s',
+        '主动脉瓣反流速': 'm/s',
+        '心率': 'bpm'
+    };
+
+    leftSidebar.querySelectorAll('input[type="text"]').forEach((input) => {
+        if (input.classList.contains('simpson-input')) return;
+        const paramName = input.getAttribute('data-param');
+        if (!paramName) return;
+        input.placeholder = '';
+        const unitText = unitPlaceholderMap[paramName];
+        const wrapper = input.closest('.input-with-unit-suffix');
+        if (wrapper) {
+            const suffixEl = wrapper.querySelector('.unit-suffix');
+            if (suffixEl) {
+                if (unitText !== undefined && unitText !== '') {
+                    suffixEl.textContent = unitText;
+                    suffixEl.style.display = '';
+                } else {
+                    suffixEl.textContent = '';
+                    suffixEl.style.display = 'none';
+                }
+            }
+        }
+    });
 }
 
 // 强制处理“显示”开关点击（避免绑定时机/重复初始化导致的失效）
@@ -2236,12 +2490,15 @@ function setupRefreshButton() {
             tooltipEl.textContent = tooltipText;
 
             if (topHintEl) {
-                // 置顶展示：快速截图快捷键（按键样式）
+                topHintEl.setAttribute('aria-label', '快速截图快捷键：Shift+Win+S');
+                topHintEl.setAttribute('title', '可拖动位置');
                 topHintEl.innerHTML = `
-                    <span class="refresh-left-snip-label">快速截图：</span>
-                    <code>Shift</code><span class="refresh-left-snip-plus">+</span>
-                    <code>Win</code><span class="refresh-left-snip-plus">+</span>
-                    <code>S</code>
+                    <span class="snip-hint-inner">
+                        <span class="snip-hint-label">截图</span>
+                        <span class="snip-hint-keys" aria-hidden="true">
+                            <kbd>Shift</kbd><kbd>Win</kbd><kbd>S</kbd>
+                        </span>
+                    </span>
                 `.trim();
             }
 
@@ -2305,9 +2562,10 @@ function setupRefreshButton() {
                     let centerX = baseRect.left + baseRect.width / 2;
                     centerX = Math.max(halfW + 6, Math.min(window.innerWidth - (halfW + 6), centerX));
 
-                    // 与顶栏同水平：对齐 refreshButton 的垂直中心
+                    // 默认下移一行：在原“与顶栏同水平”基础上向下偏移 1 行高度
                     const refreshRect = refreshButton.getBoundingClientRect();
-                    let top = refreshRect.top + refreshRect.height / 2 - hRect.height / 2;
+                    const oneLineOffset = hRect.height + 4;
+                    let top = refreshRect.top + refreshRect.height / 2 - hRect.height / 2 + oneLineOffset;
                     top = Math.max(6, Math.min(top, window.innerHeight - hRect.height - 6));
 
                     topHintEl.style.left = `${centerX}px`;
@@ -2425,12 +2683,21 @@ function setupRefreshButton() {
             calculateEDVI();
             calculateESVI();
             calculateLVDDN();
+            calculateAtOverEt();
+            calculateTapseOverAo();
 
             // 刷新后默认不激活“含辛普森测量”
             const simpsonButton = document.getElementById('simpsonButton');
             simpsonEnabled = false;
             if (simpsonButton) simpsonButton.classList.remove('active');
             toggleSimpsonInputs();
+
+            // 与首次进入页面一致：默认开启「右心高阶」
+            rightHeartAdvancedEnabled = true;
+            const rightHeartBtn = document.getElementById('rightHeartAdvancedButton');
+            if (rightHeartBtn) rightHeartBtn.classList.add('active');
+            parameters['右心高阶'] = '是';
+            toggleRightHeartAdvancedInputs();
 
             // 确保模板使用非辛普森版本
             try {
@@ -2558,7 +2825,8 @@ function setupRightSidebarResize() {
 const GUIDE_ITEMS = [
     { date: '2025-12', content: '数据填写：双击PACS系统的图片→图片自动置顶→跳转至此界面进行内容填写' },
     { date: '2026-3-12', content: '结论生成：结论会依据左侧栏填写情况，实时更新，请谨慎参考。' },
-    { date: '2026-3-22', content: '支持OCR：直接粘贴心超截图可自动识别并回填 M 型参数（IVSd、LVDd、LVPWd、IVSs、LVDs、LVPWs、EDV、ESV、FS、EF）。<br>数据识别可能有误，请人工核对。<br>尽量减小截图范围，以提高识别准确度。<div class="guide-item-img-wrap"><span class="guide-item-img-label">截图示意图</span><img src="img/image.png" alt="截图示意图" class="guide-item-img"></div>' }
+    { date: '2026-3-22', content: '支持OCR：直接粘贴心超截图可自动识别并回填 M 型参数（IVSd、LVDd、LVPWd、IVSs、LVDs、LVPWs、EDV、ESV、FS、EF）。<br>数据识别可能有误，请人工核对。<br>尽量减小截图范围，以提高识别准确度。<div class="guide-item-img-wrap"><span class="guide-item-img-label">截图示意图</span><img src="img/image.png" alt="截图示意图" class="guide-item-img"></div>' },
+    { date: '2026-4-1', content: '① 新增 OCR 识别：AO、LA、LA/Ao、E、A、E/A 等。<br>② 新增右心高阶测量参数。' }
 ];
 function setupGuide() {
     const trigger = document.getElementById('guideTrigger');
@@ -2839,6 +3107,13 @@ function setupOCR() {
             'AO': 'AO',
             'AO.': 'AO',
             'LA': 'LA',
+            'LA/AO': 'LA/AO',
+            'LA/AO.': 'LA/AO',
+            'E': 'E',
+            'A': 'A',
+            'E/A': 'E/A',
+            'E\'': 'E\'',
+            'E/E\'': 'E/E\'',
             'FS': 'FS',
             'EF': 'EF'
         };
@@ -2944,6 +3219,15 @@ function setupOCR() {
             .replace(/收缩末期容积（?ml）?/gi, 'ESV')
             .replace(/收缩末期左心室容量/gi, 'ESV')
             .replace(/收缩期左心室容量/gi, 'ESV')
+            // LA/AO + 频谱多普勒参数
+            .replace(/\bL[Aa]\s*Diam\b/gi, 'LA')
+            .replace(/\bA[oO]\s*Diam\b/gi, 'AO')
+            .replace(/\bL[Aa]\s*\/\s*A[oO]\b/gi, 'LA/AO')
+            .replace(/\bE\s*Vel\b/gi, 'E')
+            .replace(/\bA\s*Vel\b/gi, 'A')
+            .replace(/\bE\s*\/\s*A\s*Ratio\b/gi, 'E/A')
+            .replace(/\bE\s*'\s*(?:Lat|Sep|Ava)\b/gi, 'E\'')
+            .replace(/\bE\s*\/\s*E\s*'\s*(?:Lat|Sep|Ava)\b/gi, 'E/E\'')
             // FS（含 %FS）
             .replace(/%\s*FS/gi, 'FS')
             .replace(/缩短分数/gi, 'FS')
@@ -2968,12 +3252,18 @@ function setupOCR() {
             .replace(/\bIVS\s*Tack\b/gi, 'IVSs')
             .replace(/\bIVS5\b/gi, 'IVSs')
             .replace(/\bIVSS\b/g, 'IVSs')
+            .replace(/\bIVS[-_.:\s]*S\b/gi, 'IVSs')
+            .replace(/\bIVS[-_.:\s]*5\b/gi, 'IVSs')
             .replace(/\bIVS\s+s\b/gi, 'IVSs')
             .replace(/\bIVS\.s\b/gi, 'IVSs')
             .replace(/\bIVS:\s*s\b/gi, 'IVSs')
             // LVIDs、LVPWs 同理
             .replace(/\bLVID5\b/gi, 'LVIDs')
             .replace(/\bLVPW5\b/gi, 'LVPWs');
+            // EDV 常见误读：EOV / E0V（0与D混淆）
+        const fixedWithEdvAlias = fixed
+            .replace(/\bEOV\b/gi, 'EDV')
+            .replace(/\bE0V\b/gi, 'EDV');
 
         const results = {};
 
@@ -2982,35 +3272,105 @@ function setupOCR() {
         // 规则：在字段名（或同义词已统一为字段名后）后面找到出现的第一个数字
         const patterns = [
             // 厚度/腔径：允许数字字母错读（例如 S436、1VSTack -> IVSs 的数字部分）
-            { key: 'IVSd',  re: /\bIVSd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'LVIDd', re: /\bLVIDd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'LVDd',  re: /\bLVDd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'LVPWd', re: /\bLVPWd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'LVWd',  re: /\bLVWd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'IVSs',  re: /\bIVSs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'LVIDs', re: /\bLVIDs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'LVDs',  re: /\bLVDs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'LVPWs', re: /\bLVPWs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'LVWs',  re: /\bLVWs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
+            { key: 'IVSd',  re: /\bIVSd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'LVIDd', re: /\bLVIDd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'LVDd',  re: /\bLVDd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'LVPWd', re: /\bLVPWd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'LVWd',  re: /\bLVWd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'IVSs',  re: /\bIVSs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            // IVSs 易漏识别：补充对 IVS-S / IVS5 / IVS s 等变体的兜底
+            { key: 'IVSs',  re: /\bIVS(?!d)\s*[-_.: ]?\s*[sS5]\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            // 再兜底：仅出现 IVS（且不是 IVSd）时也尝试抓取后续数字
+            { key: 'IVSs',  re: /\bIVS(?!d)\b[^\d\-+]{0,12}([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 0 },
+            { key: 'LVIDs', re: /\bLVIDs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'LVDs',  re: /\bLVDs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'LVPWs', re: /\bLVPWs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'LVWs',  re: /\bLVWs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            // 非 M 型 / 频谱多普勒 OCR 字段
+            { key: 'LA',    re: /\bLA\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'AO',    re: /\bAO\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'LA/AO', re: /\bLA\s*\/\s*AO\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
+            { key: 'E\'',   re: /\bE\s*'\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
+            { key: 'E/E\'', re: /\bE\s*\/\s*E\s*'\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
+            { key: 'E/A',   re: /\bE\s*\/\s*A\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
+            { key: 'E',     re: /\bE\b(?!\s*\/)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'A',     re: /\bA\b(?!\s*\/)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
             // EDV/ESV：同样允许数字字母错读（Sl、Im 等）
-            { key: 'EDV',   re: /\bEDV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'ESV',   re: /\bESV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i },
-            { key: 'FS',    re: /\bFS\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i },
-            { key: 'EF',    re: /\bEF\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i }
+            { key: 'EDV',   re: /\bEDV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'ESV',   re: /\bESV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'FS',    re: /\bFS\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i, priority: 1 },
+            // EF(Teich) 优先于普通 EF
+            { key: 'EF_TEICH', re: /\bEF\s*\(\s*Teich\s*\)\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i, priority: 2 },
+            { key: 'EF_TEICH', re: /\bEF\s*Teich\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i, priority: 2 },
+            { key: 'EF',    re: /\bEF\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i, priority: 1 }
         ];
 
+        const resultPriority = {};
         for (const p of patterns) {
-            const m = fixed.match(p.re);
+            const m = fixedWithEdvAlias.match(p.re);
             if (!m) continue;
             const valueNum = parseValue(m[1], p.key);
             if (valueNum === null) continue;
             // 先用 mapKeyToParam 做一次映射（处理 LVIDd/LVFWs 等），否则直接用 key 自身
-            const mapped = mapKeyToParam(p.key) || mapKeyToParam(p.key.toUpperCase());
-            const targetParam = mapped || p.key;
+            const baseKey = p.key === 'EF_TEICH' ? 'EF' : p.key;
+            const mapped = mapKeyToParam(baseKey) || mapKeyToParam(baseKey.toUpperCase());
+            const targetParam = mapped || baseKey;
             if (!targetParam) continue;
+
+            const priority = p.priority || 0;
+            if (resultPriority[targetParam] !== undefined && resultPriority[targetParam] > priority) {
+                continue;
+            }
 
             // 简化：不根据单位做 cm→mm 换算，直接使用识别到的数值
             results[targetParam] = valueNum;
+            resultPriority[targetParam] = priority;
+        }
+
+        // IVSs 稳定性增强：
+        // 1) 先校验当前值是否在合理区间；
+        // 2) 若缺失或异常，再从多种 IVSs 文本形态中回退提取候选并择优。
+        const isIvssPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 30;
+        if (!isIvssPlausible(Number(results['IVSs']))) {
+            const ivssCandidatePatterns = [
+                /\bIVSs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
+                /\bIVS(?!d)\s*[-_.: ]?\s*[sS5]\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
+                /\bIVS(?!d)\b[^\d\-+]{0,16}([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig
+            ];
+            const ivssCandidates = [];
+            for (const re of ivssCandidatePatterns) {
+                for (const m of fixedWithEdvAlias.matchAll(re)) {
+                    const n = parseValue(m[1], 'IVSs');
+                    if (n !== null) ivssCandidates.push(n);
+                }
+            }
+            const plausible = ivssCandidates.filter(isIvssPlausible);
+            if (plausible.length > 0) {
+                results['IVSs'] = plausible[0];
+                resultPriority['IVSs'] = Math.max(resultPriority['IVSs'] || 0, 1);
+            }
+        }
+
+        // EDV 稳定性增强：范围校验 + 候选回退
+        const isEdvPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 500;
+        if (!isEdvPlausible(Number(results['EDV']))) {
+            const edvCandidatePatterns = [
+                /\bEDV\s*\(\s*Teich\s*\)\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
+                /\bEDV\s*Teich\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
+                /\bEDV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig
+            ];
+            const edvCandidates = [];
+            for (const re of edvCandidatePatterns) {
+                for (const m of fixedWithEdvAlias.matchAll(re)) {
+                    const n = parseValue(m[1], 'EDV');
+                    if (n !== null) edvCandidates.push(n);
+                }
+            }
+            const plausible = edvCandidates.filter(isEdvPlausible);
+            if (plausible.length > 0) {
+                results['EDV'] = plausible[0];
+                resultPriority['EDV'] = Math.max(resultPriority['EDV'] || 0, 1);
+            }
         }
 
         return results;
@@ -3029,6 +3389,22 @@ function setupOCR() {
             written++;
         }
         return written;
+    }
+
+    // OCR 回填前先清空 M 型相关字段，避免旧值残留影响本次识别结果
+    function clearMModeFieldsBeforeOcrWrite() {
+        const mModeParams = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'FS', 'EF', 'TAPSE', 'EDVI', 'ESVI'];
+        mModeParams.forEach((param) => {
+            const input = document.querySelector(`input[data-param="${param}"]`);
+            if (!input) return;
+            if (input.value === '') return;
+            input.value = '';
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        // 兜底清理自动计算缓存值
+        delete parameters['EDV_raw'];
+        delete parameters['ESV_raw'];
     }
 
     let __ocrRunCounter = 0;
@@ -3084,6 +3460,32 @@ function setupOCR() {
             const p1 = parseOcrToParamValues(d1?.text || '');
             const p2 = parseOcrToParamValues(d2?.text || '');
             const paramValues = { ...p1, ...p2 };
+
+            // 双路 OCR 的 IVSs 择优合并，避免后写覆盖前写导致退化
+            const isIvssPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 30;
+            const ivss1 = Number(p1['IVSs']);
+            const ivss2 = Number(p2['IVSs']);
+            if (isIvssPlausible(ivss1) && !isIvssPlausible(ivss2)) {
+                paramValues['IVSs'] = ivss1;
+            } else if (!isIvssPlausible(ivss1) && isIvssPlausible(ivss2)) {
+                paramValues['IVSs'] = ivss2;
+            } else if (isIvssPlausible(ivss1) && isIvssPlausible(ivss2)) {
+                // 两者都合理时，优先预处理更强的第一路
+                paramValues['IVSs'] = ivss1;
+            }
+            // 双路 OCR 的 EDV 择优合并，避免漏识别/误识别覆盖
+            const isEdvPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 500;
+            const edv1 = Number(p1['EDV']);
+            const edv2 = Number(p2['EDV']);
+            if (isEdvPlausible(edv1) && !isEdvPlausible(edv2)) {
+                paramValues['EDV'] = edv1;
+            } else if (!isEdvPlausible(edv1) && isEdvPlausible(edv2)) {
+                paramValues['EDV'] = edv2;
+            } else if (isEdvPlausible(edv1) && isEdvPlausible(edv2)) {
+                // 两者都合理时，优先预处理更强的第一路
+                paramValues['EDV'] = edv1;
+            }
+            clearMModeFieldsBeforeOcrWrite();
             const written = writeParamsToInputs(paramValues);
             const parse1 = performance.now();
             // #region agent log H4_parse_write_done
@@ -3461,6 +3863,23 @@ if (simpsonButton) {
     });
 }
 
+// 右心高阶按钮（与含辛普森测量同款样式；后续高阶输入框显隐依赖此开关）
+const rightHeartAdvancedButton = document.getElementById('rightHeartAdvancedButton');
+if (rightHeartAdvancedButton) {
+    rightHeartAdvancedButton.addEventListener('click', function() {
+        rightHeartAdvancedEnabled = !rightHeartAdvancedEnabled;
+        if (rightHeartAdvancedEnabled) {
+            this.classList.add('active');
+            parameters['右心高阶'] = '是';
+        } else {
+            this.classList.remove('active');
+            delete parameters['右心高阶'];
+        }
+        toggleRightHeartAdvancedInputs();
+        generateTemplate();
+    });
+}
+
 // 节律不齐按钮事件
 const rhythmIrregularButton = document.getElementById('rhythmIrregularButton');
 if (rhythmIrregularButton) {
@@ -3510,6 +3929,13 @@ function toggleWeightInput() {
 function setHeartRateDefault() {
     const heartRateInput = document.querySelector('input[data-param="心率"]');
     if (!heartRateInput) return;
+
+    // 选择“猫”时，默认心率固定填写为 180-200（覆盖当前值）
+    if (selectedReferenceRange === '猫') {
+        heartRateInput.value = '180-200';
+        parameters['心率'] = '180-200';
+        return;
+    }
     
     // 如果输入框已经有值，不覆盖
     if (heartRateInput.value.trim()) {
@@ -3560,6 +3986,174 @@ function restoreSimpsonDataFromCache() {
     if (efSimpsonInput) {
         efSimpsonInput.value = cached.EF辛普森 ?? '';
         if (cached.EF辛普森) parameters['EF辛普森'] = cached.EF辛普森; else delete parameters['EF辛普森'];
+    }
+}
+
+/** TAPSE 参考区间（readme 2.1）：下限 4.777×W^0.297，上限 7.640×W^0.297，W 为左侧栏体重（kg） */
+function getTapseRefRangeFromWeight(weightStr) {
+    const W = parseFloat(weightStr);
+    if (isNaN(W) || W <= 0) return { min: null, max: null, str: '' };
+    const pow = Math.pow(W, 0.297);
+    const min = 4.777 * pow;
+    const max = 7.640 * pow;
+    return {
+        min,
+        max,
+        str: `${min.toFixed(2)}-${max.toFixed(2)}`
+    };
+}
+
+/** readme 2.3 FAC 参考区间：下限 46.34×W^(-0.097)，上限 76.92×W^(-0.097)，W 为体重 kg */
+function getFACRefRangeFromWeight(weightStr) {
+    const W = parseFloat(weightStr);
+    if (isNaN(W) || W <= 0) return { min: null, max: null, str: '' };
+    const pow = Math.pow(W, -0.097);
+    const min = 46.34 * pow;
+    const max = 76.92 * pow;
+    return {
+        min,
+        max,
+        str: `${min.toFixed(2)}-${max.toFixed(2)}`
+    };
+}
+
+/** readme 2.6 S'（TV）参考：下限 4.262×W^0.233，上限 11.178×W^0.233，W 为体重 kg */
+function getSPrimeRefRangeFromWeight(weightStr) {
+    const W = parseFloat(weightStr);
+    if (isNaN(W) || W <= 0) return { min: null, max: null, str: '' };
+    const pow = Math.pow(W, 0.233);
+    const min = 4.262 * pow;
+    const max = 11.178 * pow;
+    return {
+        min,
+        max,
+        str: `${min.toFixed(2)}-${max.toFixed(2)}`
+    };
+}
+
+/** readme 2.4：RPAD = (舒张直径 − 收缩直径) / 收缩直径 × 100；≤30% 标红 */
+function calculateRPAD() {
+    if (!rightHeartAdvancedEnabled) return;
+    const dIn = document.querySelector('input[data-param="舒张直径"]');
+    const sIn = document.querySelector('input[data-param="收缩直径"]');
+    const rIn = document.querySelector('input[data-param="RPAD"]');
+    if (!dIn || !sIn || !rIn) return;
+    const d = parseFloat(dIn.value.trim());
+    const s = parseFloat(sIn.value.trim());
+    rIn.style.color = '';
+    if (!isNaN(d) && !isNaN(s) && s !== 0) {
+        const pct = ((d - s) / s) * 100;
+        const rounded = pct.toFixed(2);
+        rIn.value = rounded;
+        parameters['RPAD'] = rounded;
+        if (parseFloat(rounded) <= 30) {
+            rIn.style.color = 'red';
+        }
+    } else {
+        rIn.value = '';
+        delete parameters['RPAD'];
+    }
+}
+
+function updateRPADColor() {
+    const rIn = document.querySelector('input[data-param="RPAD"]');
+    if (!rIn) return;
+    rIn.style.color = '';
+    const n = parseFloat(rIn.value.trim());
+    if (!isNaN(n) && n <= 30) {
+        rIn.style.color = 'red';
+    }
+}
+
+/** TAPSE/AO = TAPSE(mm) ÷ AO(mm)，左侧展示 2 位小数；依赖主 AO（2. 瓣膜区） */
+function calculateTapseOverAo() {
+    const tapseIn = document.querySelector('input[data-param="TAPSE"]');
+    const aoIn = document.querySelector('input[data-param="AO"]');
+    const disp = document.getElementById('tapseAoRatioDisplay');
+    if (!disp) return;
+    disp.classList.remove('tapse-ao-ratio--low', 'tapse-ao-ratio--muted');
+    disp.style.removeProperty('color');
+    if (!tapseIn || !aoIn) {
+        disp.textContent = '-';
+        disp.classList.add('tapse-ao-ratio--muted');
+        return;
+    }
+    const t = parseFloat(tapseIn.value.trim());
+    const ao = parseFloat(aoIn.value.trim());
+    if (!isNaN(t) && t > 0 && !isNaN(ao) && ao > 0) {
+        const ratio = t / ao;
+        disp.textContent = ratio.toFixed(2);
+        if (ratio <= 0.65) {
+            disp.classList.add('tapse-ao-ratio--low');
+        }
+    } else {
+        disp.textContent = '-';
+        disp.classList.add('tapse-ao-ratio--muted');
+    }
+}
+
+function toggleRightHeartAdvancedInputs() {
+    const tapseRow = document.getElementById('tapseInputRow');
+    const paAoRow = document.getElementById('paAoAdvancedRow');
+    const rpadRow = document.getElementById('rpadAdvancedRow');
+    const vpaVaoWrap = document.getElementById('vpaVaoWrap');
+    const tvTricuspidRow = document.getElementById('tvTricuspidRow');
+    const gsFwsRow = document.getElementById('gsFwsRow');
+
+    if (rightHeartAdvancedEnabled) {
+        if (tapseRow) {
+            tapseRow.style.display = '';
+            calculateTapseOverAo();
+        }
+        if (paAoRow) {
+            paAoRow.style.display = '';
+            calculatePAOverAo();
+        }
+        if (rpadRow) {
+            rpadRow.style.display = '';
+            calculateRPAD();
+        }
+        if (vpaVaoWrap) vpaVaoWrap.classList.add('right-heart-advanced');
+        if (tvTricuspidRow) tvTricuspidRow.style.display = 'grid';
+        if (gsFwsRow) gsFwsRow.style.display = 'flex';
+        updateReferenceValues();
+    } else {
+        if (tapseRow) tapseRow.style.display = 'none';
+        const tapseInp = document.querySelector('input[data-param="TAPSE"]');
+        if (tapseInp) tapseInp.value = '';
+        delete parameters['TAPSE'];
+        calculateTapseOverAo();
+
+        if (paAoRow) paAoRow.style.display = 'none';
+        ['PA', 'AO2', 'PA/Ao', 'FAC'].forEach((p) => {
+            const el = document.querySelector(`input[data-param="${p}"]`);
+            if (el) {
+                el.value = '';
+                el.style.color = '';
+            }
+            delete parameters[p];
+        });
+
+        if (rpadRow) rpadRow.style.display = 'none';
+        ['舒张直径', '收缩直径', 'RPAD'].forEach((p) => {
+            const el = document.querySelector(`input[data-param="${p}"]`);
+            if (el) {
+                el.value = '';
+                el.style.color = '';
+            }
+            delete parameters[p];
+        });
+
+        if (vpaVaoWrap) vpaVaoWrap.classList.remove('right-heart-advanced');
+        if (tvTricuspidRow) tvTricuspidRow.style.display = 'none';
+        if (gsFwsRow) gsFwsRow.style.display = 'none';
+        [
+            'VTI', 'AT', 'ET', 'AT/ET', 'E（TV）', 'A（TV）', 'E/A（TV）', "S'", 'GS', 'FWS'
+        ].forEach((p) => {
+            const el = document.querySelector(`input[data-param="${p}"]`);
+            if (el) el.value = '';
+            delete parameters[p];
+        });
     }
 }
 
@@ -3670,7 +4264,7 @@ function addTagInput(paramName, label) {
     item.setAttribute('data-tag-param', paramName);
     item.innerHTML = `
         <label class="other-param-label">${label}</label>
-        <input type="text" class="other-param-input" data-param="${paramName}" placeholder="请输入数值">
+        <input type="text" class="other-param-input" data-param="${paramName}" placeholder="">
     `;
     
     dynamicInputsContainer.appendChild(item);
@@ -4220,7 +4814,7 @@ const templateConfig = {
         // 注意：'二尖瓣反流'、'三尖瓣反流'、'主动脉瓣反流'、'肺动脉瓣反流' 是嵌套占位符，不在这里处理
         // 注意：'二尖瓣反流速'、'二尖瓣压力差' 等是嵌套占位符的内层，也不在这里处理
         const paramNames = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'EDVI', 'ESVI', 'FS', 'EF', 
-                           'LA', 'AO', 'LA/AO', 'LA Volume', 'LAVi', 'VPA', 'VAO', 'E', 'A', 'E/A', 'EA融合', 'E/E\'', '心率',
+                           'LA', 'AO', 'LA/AO', 'PA', 'AO2', 'PA/Ao', 'FAC', '舒张直径', '收缩直径', 'RPAD', 'LA Volume', 'LAVi', 'VPA', 'VAO', 'VTI', 'AT', 'ET', 'AT/ET', 'E（TV）', 'A（TV）', 'E/A（TV）', "S'", 'GS', 'FWS', 'E', 'A', 'E/A', 'E\'', 'EA融合', 'E/E\'', '心率',
                            'SAM', '假腱索', '左心房容量',
                            '脱垂程度', '二尖瓣前叶厚度'];
         
@@ -4847,6 +5441,8 @@ const templateConfig = {
                 { left: 'EDVI', right: 'ESVI' },
                 { left: 'FS', right: ['EF_teich', 'EF_simpson'] }
             ];
+            const isCatReferenceForLayout =
+                referenceRange === '猫' || referenceRange === '猫心超（含体重）';
 
             const weightText =
                 referenceRange === '金毛'
@@ -4884,7 +5480,7 @@ const templateConfig = {
                         edvText = `${edvBase}/${edvSimpPart}（辛普森）`;
                         esvText = `${esvBase}/${esvSimpPart}（辛普森）`;
                     }
-                    const leftTargetWidth = colWidth + 1;
+                    const leftTargetWidth = colWidth;
                     const leftRawWidth = stringDisplayWidth(edvText);
                     const leftIsPadded = leftRawWidth < leftTargetWidth;
                     // #region agent log H_EDV_ESV_align_width
@@ -4908,11 +5504,30 @@ const templateConfig = {
                         efText = `${efBase}/${efSimpPart}（辛普森）`;
                     }
                     renderLeftRight(fsText, efText);
+                    if (rightHeartAdvancedEnabled) {
+                        const wStr = get('体重', '');
+                        const { str: tapseRefStr } = getTapseRefRangeFromWeight(wStr);
+                        const tapseVal = get('TAPSE', '');
+                        const tapseFormatted = tapseVal ? formatValue(tapseVal) : '';
+                        let tapseLeft;
+                        if (tapseFormatted) {
+                            tapseLeft = tapseRefStr
+                                ? `TAPSE: ${tapseFormatted}mm（${tapseRefStr}）`
+                                : `TAPSE: ${tapseFormatted}mm（）`;
+                        } else {
+                            tapseLeft = tapseRefStr ? `TAPSE:（${tapseRefStr}）` : `TAPSE:（）`;
+                        }
+                        renderLeftRight(tapseLeft, '');
+                    }
                     continue;
                 }
 
                 // EDVI/ESVI 行：无参考值，显示为“EDVI: {值}ml/m2”
                 if (r.left === 'EDVI' && r.right === 'ESVI') {
+                    // 猫参考范围不显示 EDVI/ESVI
+                    if (isCatReferenceForLayout) {
+                        continue;
+                    }
                     const edvi = valueByKey('EDVI');
                     const esvi = valueByKey('ESVI');
                     const edviText = edvi ? `EDVI: ${formatValue(edvi, true)}ml/m2` : 'EDVI: ml/m2';
@@ -4955,11 +5570,21 @@ const templateConfig = {
             }
             findings += `    ${formatParamWithRef('AO', get('AO', ''), 'AO')}\n`;
             findings += `    ${formatParamWithRef('LA', get('LA', ''), 'LA')}\n`;
-            findings += `    LA/AO:  ${formatValue(get('LA/AO', ''))}\n`;
+            findings += `    LA/AO: ${formatValue(get('LA/AO', ''))}\n`;
             const laVolumeDisplay = (get('LA Volume显示', '不显示') || '').toString().trim();
             const lavi = get('LAVi', '');
             if (laVolumeDisplay === '显示') {
                 findings += `    LA volume：${lavi ? formatValue(lavi) : ''}ml/kg；\n`;
+            }
+            if (rightHeartAdvancedEnabled) {
+                const paAoVal = get('PA/Ao', '');
+                findings += `    PA/Ao: ${paAoVal ? formatValue(paAoVal) : ''}（正常＜1.1）\n`;
+                const facVal = get('FAC', '');
+                const { str: facRefStrFindings } = getFACRefRangeFromWeight((get('体重', '') || '').toString().trim());
+                const facParen = facRefStrFindings ? `（${facRefStrFindings}）` : '（参考值）';
+                findings += `    RV FAC: ${facVal ? formatValue(facVal) : ''}%${facParen}\n`;
+                const rpadVal = get('RPAD', '');
+                findings += `    RPAD: ${rpadVal ? formatValue(rpadVal) : ''}%\n`;
             }
             findings += `\n`;
 
@@ -4990,16 +5615,45 @@ const templateConfig = {
             }
 
             // 频谱多普勒 + E/A、E/E'（猫参考值且选择 EA融合 时只显示 EA融合）
-            findings += `    频谱多普勒检查  VPA: ${get('VPA', '')}m/s；  VAO: ${get('VAO', '')}m/s；\n`;
+            const vpaFormattedInFindings = formatValue(get('VPA', ''));
+            const vaoFormattedInFindings = formatValue(get('VAO', ''));
+            if (rightHeartAdvancedEnabled) {
+                const vtiRaw = get('VTI', '');
+                const atetRaw = get('AT/ET', '');
+                const vtiPart = vtiRaw ? formatValue(vtiRaw) : '';
+                const atetPart = atetRaw ? formatValue(atetRaw) : '';
+                findings += `    频谱多普勒检查\n`;
+                findings += `    VPA：${vpaFormattedInFindings}m/s； VTI: ${vtiPart}cm； AT/ET: ${atetPart}（＜0.3 提示可能肺动脉高压）；\n`;
+                findings += `    VAO: ${vaoFormattedInFindings}m/s；\n`;
+            } else {
+                findings += `    频谱多普勒检查  VPA: ${vpaFormattedInFindings}m/s；  VAO: ${vaoFormattedInFindings}m/s；\n`;
+            }
             const eaFusionInFindings = get('EA融合', '');
             const isCatReferenceInFindings =
                 referenceRange === '猫' || referenceRange === '猫心超（含体重）';
             if (isCatReferenceInFindings && eaFusionInFindings) {
                 findings += `    EA融合: ${eaFusionInFindings}m/s；\n`;
             } else {
+                const eFormattedInFindings = formatValue(get('E', ''));
+                const aFormattedInFindings = formatValue(get('A', ''));
                 const eEText = (get("E/E'", '') || '').toString().trim();
-                const eEPart = eEText ? `； E/E': ${eEText}；` : '';
-                findings += `    E: ${get('E', '')}m/s，A: ${get('A', '')}m/s，E/A${get('E/A', '')}；${eEPart}\n`;
+                const eENum = parseFloat(eEText);
+                const eEFormatted = eEText ? (!isNaN(eENum) ? eENum.toFixed(2) : eEText) : '';
+                const showEEField = !isCatReferenceInFindings || !!eEText;
+                const mvPrefix = rightHeartAdvancedEnabled ? 'MV:   ' : '';
+                let eaLine = `    ${mvPrefix}E: ${eFormattedInFindings}m/s，A: ${aFormattedInFindings}m/s，E/A${get('E/A', '')}；`;
+                if (showEEField) {
+                    eaLine += ` E/E': ${eEFormatted}；`;
+                }
+                findings += `${eaLine}\n`;
+            }
+            if (rightHeartAdvancedEnabled) {
+                const eTV = formatValue(get('E（TV）', ''));
+                const aTV = formatValue(get('A（TV）', ''));
+                const eaTV = formatValue(get('E/A（TV）', ''));
+                const sP = formatValue(get("S'", ''));
+                // 与上行「MV:   E:」错开半格，TV 行「：」后保留两空格
+                findings += `    TV：  E:${eTV}m/s  A: ${aTV}m/s   E/A: ${eaTV}；  S':${sP}cm/s；\n`;
             }
 
             // MMVD：在 E/A 行下一行展示 dp/dt（由 dp/dt 显示开关控制）
@@ -5066,6 +5720,12 @@ const templateConfig = {
             // “未测得”放在有反流速下一行
             if (unknownValves.length > 0) {
                 findings += `    ${unknownValves.join('、')}反流速未测得；\n`;
+            }
+
+            if (rightHeartAdvancedEnabled) {
+                const gs = get('GS', '');
+                const fws = get('FWS', '');
+                findings += `    右心室应变：GS：${gs ? formatValue(gs) : ''}% FWS：${fws ? formatValue(fws) : ''}%\n`;
             }
 
             findings += `\n`;
@@ -5430,17 +6090,36 @@ const templateConfig = {
         // 不显示辛普森部分；ESV 行单独增加与前内容的间距
         const edvText = edvFormatted ? `EDV: ${edvFormatted}ml` : 'EDV: ml';
         const esvText = esvFormatted ? `ESV: ${esvFormatted}ml` : 'ESV: ml';
-        const edvLine = edvText.padEnd(45, ' ');
+        const edvLine = edvText.padEnd(44, ' ');
         findings += `     ${edvLine}${esvText}\n`;
         
-        // EDVI:                      ESVI:
-        const edviLine = `EDVI: `.padEnd(45, ' ');
-        findings += `     ${edviLine}ESVI: \n`;
+        // 猫参考范围不显示 EDVI/ESVI
+        const isCatReferenceForCompactMmode =
+            referenceRange === '猫' || referenceRange === '猫心超（含体重）';
+        if (!isCatReferenceForCompactMmode) {
+            const edviLine = `EDVI: `.padEnd(45, ' ');
+            findings += `     ${edviLine}ESVI: \n`;
+        }
         
         // FS: %                      EF: %
         const fsAligned = `FS: ${fsFormatted ? `${fsFormatted}%` : '%'}`.padEnd(45, ' ');
         const efText = efFormatted ? `EF: ${efFormatted}%` : 'EF: %';
-        findings += `     ${fsAligned}${efText}\n\n`;
+        findings += `     ${fsAligned}${efText}\n`;
+        if (rightHeartAdvancedEnabled) {
+            const { str: tapseRefStr } = getTapseRefRangeFromWeight(get('体重', ''));
+            const tapse = get('TAPSE', '');
+            const tapseFormatted = tapse ? formatValue(tapse) : '';
+            let tapseLine;
+            if (tapseFormatted) {
+                tapseLine = tapseRefStr
+                    ? `TAPSE: ${tapseFormatted}mm（${tapseRefStr}）`
+                    : `TAPSE: ${tapseFormatted}mm（）`;
+            } else {
+                tapseLine = tapseRefStr ? `TAPSE:（${tapseRefStr}）` : `TAPSE:（）`;
+            }
+            findings += `     ${tapseLine.padEnd(45, ' ')}\n`;
+        }
+        findings += `\n`;
         
         // 2. 瓣膜异常部分
         if (diseaseType === 'MMVD') {
@@ -5478,7 +6157,18 @@ const templateConfig = {
         
         findings += `     ${laText}\n`;
         findings += `     ${aoText}\n`;
-        findings += `     LA/AO:  ${laAoFormatted || ''}\n\n`;
+        findings += `     LA/AO: ${laAoFormatted || ''}\n`;
+        if (rightHeartAdvancedEnabled) {
+            const paAoCompact = get('PA/Ao', '');
+            findings += `     PA/Ao: ${paAoCompact ? formatValue(paAoCompact) : ''}（正常＜1.1）\n`;
+            const facCompact = get('FAC', '');
+            const { str: facRefStrCompact } = getFACRefRangeFromWeight((get('体重', '') || '').toString().trim());
+            const facParenCompact = facRefStrCompact ? `（${facRefStrCompact}）` : '（参考值）';
+            findings += `     RV FAC: ${facCompact ? formatValue(facCompact) : ''}%${facParenCompact}\n`;
+            const rpadCompact = get('RPAD', '');
+            findings += `     RPAD: ${rpadCompact ? formatValue(rpadCompact) : ''}%\n`;
+        }
+        findings += `\n`;
         
         // 3. 频谱多普勒部分
         const vpa = get('VPA', '');
@@ -5502,8 +6192,10 @@ const templateConfig = {
         
         findings += `  3.频谱多普勒： 未见明显异常；\n`;
         let dopplerLine = '';
-        if (vpa) dopplerLine += `VPA: ${formatValue(vpa)} `;
-        if (vao) dopplerLine += `VAO: ${formatValue(vao)} `;
+        if (!rightHeartAdvancedEnabled) {
+            if (vpa) dopplerLine += `VPA: ${formatValue(vpa)} `;
+            if (vao) dopplerLine += `VAO: ${formatValue(vao)} `;
+        }
 
         // 猫参考值选择 EA融合 时：所见只显示 EA融合，不显示 E、A、E/A（并隐藏 E/E'）
         // 说明：页面层面会禁用 E/A 输入，但这里仍做兜底，避免旧值/参数残留导致渲染错误。
@@ -5515,15 +6207,43 @@ const templateConfig = {
             if (e) dopplerLine += `E: ${formatValue(e)} m/s `;
             if (a) dopplerLine += `A: ${formatValue(a)} m/s `;
             if (eA) dopplerLine += `E/A: ${formatValue(eA)} `;
-            if (eE) dopplerLine += `E/E': ${formatValue(eE)}`;
+            const eENum = parseFloat((eE || '').toString().trim());
+            const eEFormatted = (eE || '').toString().trim()
+                ? (!isNaN(eENum) ? eENum.toFixed(2) : formatValue(eE))
+                : '';
+            if (!isCatReference || eEFormatted) dopplerLine += `E/E': ${eEFormatted}`;
         }
-        
-        if (dopplerLine) {
-            findings += `     ${dopplerLine.trim()}\n`;
-        } else {
+
+        if (rightHeartAdvancedEnabled) {
+            const vpaF = formatValue(get('VPA', ''));
+            const vaoF = formatValue(get('VAO', ''));
+            const vti = get('VTI', '');
+            const atet = get('AT/ET', '');
+            findings += `     频谱多普勒检查\n`;
+            findings += `     VPA：${vpaF}m/s； VTI: ${vti ? formatValue(vti) : ''}cm； AT/ET: ${atet ? formatValue(atet) : ''}（＜0.3 提示可能肺动脉高压）；\n`;
+            findings += `     VAO: ${vaoF}m/s；\n`;
+        }
+
+        if (dopplerLine.trim()) {
+            let lineOut = dopplerLine.trim();
+            if (rightHeartAdvancedEnabled && !(eaFusion && isCatReference)) {
+                lineOut = `MV:   ${lineOut}`;
+            }
+            findings += `     ${lineOut}\n`;
+        } else if (!rightHeartAdvancedEnabled) {
             findings += `     E: m/s A: m/s E/A: ；\n`;
+        } else if (!(eaFusion && isCatReference)) {
+            findings += `     MV:   E: m/s A: m/s E/A: ；\n`;
         }
-        
+
+        if (rightHeartAdvancedEnabled) {
+            const eTV = formatValue(get('E（TV）', ''));
+            const aTV = formatValue(get('A（TV）', ''));
+            const eaTV = formatValue(get('E/A（TV）', ''));
+            const sP = formatValue(get("S'", ''));
+            findings += `     TV：  E:${eTV}m/s  A: ${aTV}m/s   E/A: ${eaTV}；  S':${sP}cm/s；\n`;
+        }
+
         // 添加动态标签参数
         if (sam || falseChord || leftVentricleSimpson || leftAtrialVolume || mitralRegurgFlow || tricuspidRegurgFlow || aorticRegurgFlow || pulmonaryRegurgFlow) {
             findings += `\n`;
@@ -5896,6 +6616,11 @@ const templateConfig = {
 
             conclusion += funcLine + '\n';
 
+            // 右心高阶开启：在左心室收缩/舒张功能结论下一行追加一条（与所见右心占位对应）
+            if (rightHeartAdvancedEnabled) {
+                conclusion += `  ${nextIndex + 1}.左心室收缩功能尚可。\n`;
+            }
+
             // MMVD：其余反流（非二尖瓣）放到结论末尾，排序三尖瓣 > 肺动脉瓣 > 主动脉瓣
             if (diseaseType === 'MMVD' && mmvdDeferredOtherRegurgEnabled && mmvdDeferredOtherRegurgLinesRaw.length > 0) {
                 const numberedLines = conclusion
@@ -6054,6 +6779,11 @@ async function generateTemplate() {
         }
     }
 
+    // 所见标点规范：英文分号统一为中文分号
+    if (typeof findings === 'string') {
+        findings = findings.replace(/;/g, '；');
+    }
+
     // 使用value设置文本内容，将换行符保留
     document.getElementById('findingsText').value = findings;
     document.getElementById('conclusionText').value = conclusion;
@@ -6064,6 +6794,7 @@ async function generateTemplate() {
 document.addEventListener('DOMContentLoaded', function() {
     // 确保输入框事件监听器已绑定
     setupInputListeners();
+    setLeftSidebarInputPlaceholders();
     
     // 确保参数内容区域始终显示
     const parametersContent = document.getElementById('parametersContent');
@@ -6081,7 +6812,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // 页面加载时检查E值、E/A的颜色显示
     updateEColor();
     updateEAColor();
-    
+    calculateEOverEPrime();
+    calculateAtOverEt();
+
     // 页面加载时检查 EA融合 的颜色显示
     updateEAFusionColor();
 
@@ -6093,6 +6826,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 页面加载时检查LA/AO的颜色显示
     updateLAOverAOColor();
+    updatePAOverAoColor();
+    updateRPADColor();
     
     // 页面加载时初始化反流速输入框的压力差和颜色
     ['二尖瓣反流速', '三尖瓣反流速', '肺动脉瓣反流速', '主动脉瓣反流速'].forEach(paramName => {
@@ -6119,7 +6854,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const initSimpsonButton = document.getElementById('simpsonButton');
     if (initSimpsonButton) initSimpsonButton.classList.remove('active');
     toggleSimpsonInputs();
-    
+
+    // 默认开启「右心高阶」：左侧显示右心相关输入，右侧栏所见含右心占位行（数值可为空）
+    rightHeartAdvancedEnabled = true;
+    const rhInitBtn = document.getElementById('rightHeartAdvancedButton');
+    if (rhInitBtn) rhInitBtn.classList.add('active');
+    parameters['右心高阶'] = '是';
+    toggleRightHeartAdvancedInputs();
+    calculateTapseOverAo();
+    generateTemplate();
+
     // 复制功能
     // 为每个按钮保存原始内容和定时器
     const buttonTimers = new Map();

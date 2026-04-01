@@ -236,67 +236,97 @@ body {
     transform: translateY(-50%) translateX(-8px);
 }
 
-/* 刷新按钮提示层：固定定位，避免被父容器 overflow 裁剪 */
+/* 刷新旁提示：白底、深灰边；字体与 body 一致 */
 .refresh-button-tooltip {
     position: fixed;
     z-index: 10001;
-    background-color: rgba(17, 24, 39, 0.95);
-    color: #fff;
-    font-size: 11px;
-    border-radius: 4px;
+    background-color: #fff;
+    color: #333;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 400;
+    letter-spacing: normal;
+    border-radius: 8px;
     white-space: nowrap;
-    padding: 4px 8px;
+    padding: 6px 11px;
     pointer-events: none;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+    border: 1px solid #6b7280;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.06),
+        0 6px 16px rgba(15, 23, 42, 0.08);
     display: none;
+    overflow: visible;
+    background-clip: padding-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
-/* 右侧栏顶部：单独悬浮（可拖动），不参与页面排版 */
+/* 右侧栏顶部「快速截图」：白底、深灰边，可拖动 */
 .refresh-button-top-snip-hint {
     position: fixed;
-    /* left/top 由 JS 计算；默认给一个兜底值 */
     left: 50%;
     top: 0px;
     transform: translateX(-50%);
     z-index: 10001;
-    background-color: rgba(17, 24, 39, 0.95);
-    color: #fff;
-    font-size: 11px;
-    border-radius: 4px;
-    white-space: nowrap;
-    padding: 4px 8px;
-    pointer-events: auto;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
     display: none;
     width: fit-content;
+    max-width: calc(100vw - 16px);
+    pointer-events: auto;
     cursor: grab;
     user-select: none;
     touch-action: none;
+    padding: 5px 10px 5px 9px;
+    border-radius: 8px;
+    border: 1px solid #6b7280;
+    background: #fff;
+    color: #333;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 400;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.06),
+        0 6px 16px rgba(15, 23, 42, 0.08);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.snip-hint-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.snip-hint-keys {
+    display: flex;
+    gap: 4px;
+    align-items: center;
 }
 
 .refresh-button-top-snip-hint:active {
     cursor: grabbing;
 }
 
-.refresh-button-top-snip-hint .refresh-left-snip-label {
-    font-weight: 800;
-    margin-right: 6px;
+.snip-hint-label {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    color: #333;
+    letter-spacing: normal;
 }
 
-.refresh-button-top-snip-hint .refresh-left-snip-plus {
-    margin: 0 2px;
-    font-weight: 900;
-    opacity: 0.95;
-}
-
-.refresh-button-top-snip-hint code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 11px;
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 0 4px;
-    border-radius: 3px;
+.refresh-button-top-snip-hint kbd {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    padding: 3px 7px;
+    border-radius: 5px;
     color: #fff;
+    background: #000;
+    border: none;
+    box-shadow: none;
 }
 
 /* 刷新按钮提示框：循环向左轻微移动 */
@@ -306,34 +336,57 @@ body {
 
 @keyframes refreshTooltipLeftLoop {
     0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(-6px); }
+    50% { transform: translateX(-4px); }
 }
 
-.refresh-button-tooltip::before {
+/* 箭头：双层三角（外边框色 + 内与卡片同色） */
+.refresh-button-tooltip::before,
+.refresh-button-tooltip::after {
     content: '';
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
     width: 0;
     height: 0;
-    border-top: 6px solid transparent;
-    border-bottom: 6px solid transparent;
+    pointer-events: none;
+    border-style: solid;
+    border-color: transparent;
 }
 
-/* tooltip 在按钮右侧：箭头指向左 */
+.refresh-button-tooltip::before {
+    z-index: 0;
+}
+
+.refresh-button-tooltip::after {
+    z-index: 1;
+}
+
 .refresh-button-tooltip[data-placement="right"]::before {
+    left: -7px;
+    right: auto;
+    border-width: 7px 7px 7px 0;
+    border-right-color: #6b7280;
+}
+
+.refresh-button-tooltip[data-placement="right"]::after {
     left: -6px;
     right: auto;
-    border-right: 6px solid rgba(17, 24, 39, 0.95);
-    border-left: 0 solid transparent;
+    border-width: 6px 6px 6px 0;
+    border-right-color: #fff;
 }
 
-/* tooltip 在按钮左侧：箭头指向右 */
 .refresh-button-tooltip[data-placement="left"]::before {
+    right: -7px;
+    left: auto;
+    border-width: 7px 0 7px 7px;
+    border-left-color: #6b7280;
+}
+
+.refresh-button-tooltip[data-placement="left"]::after {
     right: -6px;
     left: auto;
-    border-left: 6px solid rgba(17, 24, 39, 0.95);
-    border-right: 0 solid transparent;
+    border-width: 6px 0 6px 6px;
+    border-left-color: #fff;
 }
 
 .refresh-icon {
@@ -446,6 +499,17 @@ body {
     flex-shrink: 0;
 }
 
+.weight-input-wrapper .input-with-unit-suffix.weight-input-with-unit {
+    width: 68px;
+    min-width: 68px;
+    flex-shrink: 0;
+}
+
+.weight-input-wrapper .weight-input-with-unit .weight-input {
+    width: 100%;
+    min-width: 0;
+}
+
 .weight-input {
     padding: 4px 10px;
     border: 1.5px solid #d1d5db;
@@ -455,8 +519,6 @@ body {
     font-weight: 500;
     color: #6b7280;
     transition: all 0.2s ease;
-    width: 60px;
-    min-width: 50px;
     flex-shrink: 0;
     text-align: center;
 }
@@ -642,8 +704,9 @@ body {
     gap: 8px;
 }
 
-.combined-input-wrapper .m-type-input {
+.combined-input-wrapper .input-with-unit-suffix {
     flex: 1;
+    min-width: 0;
 }
 
 /* 确保所有combined-input-wrapper中的input-with-label-wrapper宽度一致 */
@@ -749,11 +812,126 @@ body {
     grid-column: span 2;
 }
 
+/* TAPSE（右心高阶）：跨两列；输入框右侧展示 TAPSE/AO */
+.m-type-item-tapse {
+    grid-column: span 2;
+}
+
+.tapse-input-with-ratio {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+}
+
+.tapse-input-with-ratio .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.tapse-ao-ratio-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* 输入框内常显单位（不再用 placeholder 显示单位，避免与常显重复） */
+.input-with-unit-suffix {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.input-with-unit-suffix .m-type-input,
+.input-with-unit-suffix .other-param-input,
+.input-with-unit-suffix .weight-input {
+    padding-right: 2.75rem;
+    box-sizing: border-box;
+}
+
+/* 无单位字段：不预留右侧占位（LA/AO、E/A、E/E' 等） */
+.input-with-unit-suffix--bare .m-type-input,
+.input-with-unit-suffix--bare .other-param-input {
+    padding-right: 8px;
+}
+
+/* dp/dt 等较长单位 */
+.input-with-unit-suffix.input-with-unit-suffix--long .m-type-input,
+.input-with-unit-suffix.input-with-unit-suffix--long .other-param-input {
+    padding-right: 3.75rem;
+}
+
+.input-with-unit-suffix .unit-suffix {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #888;
+    pointer-events: none;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.mmvd-thickness-wrap {
+    width: 100px;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.mmvd-thickness-wrap .mmvd-thickness-input {
+    width: 100%;
+}
+
+.la-volume-input-wrap {
+    width: 100px;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.la-volume-input-wrap .la-volume-input {
+    width: 100%;
+}
+
+.regurgitation-velocity-item .input-with-unit-suffix {
+    width: 100px;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.regurgitation-velocity-item .input-with-unit-suffix .other-param-input.regurgitation-input {
+    width: 100%;
+}
+
+.heart-rate-section .input-with-unit-suffix.heart-rate-input-wrap {
+    width: 100px;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.heart-rate-section .heart-rate-input-wrap .heart-rate-input {
+    width: 100%;
+}
+
 .pressure-gradient-display {
     font-size: 13px;
     color: #2c3e50;
     font-weight: 500;
     margin-left: 4px;
+}
+
+/* TAPSE/Ao 比值：≤0.65 异常标红（与 .pressure-gradient-display 颜色冲突时用 class + !important） */
+#tapseAoRatioDisplay.tapse-ao-ratio--low {
+    color: #c0392b !important;
+}
+
+#tapseAoRatioDisplay.tapse-ao-ratio--muted {
+    color: #666 !important;
 }
 
 .pressure-gradient-display-wrapper {
@@ -805,6 +983,499 @@ body {
     flex-direction: column;
 }
 
+/* AO、LA、LA/AO 同行三列布局 */
+.la-ao-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.la-ao-row .la-ao-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* readme 2.2–2.3 PA/Ao + FAC（右心高阶）：首行仅 PA/Ao（PA、AO2 在气泡内）；次行 FAC 全宽 */
+.pa-ao-advanced-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    align-items: start;
+}
+
+.pa-ao-advanced-row .pa-ao-adv-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.pa-ao-adv-item--paa-wrap {
+    overflow: visible;
+}
+
+.pa-ao-paa-wrap {
+    position: relative;
+    width: 100%;
+}
+
+/* PA/Ao 比值为自动计算，只读样式 */
+#paAoRatioInput[readonly] {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+/* PA、AO（2）气泡：聚焦 PA/Ao 或气泡内输入时显示 */
+.pa-ao-bubble {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 240px;
+    max-width: min(100vw - 24px, 320px);
+    z-index: 120;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #818181;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.pa-ao-paa-wrap:focus-within .pa-ao-bubble {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.pa-ao-bubble-body {
+    padding: 8px 10px 6px;
+}
+
+.pa-ao-bubble-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.pa-ao-bubble-row:last-of-type {
+    margin-bottom: 4px;
+}
+
+.pa-ao-bubble-label {
+    flex: 0 0 3.25em;
+    font-size: 12px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.pa-ao-bubble-row .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.pa-ao-bubble-hint {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+    margin: 0;
+    padding-top: 2px;
+    border-top: 1px solid #eee;
+}
+
+.pa-ao-advanced-row .pa-ao-adv-item--fac {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pa-ao-advanced-row .pa-ao-fac-input-wrap {
+    width: 100%;
+    max-width: 100%;
+}
+
+.pa-ao-advanced-row .pa-ao-fac-input-wrap .other-param-input {
+    width: 100%;
+    min-width: 0;
+}
+
+/* readme 2.4 RPAD：单行 + 气泡内舒张/收缩直径 */
+.rpad-advanced-row {
+    grid-column: 1 / -1;
+    display: block;
+}
+
+.rpad-adv-item--rpad-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: visible;
+}
+
+.rpad-paa-wrap {
+    position: relative;
+    width: 100%;
+}
+
+#rpadRatioInput[readonly] {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.rpad-bubble {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 240px;
+    max-width: min(100vw - 24px, 320px);
+    z-index: 120;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #818181;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.rpad-paa-wrap:focus-within .rpad-bubble {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.rpad-bubble-body {
+    padding: 8px 10px 6px;
+}
+
+.rpad-bubble-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.rpad-bubble-row:last-of-type {
+    margin-bottom: 4px;
+}
+
+.rpad-bubble-label {
+    flex: 0 0 4.5em;
+    font-size: 12px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.rpad-bubble-row .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.rpad-bubble-hint {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+    margin: 0;
+    padding-top: 2px;
+    border-top: 1px solid #eee;
+}
+
+/* 参数标题旁：正常范围提示 / 「参考值」说明（与 .reference-value 搭配） */
+.param-normal-hint {
+    font-size: 11px;
+    font-weight: 400;
+    color: #888;
+    margin-left: 4px;
+    white-space: nowrap;
+}
+
+/* readme 2.5 VPA/VAO：默认横向；右心高阶时 VPA|VAO 仍与未开启时同排，VTI|AT/ET 另起整行 */
+.vpa-vao-wrap {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+.vpa-vao-wrap .vpa-row,
+.vpa-vao-wrap .vao-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+}
+
+.vpa-vao-wrap:not(.right-heart-advanced) .vti-atet-row {
+    display: none !important;
+}
+
+/* 右心高阶开启：不改变 VPA/VAO 的并排宽度，仅让 VTI/AT/ET 行占满换行 */
+.vpa-vao-wrap.right-heart-advanced .vti-atet-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 100%;
+}
+
+.vti-atet-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.vti-atet-item.atet-wrap {
+    overflow: visible;
+}
+
+.atet-paa-wrap {
+    position: relative;
+    width: 100%;
+}
+
+#atetRatioInput[readonly] {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.atet-bubble {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 220px;
+    max-width: min(100vw - 24px, 300px);
+    z-index: 120;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #818181;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.atet-paa-wrap:focus-within .atet-bubble {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.atet-bubble-body {
+    padding: 8px 10px 6px;
+}
+
+.atet-bubble-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.atet-bubble-label {
+    flex: 0 0 2em;
+    font-size: 12px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.atet-bubble-row .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.atet-bubble-hint {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+    margin: 0;
+    padding-top: 6px;
+    border-top: 1px solid #eee;
+}
+
+/* readme 2.6 三尖瓣 TV 行 */
+.tv-tricuspid-row {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    align-items: start;
+}
+
+.tv-tricuspid-row .tv-tv-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+@media (max-width: 1200px) {
+    .tv-tricuspid-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* readme 2.7 GS/FWS：反流速区域末行之下 */
+.gs-fws-row {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.gs-fws-row .regurgitation-label {
+    width: auto;
+    min-width: 5em;
+}
+
+.gs-fws-input-wrap {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+}
+
+.gs-fws-mini-label {
+    font-size: 12px;
+    color: #555;
+    white-space: nowrap;
+}
+
+.gs-fws-input-wrap .input-with-unit-suffix {
+    width: auto;
+    min-width: 4rem;
+}
+
+/* 舒张参数四联行：E、A、E/A、E/E'（E′ 在 E/E' 气泡内） */
+.e-diastolic-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+    gap: 6px;
+}
+
+.e-diastolic-row .diastolic-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.e-diastolic-row .other-param-label {
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.e-diastolic-row .input-with-unit-suffix .other-param-input {
+    width: 100%;
+    min-width: 0;
+    padding: 4px 6px;
+    font-size: 12px;
+}
+
+.e-diastolic-row .input-with-unit-suffix:not(.input-with-unit-suffix--bare) .other-param-input {
+    padding-right: 2.75rem;
+}
+
+/* 窄宽度兜底：避免极端情况下被挤压不可读 */
+@media (max-width: 1200px) {
+    .e-diastolic-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.diastolic-item-ee-prime.ee-prime-wrap {
+    overflow: visible;
+}
+
+.ee-prime-paa-wrap {
+    position: relative;
+    width: 100%;
+}
+
+#eePrimeRatioInput[readonly] {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+
+.ee-prime-bubble {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 220px;
+    max-width: min(100vw - 24px, 300px);
+    z-index: 120;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #818181;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.ee-prime-paa-wrap:focus-within .ee-prime-bubble {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.ee-prime-bubble-body {
+    padding: 8px 10px 6px;
+}
+
+.ee-prime-bubble-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.ee-prime-bubble-label {
+    flex: 0 0 2em;
+    font-size: 12px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.ee-prime-bubble-row .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.ee-prime-bubble-hint {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+    margin: 0;
+    padding-top: 6px;
+    border-top: 1px solid #eee;
+}
+
 /* dP/dt：单独占一行（跨越两列） */
 #dpdtInputItem {
     grid-column: 1 / -1;
@@ -813,7 +1484,7 @@ body {
     gap: 8px;
 }
 
-#dpdtInputItem .other-param-input {
+#dpdtInputItem .input-with-unit-suffix {
     width: 140px;
     min-width: 140px;
     flex: 0 0 140px;
@@ -823,14 +1494,6 @@ body {
     white-space: nowrap;
     margin-bottom: 0;
 }
-
-/* dP/dt 同行显示：输入框略缩窄 */
-#dpdtInputItem input[data-param="dp/dt"] {
-    width: 110px;
-    min-width: 110px;
-    flex: 0 0 110px;
-}
-
 
 #dpdtInputItem .dpdt-display-btn-group {
     display: inline-flex;
@@ -926,7 +1589,7 @@ body {
     bottom: 14px;
     width: 16px;
     height: 16px;
-    background: linear-gradient(135deg, transparent 50%, #818181 50%);
+    background: linear-gradient(135deg, transparent 50%, #20c7ec98 50%);
     cursor: nwse-resize;
     z-index: 20;
     transition: background 0.2s;
@@ -938,6 +1601,9 @@ body {
 }
 /* 模板生成区域 - 占满右侧栏高度 */
 .template-section {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
     background-color: #fff;
     border-radius: 0;
     padding: 8px 12px;
@@ -949,6 +1615,10 @@ body {
     flex-direction: column;
     min-height: 0;
     box-sizing: border-box;
+}
+
+.template-section > * {
+    pointer-events: auto;
 }
 
 .template-content {
@@ -1247,8 +1917,6 @@ body {
 }
 
 .regurgitation-input {
-    width: 100px;
-    min-width: 100px;
     flex-shrink: 0;
 }
 
@@ -1344,8 +2012,6 @@ body {
 }
 
 .heart-rate-input {
-    width: 100px;
-    min-width: 100px;
     flex-shrink: 0;
 }
 
@@ -1400,8 +2066,6 @@ body {
 }
 
 .mmvd-thickness-input {
-    width: 100px;
-    min-width: 100px;
     flex-shrink: 0;
 }
 
@@ -1427,8 +2091,9 @@ body {
     margin-left: 16px;
 }
 
-/* LA Volume和LAVi样式 */
+/* LA Volume和LAVi样式（在 .other-params-grid 内占满一行，位于 PA/Ao 上一行） */
 .la-volume-row {
+    grid-column: 1 / -1;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1445,16 +2110,7 @@ body {
 }
 
 .la-volume-input {
-    width: 100px;
-    min-width: 100px;
     flex-shrink: 0;
-}
-
-.unit-label {
-    font-size: 12px;
-    color: #999;
-    font-weight: normal;
-    white-space: nowrap;
 }
 
 .lavi-display {
@@ -1860,5 +2516,21 @@ body {
     .right-sidebar-resize-triangle {
         display: none;
     }
+}
+
+/* 左栏「右心高阶」相关参数：输入框淡红底（含气泡内；覆盖只读灰底）。VPA/VAO 非高阶专属，保持默认底 */
+#tapseInputRow .m-type-input,
+#paAoAdvancedRow .other-param-input,
+#rpadAdvancedRow .other-param-input,
+.vpa-vao-wrap.right-heart-advanced .vti-atet-row .other-param-input,
+#tvTricuspidRow .other-param-input,
+#gsFwsRow .other-param-input {
+    background-color: #fff0f2;
+}
+
+#paAoAdvancedRow #paAoRatioInput[readonly],
+#rpadAdvancedRow #rpadRatioInput[readonly],
+.vpa-vao-wrap.right-heart-advanced #atetRatioInput[readonly] {
+    background-color: #fff0f2;
 }
 
