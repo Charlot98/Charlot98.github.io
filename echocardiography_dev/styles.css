@@ -6,10 +6,10 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
-    /* 背景：左侧50%与左侧栏一致(#fff)，右侧50%波点，固定不随滚动 */
-    background-color: #fff;
+    /* 背景：略灰底，左侧50%与左侧栏区域同色遮罩，右侧纹理，固定不随滚动 */
+    background-color: #f1f3f5;
     background-image:
-        linear-gradient(to right, #fff 0%, #fff 50%, transparent 50%),
+        linear-gradient(to right, #f1f3f5 0%, #f1f3f5 50%, transparent 50%),
         radial-gradient(circle, #d1d5db 1px, transparent 1px);
     background-size: 100% 100%, 20px 20px;
     background-position: 0 0, 0 0;
@@ -2332,8 +2332,10 @@ body {
 .guide-trigger {
     width: 44px;
     height: 44px;
+    padding: 0;
+    margin: 0;
     border-radius: 50%;
-    border: 1px solid #818181;
+    border: none;
     background: #fff;
     color: #818181;
     cursor: pointer;
@@ -2341,17 +2343,23 @@ body {
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    transition: background 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
 }
 .guide-trigger:hover {
-    border-color: #4a90e2;
     background: #e8f2ff;
     color: #4a90e2;
     box-shadow: 0 2px 8px rgba(74,144,226,0.2);
 }
 .guide-icon {
+    display: block;
     width: 22px;
     height: 22px;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    pointer-events: none;
 }
 /* 外层容器：背景透明，卡片之间可见页面背景 */
 .guide-card {
@@ -2401,6 +2409,14 @@ body {
 .guide-item:nth-child(4) { border-top-color: #34d399; }
 .guide-item:nth-child(5) { border-top-color: #22d3ee; }
 .guide-item:nth-child(n+6) { border-top-color: #94a3b8; }
+/* 今日更新：固定置顶，顶条强调色（覆盖 nth-child 配色） */
+.guide-item.guide-item--today {
+    border-top-color: #e11d48;
+}
+.guide-item.guide-item--today .guide-item-date {
+    color: #be123c;
+    font-weight: 600;
+}
 .guide-item-date {
     font-size: 11px;
     color: #9ca3af;
