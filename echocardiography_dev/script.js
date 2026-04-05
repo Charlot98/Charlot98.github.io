@@ -528,6 +528,39 @@ let simpsonDataCache = {};
 // 瓣口反流速数据缓存：切换瓣口反流状态时保留输入内容，下次激活时恢复；刷新时清空
 const regurgitationVelocityCache = {};
 
+/** 肺动脉瓣/主动脉瓣默认「微量」，二尖瓣/三尖瓣默认「轻度」（与 index 中程度按钮初始态一致） */
+function getDefaultRegurgitationSeverityForParam(severityParamName) {
+    if (severityParamName === '肺动脉瓣反流程度' || severityParamName === '主动脉瓣反流程度') return '微量';
+    return '轻度';
+}
+
+/**
+ * 将当前反流条目的程度按钮状态同步进 parameters。
+ * 修复：缓存无 severity 仍 return true 跳过初始化、或仅 DOM 默认「轻度」未写入 parameters 时，
+ * 模板/所见/结论出现「二尖瓣反流」而无「轻度」等程度。
+ */
+function ensureRegurgitationSeverityParameters(inputItem) {
+    if (!inputItem) return;
+    const severityButtons = inputItem.querySelector('.regurgitation-severity-buttons');
+    if (!severityButtons) return;
+    const severityParamName = severityButtons.getAttribute('data-param');
+    if (!severityParamName) return;
+    let activeBtn = severityButtons.querySelector('.regurgitation-severity-btn.active');
+    if (!activeBtn) {
+        const def = getDefaultRegurgitationSeverityForParam(severityParamName);
+        const defaultBtn = severityButtons.querySelector(`.regurgitation-severity-btn[data-value="${def}"]`);
+        if (defaultBtn) {
+            severityButtons.querySelectorAll('.regurgitation-severity-btn').forEach((btn) => btn.classList.remove('active'));
+            defaultBtn.classList.add('active');
+            activeBtn = defaultBtn;
+        }
+    }
+    if (activeBtn) {
+        const v = activeBtn.getAttribute('data-value');
+        if (v) parameters[severityParamName] = v;
+    }
+}
+
 // 根据疾病类型和参考范围生成模版文件名
 function getTemplateFileName(diseaseType, referenceRange, useSimpson = false) {
     // 模版文件名映射规则
@@ -1203,7 +1236,11 @@ function updateSpecialLogicInputColors() {
         }
     }
     
-    // E: ≥ 1.3 标红（由updateEColor函数处理，这里不需要重复处理）
+    // E: ≥ 1.3 标红（由 updateEColor 处理）
+    // EA融合: ≥ 1.3 m/s 标红
+    updateEAFusionColor();
+    // E/E′: ≥ 11 标红
+    updateEOverEPrimeColor();
 
     // TAPSE/Ao 显示区：与其它标红逻辑一并刷新（避免仅依赖 input 时偶发不同步）
     calculateTapseOverAo();
@@ -1669,6 +1706,8 @@ function updateEAFusionVisibility() {
             // 仅在"猫"或"猫心超（含体重）"时显示
             if (selectedReferenceRange === '猫' || selectedReferenceRange === '猫心超（含体重）') {
                 eaFusionItem.style.display = 'block';
+                updateEAInputsState();
+                updateEAFusionColor();
             } else {
                 eaFusionItem.style.display = 'none';
                 // 隐藏时清空EA融合的值
@@ -1727,36 +1766,31 @@ function updateEAInputsState() {
     }
 }
 
-// 检查 EA融合 值（单位 m/s）：当值 >= 1.3 时标红
+// 检查 EA融合 值（单位 m/s）：当值 ≥ 1.3 时标红（与 E 峰值阈值一致）
 function updateEAFusionColor() {
     const eaFusionInput = document.querySelector('input[data-param="EA融合"]');
     if (!eaFusionInput) return;
-    
+
     const eaFusionItem = eaFusionInput.closest('.other-param-item');
     if (eaFusionItem && eaFusionItem.style.display === 'none') {
         eaFusionInput.style.color = '';
         return;
     }
-    
-    // EA融合 输入框不需要像 E/E/A 一样禁用/启用联动，但兜底清理
-    if (eaFusionInput.disabled) {
-        eaFusionInput.style.color = '';
-        return;
-    }
-    
+
     const raw = (eaFusionInput.value || '').toString().trim();
     if (!raw) {
         eaFusionInput.style.color = '';
         return;
     }
-    
-    // 兼容用户可能输入“≥1.3 / >1.3 / 1.3m/s”等情况
+
+    // 兼容 ≥1.3、1,35（小数逗号）、1.3m/s 等
     const cleaned = raw
         .replace(/[＜＞<＜>=＝≤≥]/g, '')
         .replace(/m\/s/ig, '')
+        .replace(/,/g, '.')
         .trim();
     const num = parseFloat(cleaned);
-    
+
     if (!isNaN(num) && num >= 1.3) {
         eaFusionInput.style.color = 'red';
     } else {
@@ -1865,8 +1899,21 @@ function calculateEOverEPrime() {
     const eOverEInput = document.querySelector('input[data-param="E/E\'"]');
 
     if (!eInput || !ePrimeInput || !eOverEInput) return;
-    if (eOverEInput.disabled) return;
-    if (eOverEInput.dataset.eeManual === '1') return;
+    if (eOverEInput.disabled) {
+        eOverEInput.style.color = '';
+        return;
+    }
+    if (eOverEInput.dataset.eeManual === '1') {
+        const raw = (eOverEInput.value || '').trim();
+        if (raw) {
+            parameters["E/E'"] = raw;
+        } else {
+            delete parameters["E/E'"];
+            delete eOverEInput.dataset.eeManual;
+        }
+        updateEOverEPrimeColor();
+        return;
+    }
 
     const eValue = parseFloat((eInput.value || '').trim());
     const ePrimeValue = parseFloat((ePrimeInput.value || '').trim());
@@ -1878,6 +1925,32 @@ function calculateEOverEPrime() {
     } else {
         eOverEInput.value = '';
         delete parameters["E/E'"];
+    }
+    updateEOverEPrimeColor();
+}
+
+/** E/E′ 主框：数值 ≥ 11 时标红 */
+function updateEOverEPrimeColor() {
+    const el = document.getElementById('eePrimeRatioInput');
+    if (!el) return;
+    if (el.disabled) {
+        el.style.color = '';
+        return;
+    }
+    const raw = (el.value || '').toString().trim();
+    if (!raw) {
+        el.style.color = '';
+        return;
+    }
+    const cleaned = raw
+        .replace(/[＜＞<＜>=＝≤≥]/g, '')
+        .replace(/,/g, '.')
+        .trim();
+    const num = parseFloat(cleaned);
+    if (!isNaN(num) && num >= 11) {
+        el.style.color = 'red';
+    } else {
+        el.style.color = '';
     }
 }
 
@@ -1945,7 +2018,8 @@ function setupInputListeners() {
                 const el = document.getElementById('atetRatioInput');
                 if (el) delete el.dataset.atetManual;
             }
-            if (paramName === 'E' || paramName === "E'") {
+            // E/E′ 主框手动输入后：改 E 不解除手动覆盖（避免误清空）；改 E′ 则恢复由 E÷E′ 自动计算
+            if (paramName === "E'") {
                 const el = document.getElementById('eePrimeRatioInput');
                 if (el) delete el.dataset.eeManual;
             }
@@ -2062,7 +2136,7 @@ function setupInputListeners() {
             }
             
             // 如果特殊逻辑参数变化，更新颜色显示
-            if (['FS', 'EF', 'VPA', 'VAO', 'E', 'dp/dt'].includes(paramName)) {
+            if (['FS', 'EF', 'VPA', 'VAO', 'E', 'dp/dt', 'EA融合', "E/E'"].includes(paramName)) {
                 updateSpecialLogicInputColors();
             }
             // dp/dt：当输入框有内容时，自动跳转为“显示”
@@ -2279,7 +2353,8 @@ function setupInputListeners() {
     }
 }
 
-// 左侧栏单位：在带 .input-with-unit-suffix 的输入框内常显（.unit-suffix），不再用 placeholder 显示单位（保留辛普森输入框 placeholder「辛普森」）
+// 左侧栏单位：在带 .input-with-unit-suffix 的输入框内常显（.unit-suffix），不再用 placeholder 显示单位；
+// 辛普森三个框另保留 placeholder「辛普森」作来源提示（单位仍用 .unit-suffix）
 function setLeftSidebarInputPlaceholders() {
     const leftSidebar = document.querySelector('.left-sidebar');
     if (!leftSidebar) return;
@@ -2293,12 +2368,15 @@ function setLeftSidebarInputPlaceholders() {
         'LVDs': 'mm',
         'LVPWs': 'mm',
         'EDV': 'ml',
+        'EDV辛普森': 'ml',
         'ESV': 'ml',
+        'ESV辛普森': 'ml',
         'EDVI': 'ml/m2',
         'ESVI': 'ml/m2',
         'FS': '%',
         'TAPSE': 'mm',
         'EF': '%',
+        'EF辛普森': '%',
         '二尖瓣前叶厚度': 'mm',
         'AO': 'mm',
         'LA': 'mm',
@@ -2337,11 +2415,12 @@ function setLeftSidebarInputPlaceholders() {
         '心率': 'bpm'
     };
 
+    const simpsonHintParams = ['EDV辛普森', 'ESV辛普森', 'EF辛普森'];
+
     leftSidebar.querySelectorAll('input[type="text"]').forEach((input) => {
-        if (input.classList.contains('simpson-input')) return;
         const paramName = input.getAttribute('data-param');
         if (!paramName) return;
-        input.placeholder = '';
+        input.placeholder = simpsonHintParams.includes(paramName) ? '辛普森' : '';
         const unitText = unitPlaceholderMap[paramName];
         const wrapper = input.closest('.input-with-unit-suffix');
         if (wrapper) {
@@ -2879,7 +2958,7 @@ const GUIDE_ITEMS = [
     { date: '2025-12', content: '数据填写：双击PACS系统的图片→图片自动置顶→跳转至此界面进行内容填写' },
     { date: '2026-3-12', content: '结论生成：结论会依据左侧栏填写情况，实时更新，请谨慎参考。' },
     { date: '2026-3-22', content: '支持OCR：直接粘贴心超截图可自动识别并回填 M 型参数（IVSd、LVDd、LVPWd、IVSs、LVDs、LVPWs、EDV、ESV、FS、EF）。<br>数据识别可能有误，请人工核对。<br>尽量减小截图范围，以提高识别准确度。<div class="guide-item-img-wrap"><span class="guide-item-img-label">截图示意图</span><img src="img/image.png" alt="截图示意图" class="guide-item-img"></div>' },
-    { date: '2026-4-1', content: '① 新增 OCR 识别：AO、LA、LA/Ao、E、A、E/A 等。<br>② 新增右心高阶测量参数。' }
+    { date: '2026-4-1', content: '① 新增 OCR 识别：AO、LA（LA/AO 自动计算）、E、A（E/A 自动计算）等。<br>② 新增右心高阶测量参数。' }
 ];
 function setupGuide() {
     const trigger = document.getElementById('guideTrigger');
@@ -3151,7 +3230,6 @@ function setupOCR() {
             'LVPWD': 'LVPWd',
             'LVWD': 'LVPWd',
             'LVFWD': 'LVPWd',
-            'IVSS': 'IVSs',
             'LVDS': 'LVDs',
             'LVIDS': 'LVDs',
             'LVPWS': 'LVPWs',
@@ -3160,11 +3238,8 @@ function setupOCR() {
             'AO': 'AO',
             'AO.': 'AO',
             'LA': 'LA',
-            'LA/AO': 'LA/AO',
-            'LA/AO.': 'LA/AO',
             'E': 'E',
             'A': 'A',
-            'E/A': 'E/A',
             'E\'': 'E\'',
             'E/E\'': 'E/E\'',
             'FS': 'FS',
@@ -3239,9 +3314,7 @@ function setupOCR() {
             .replace(/舒张末期左心室游离壁厚度/gi, 'LVWd')
             .replace(/舒张期左心室游离壁厚度/gi, 'LVWd')
             .replace(/\bLVFWd\b/gi, 'LVWd')
-            // IVSs
-            .replace(/收缩期室间隔厚度/gi, 'IVSs')
-            .replace(/收缩末期室间隔厚度/gi, 'IVSs')
+            // IVSs：readme 约定仅识别字面 IVSs，不同义词替换
             // LVDs（含 LVIDs）
             .replace(/收缩末期左心室内径/gi, 'LVDs')
             .replace(/收缩期左心室内径/gi, 'LVDs')
@@ -3257,28 +3330,24 @@ function setupOCR() {
             .replace(/\bLPW[sS]\b/gi, 'LVWs')
             // OCR 常见拼写：LVPWThck -> LVPWs（用于厚度类字段兜底）
             .replace(/LVPWThck/gi, 'LVPWs')
-            // EDV（Teich）
-            .replace(/EDV\(teich\)/gi, 'EDV')
-            // 常见 OCR 误识：EDviTeich / EDV i Teich / EDViTeich
-            .replace(/EDV\s*[iI]\s*Teich\)?/gi, 'EDV')
-            .replace(/舒张末期容积（?ml）?/gi, 'EDV')
-            .replace(/舒张末期左心室容量/gi, 'EDV')
-            .replace(/舒张期左心室容量/gi, 'EDV')
-            // ESV（Teich）
-            .replace(/ESV\(teich\)/gi, 'ESV')
-            // 常见 OCR 误识：ESViTeich / ESMiTeich -> ESV
-            .replace(/ESV\s*[iI]\s*Teich\)?/gi, 'ESV')
-            .replace(/ESM\s*[iI]\s*Teich\)?/gi, 'ESV')
-            .replace(/收缩末期容积（?ml）?/gi, 'ESV')
-            .replace(/收缩末期左心室容量/gi, 'ESV')
-            .replace(/收缩期左心室容量/gi, 'ESV')
-            // LA/AO + 频谱多普勒参数
+            // EDV、ESV：readme 约定仅对应 EDV(Teich)、ESV(Teich)；统一成带 (Teich) 便于正则只抓 Teich 容积
+            .replace(/EDV\(teich\)/gi, 'EDV(Teich)')
+            .replace(/EDV\s*[iI]\s*Teich\)?/gi, 'EDV(Teich)')
+            .replace(/舒张末期容积（?ml）?/gi, 'EDV(Teich)')
+            .replace(/舒张末期左心室容量/gi, 'EDV(Teich)')
+            .replace(/舒张期左心室容量/gi, 'EDV(Teich)')
+            .replace(/ESV\(teich\)/gi, 'ESV(Teich)')
+            .replace(/ESV\s*[iI]\s*Teich\)?/gi, 'ESV(Teich)')
+            .replace(/ESM\s*[iI]\s*Teich\)?/gi, 'ESV(Teich)')
+            .replace(/收缩末期容积（?ml）?/gi, 'ESV(Teich)')
+            .replace(/收缩末期左心室容量/gi, 'ESV(Teich)')
+            .replace(/收缩期左心室容量/gi, 'ESV(Teich)')
+            // LA、AO 直径（不将 LA/AO 比值整行替换为标签，避免误识别比值；LA/AO 由 LA、AO 自动计算）
             .replace(/\bL[Aa]\s*Diam\b/gi, 'LA')
             .replace(/\bA[oO]\s*Diam\b/gi, 'AO')
-            .replace(/\bL[Aa]\s*\/\s*A[oO]\b/gi, 'LA/AO')
             .replace(/\bE\s*Vel\b/gi, 'E')
             .replace(/\bA\s*Vel\b/gi, 'A')
-            .replace(/\bE\s*\/\s*A\s*Ratio\b/gi, 'E/A')
+            // 不将 E/A Ratio 整行替换为 E/A 标签：比值由 E、A 自动计算，OCR 只填 E、A
             .replace(/\bE\s*'\s*(?:Lat|Sep|Ava)\b/gi, 'E\'')
             .replace(/\bE\s*\/\s*E\s*'\s*(?:Lat|Sep|Ava)\b/gi, 'E/E\'')
             // FS（含 %FS）
@@ -3300,23 +3369,14 @@ function setupOCR() {
             .replace(/\bIVS[dD]\b/g, 'IVSd')
             .replace(/\bLVPW[dD]\b/g, 'LVPWd')
             .replace(/\bLVPW[sS]\b/g, 'LVPWs')
-            // IVSs：s 易被识成 5、空格、点等
-            .replace(/\bIVSTack\b/gi, 'IVSs')
-            .replace(/\bIVS\s*Tack\b/gi, 'IVSs')
-            .replace(/\bIVS5\b/gi, 'IVSs')
-            .replace(/\bIVSS\b/g, 'IVSs')
-            .replace(/\bIVS[-_.:\s]*S\b/gi, 'IVSs')
-            .replace(/\bIVS[-_.:\s]*5\b/gi, 'IVSs')
-            .replace(/\bIVS\s+s\b/gi, 'IVSs')
-            .replace(/\bIVS\.s\b/gi, 'IVSs')
-            .replace(/\bIVS:\s*s\b/gi, 'IVSs')
+            // IVSs：readme 仅 IVSs <- IVSs，不归一 IVS5/IVSS 等变体
             // LVIDs、LVPWs 同理
             .replace(/\bLVID5\b/gi, 'LVIDs')
             .replace(/\bLVPW5\b/gi, 'LVPWs');
-            // EDV 常见误读：EOV / E0V（0与D混淆）
+            // EDV(Teich) 常见误读：EOV / E0V（0与D混淆）
         const fixedWithEdvAlias = fixed
-            .replace(/\bEOV\b/gi, 'EDV')
-            .replace(/\bE0V\b/gi, 'EDV');
+            .replace(/\bEOV\b/gi, 'EDV(Teich)')
+            .replace(/\bE0V\b/gi, 'EDV(Teich)');
 
         const results = {};
 
@@ -3324,33 +3384,31 @@ function setupOCR() {
         // IVSd、LVDd、LVWd、IVSs、LVDs、LVWs、EDV（Teich）、ESV（Teich）、FS、EF（Teich）
         // 规则：在字段名（或同义词已统一为字段名后）后面找到出现的第一个数字
         const patterns = [
-            // 厚度/腔径：允许数字字母错读（例如 S436、1VSTack -> IVSs 的数字部分）
+            // 厚度/腔径：允许数字字母错读（例如 S436）
             { key: 'IVSd',  re: /\bIVSd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
             { key: 'LVIDd', re: /\bLVIDd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
             { key: 'LVDd',  re: /\bLVDd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
             { key: 'LVPWd', re: /\bLVPWd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
             { key: 'LVWd',  re: /\bLVWd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            // IVSs：readme 仅 IVSs <- IVSs（正则 /i 仍可匹配 IVSS 等大小写变体）
             { key: 'IVSs',  re: /\bIVSs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
-            // IVSs 易漏识别：补充对 IVS-S / IVS5 / IVS s 等变体的兜底
-            { key: 'IVSs',  re: /\bIVS(?!d)\s*[-_.: ]?\s*[sS5]\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
-            // 再兜底：仅出现 IVS（且不是 IVSd）时也尝试抓取后续数字
-            { key: 'IVSs',  re: /\bIVS(?!d)\b[^\d\-+]{0,12}([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 0 },
             { key: 'LVIDs', re: /\bLVIDs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
             { key: 'LVDs',  re: /\bLVDs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
             { key: 'LVPWs', re: /\bLVPWs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
             { key: 'LVWs',  re: /\bLVWs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
-            // 非 M 型 / 频谱多普勒 OCR 字段
-            { key: 'LA',    re: /\bLA\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
-            { key: 'AO',    re: /\bAO\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
-            { key: 'LA/AO', re: /\bLA\s*\/\s*AO\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
+            // 非 M 型 / 频谱多普勒 OCR：LA、AO 单独识别（排除 LA/AO 比值行，避免把比值误填到 LA 或 AO）
+            { key: 'LA',    re: /\bLA\b(?!\s*\/\s*AO)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'AO',    re: /(?<!\bLA\s*\/\s*)\bAO\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
             { key: 'E\'',   re: /\bE\s*'\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
             { key: 'E/E\'', re: /\bE\s*\/\s*E\s*'\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
-            { key: 'E/A',   re: /\bE\s*\/\s*A\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
+            // E、A 单独识别：E 用 (?!\s*\/) 排除 E/A、E/E′；A 排除 E/A 比值行中的 A（E/A 由 calculateEOverA 自动算）
             { key: 'E',     re: /\bE\b(?!\s*\/)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
-            { key: 'A',     re: /\bA\b(?!\s*\/)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
-            // EDV/ESV：同样允许数字字母错读（Sl、Im 等）
-            { key: 'EDV',   re: /\bEDV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
-            { key: 'ESV',   re: /\bESV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            { key: 'A',     re: /(?<!\bE\s*\/\s*)\bA\b(?!\s*\/)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 1 },
+            // EDV、ESV：readme 仅识别 EDV(Teich)、ESV(Teich)（及 EDV Teich / 无括号变体），不抓裸 EDV/ESV（避免与 Simpson 等混淆）
+            { key: 'EDV_TEICH', re: /\bEDV\s*\(\s*Teich\s*\)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
+            { key: 'EDV_TEICH', re: /\bEDV\s*Teich\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
+            { key: 'ESV_TEICH', re: /\bESV\s*\(\s*Teich\s*\)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
+            { key: 'ESV_TEICH', re: /\bESV\s*Teich\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/i, priority: 2 },
             { key: 'FS',    re: /\bFS\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i, priority: 1 },
             // EF(Teich) 优先于普通 EF
             { key: 'EF_TEICH', re: /\bEF\s*\(\s*Teich\s*\)\b[^\d\-+]*([0-9]+(?:[.,][0-9]+)?)/i, priority: 2 },
@@ -3362,10 +3420,19 @@ function setupOCR() {
         for (const p of patterns) {
             const m = fixedWithEdvAlias.match(p.re);
             if (!m) continue;
-            const valueNum = parseValue(m[1], p.key);
+            const parseKey =
+                p.key === 'EDV_TEICH' ? 'EDV' :
+                p.key === 'ESV_TEICH' ? 'ESV' :
+                p.key === 'EF_TEICH' ? 'EF' :
+                p.key;
+            const valueNum = parseValue(m[1], parseKey);
             if (valueNum === null) continue;
             // 先用 mapKeyToParam 做一次映射（处理 LVIDd/LVFWs 等），否则直接用 key 自身
-            const baseKey = p.key === 'EF_TEICH' ? 'EF' : p.key;
+            const baseKey =
+                p.key === 'EF_TEICH' ? 'EF' :
+                p.key === 'EDV_TEICH' ? 'EDV' :
+                p.key === 'ESV_TEICH' ? 'ESV' :
+                p.key;
             const mapped = mapKeyToParam(baseKey) || mapKeyToParam(baseKey.toUpperCase());
             const targetParam = mapped || baseKey;
             if (!targetParam) continue;
@@ -3380,15 +3447,11 @@ function setupOCR() {
             resultPriority[targetParam] = priority;
         }
 
-        // IVSs 稳定性增强：
-        // 1) 先校验当前值是否在合理区间；
-        // 2) 若缺失或异常，再从多种 IVSs 文本形态中回退提取候选并择优。
+        // IVSs 稳定性增强：仅字面 IVSs；合理区间 1–30 mm 内再 matchAll 择优
         const isIvssPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 30;
         if (!isIvssPlausible(Number(results['IVSs']))) {
             const ivssCandidatePatterns = [
-                /\bIVSs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
-                /\bIVS(?!d)\s*[-_.: ]?\s*[sS5]\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
-                /\bIVS(?!d)\b[^\d\-+]{0,16}([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig
+                /\bIVSs\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig
             ];
             const ivssCandidates = [];
             for (const re of ivssCandidatePatterns) {
@@ -3404,13 +3467,12 @@ function setupOCR() {
             }
         }
 
-        // EDV 稳定性增强：范围校验 + 候选回退
+        // EDV 稳定性增强：仅 EDV(Teich) / EDV Teich；范围校验 + 候选回退（不再回退裸 EDV）
         const isEdvPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 500;
         if (!isEdvPlausible(Number(results['EDV']))) {
             const edvCandidatePatterns = [
-                /\bEDV\s*\(\s*Teich\s*\)\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
-                /\bEDV\s*Teich\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
-                /\bEDV\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig
+                /\bEDV\s*\(\s*Teich\s*\)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
+                /\bEDV\s*Teich\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig
             ];
             const edvCandidates = [];
             for (const re of edvCandidatePatterns) {
@@ -3423,6 +3485,27 @@ function setupOCR() {
             if (plausible.length > 0) {
                 results['EDV'] = plausible[0];
                 resultPriority['EDV'] = Math.max(resultPriority['EDV'] || 0, 1);
+            }
+        }
+
+        // ESV 稳定性增强：仅 ESV(Teich) / ESV Teich
+        const isEsvPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 500;
+        if (!isEsvPlausible(Number(results['ESV']))) {
+            const esvCandidatePatterns = [
+                /\bESV\s*\(\s*Teich\s*\)[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig,
+                /\bESV\s*Teich\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/ig
+            ];
+            const esvCandidates = [];
+            for (const re of esvCandidatePatterns) {
+                for (const m of fixedWithEdvAlias.matchAll(re)) {
+                    const n = parseValue(m[1], 'ESV');
+                    if (n !== null) esvCandidates.push(n);
+                }
+            }
+            const plausibleEsv = esvCandidates.filter(isEsvPlausible);
+            if (plausibleEsv.length > 0) {
+                results['ESV'] = plausibleEsv[0];
+                resultPriority['ESV'] = Math.max(resultPriority['ESV'] || 0, 1);
             }
         }
 
@@ -3444,10 +3527,17 @@ function setupOCR() {
         return written;
     }
 
-    // OCR 回填前先清空 M 型相关字段，避免旧值残留影响本次识别结果
+    /** 与 1.M-MODE 相关的 OCR 可填字段；仅当本次识别命中其中任一项时才清空这些输入框 */
+    const OCR_MMODE_FIELD_PARAMS = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'FS', 'EF', 'TAPSE', 'EDVI', 'ESVI'];
+
+    function ocrParsedContainsMMode(paramValues) {
+        if (!paramValues || typeof paramValues !== 'object') return false;
+        return OCR_MMODE_FIELD_PARAMS.some((p) => Object.prototype.hasOwnProperty.call(paramValues, p));
+    }
+
+    // OCR 回填前：仅当识别到 M 型相关内容时清空 1.M-MODE 字段，避免粘贴非 M 型截图时误清空已有 M 型数据
     function clearMModeFieldsBeforeOcrWrite() {
-        const mModeParams = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'FS', 'EF', 'TAPSE', 'EDVI', 'ESVI'];
-        mModeParams.forEach((param) => {
+        OCR_MMODE_FIELD_PARAMS.forEach((param) => {
             const input = document.querySelector(`input[data-param="${param}"]`);
             if (!input) return;
             if (input.value === '') return;
@@ -3526,19 +3616,29 @@ function setupOCR() {
                 // 两者都合理时，优先预处理更强的第一路
                 paramValues['IVSs'] = ivss1;
             }
-            // 双路 OCR 的 EDV 择优合并，避免漏识别/误识别覆盖
-            const isEdvPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 500;
+            // 双路 OCR 的 EDV/ESV 择优合并，避免漏识别/误识别覆盖（与 Teich 容积解析一致，1–500 ml）
+            const isTeichVolPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 500;
             const edv1 = Number(p1['EDV']);
             const edv2 = Number(p2['EDV']);
-            if (isEdvPlausible(edv1) && !isEdvPlausible(edv2)) {
+            if (isTeichVolPlausible(edv1) && !isTeichVolPlausible(edv2)) {
                 paramValues['EDV'] = edv1;
-            } else if (!isEdvPlausible(edv1) && isEdvPlausible(edv2)) {
+            } else if (!isTeichVolPlausible(edv1) && isTeichVolPlausible(edv2)) {
                 paramValues['EDV'] = edv2;
-            } else if (isEdvPlausible(edv1) && isEdvPlausible(edv2)) {
-                // 两者都合理时，优先预处理更强的第一路
+            } else if (isTeichVolPlausible(edv1) && isTeichVolPlausible(edv2)) {
                 paramValues['EDV'] = edv1;
             }
-            clearMModeFieldsBeforeOcrWrite();
+            const esv1 = Number(p1['ESV']);
+            const esv2 = Number(p2['ESV']);
+            if (isTeichVolPlausible(esv1) && !isTeichVolPlausible(esv2)) {
+                paramValues['ESV'] = esv1;
+            } else if (!isTeichVolPlausible(esv1) && isTeichVolPlausible(esv2)) {
+                paramValues['ESV'] = esv2;
+            } else if (isTeichVolPlausible(esv1) && isTeichVolPlausible(esv2)) {
+                paramValues['ESV'] = esv1;
+            }
+            if (ocrParsedContainsMMode(paramValues)) {
+                clearMModeFieldsBeforeOcrWrite();
+            }
             const written = writeParamsToInputs(paramValues);
             const parse1 = performance.now();
             // #region agent log H4_parse_write_done
@@ -4227,36 +4327,37 @@ function toggleRightHeartAdvancedInputs() {
     }
 }
 
-// 根据含辛普森测量按钮状态显示/隐藏辛普森输入框
+// 根据含辛普森测量按钮状态显示/隐藏辛普森输入框（含单位的外层包裹）
 function toggleSimpsonInputs() {
     const edvSimpsonInput = document.getElementById('edvSimpsonInput');
     const esvSimpsonInput = document.getElementById('esvSimpsonInput');
     const efSimpsonInput = document.getElementById('efSimpsonInput');
-    
+    const edvSimpsonWrap = document.getElementById('edvSimpsonInputWrap');
+    const esvSimpsonWrap = document.getElementById('esvSimpsonInputWrap');
+    const efSimpsonWrap = document.getElementById('efSimpsonInputWrap');
+
     if (simpsonEnabled) {
-        // 显示辛普森输入框
-        if (edvSimpsonInput) edvSimpsonInput.style.display = 'block';
-        if (esvSimpsonInput) esvSimpsonInput.style.display = 'block';
-        if (efSimpsonInput) efSimpsonInput.style.display = 'block';
+        if (edvSimpsonWrap) edvSimpsonWrap.style.display = '';
+        if (esvSimpsonWrap) esvSimpsonWrap.style.display = '';
+        if (efSimpsonWrap) efSimpsonWrap.style.display = '';
         restoreSimpsonDataFromCache();
     } else {
-        // 隐藏前先保存到缓存，再清空
         saveSimpsonDataToCache();
         if (edvSimpsonInput) {
-            edvSimpsonInput.style.display = 'none';
             edvSimpsonInput.value = '';
             delete parameters['EDV辛普森'];
         }
         if (esvSimpsonInput) {
-            esvSimpsonInput.style.display = 'none';
             esvSimpsonInput.value = '';
             delete parameters['ESV辛普森'];
         }
         if (efSimpsonInput) {
-            efSimpsonInput.style.display = 'none';
             efSimpsonInput.value = '';
             delete parameters['EF辛普森'];
         }
+        if (edvSimpsonWrap) edvSimpsonWrap.style.display = 'none';
+        if (esvSimpsonWrap) esvSimpsonWrap.style.display = 'none';
+        if (efSimpsonWrap) efSimpsonWrap.style.display = 'none';
     }
 }
 
@@ -4575,13 +4676,9 @@ function toggleRegurgitationVelocityInput(tag, isActive) {
                 if (severityButtons) {
                     const severityParamName = severityButtons.getAttribute('data-param');
                     if (severityParamName) {
-                        const getDefaultSeverity = (paramName) => {
-                            if (paramName === '肺动脉瓣反流程度' || paramName === '主动脉瓣反流程度') return '微量';
-                            return '轻度';
-                        };
                         const activeBtn = severityButtons.querySelector('.regurgitation-severity-btn.active');
                         if (!activeBtn) {
-                            const defaultSeverity = getDefaultSeverity(severityParamName);
+                            const defaultSeverity = getDefaultRegurgitationSeverityForParam(severityParamName);
                             const defaultBtn = severityButtons.querySelector(`.regurgitation-severity-btn[data-value="${defaultSeverity}"]`);
                             if (defaultBtn) {
                                 defaultBtn.classList.add('active');
@@ -4594,6 +4691,7 @@ function toggleRegurgitationVelocityInput(tag, isActive) {
                     }
                 }
             }
+            ensureRegurgitationSeverityParameters(inputItem);
             updateRegurgitationVelocityColor();
         } else {
             // 隐藏前保存到缓存
@@ -4615,12 +4713,8 @@ function toggleRegurgitationVelocityInput(tag, isActive) {
             const severityButtons = inputItem.querySelector('.regurgitation-severity-buttons');
             if (severityButtons) {
                 const severityParamName = severityButtons.getAttribute('data-param');
-                const getDefaultSeverity = (paramName) => {
-                    if (paramName === '肺动脉瓣反流程度' || paramName === '主动脉瓣反流程度') return '微量';
-                    return '轻度';
-                };
                 severityButtons.querySelectorAll('.regurgitation-severity-btn').forEach(btn => btn.classList.remove('active'));
-                const defaultSeverity = getDefaultSeverity(severityParamName);
+                const defaultSeverity = getDefaultRegurgitationSeverityForParam(severityParamName);
                 const defaultBtn = severityButtons.querySelector(`.regurgitation-severity-btn[data-value="${defaultSeverity}"]`);
                 if (defaultBtn) defaultBtn.classList.add('active');
                 delete parameters[severityParamName];
@@ -4657,12 +4751,8 @@ function hideAllRegurgitationVelocityInputs() {
             const severityButtons = item.querySelector('.regurgitation-severity-buttons');
             if (severityButtons) {
                 const severityParamName = severityButtons.getAttribute('data-param');
-                const getDefaultSeverity = (paramName) => {
-                    if (paramName === '肺动脉瓣反流程度' || paramName === '主动脉瓣反流程度') return '微量';
-                    return '轻度';
-                };
                 severityButtons.querySelectorAll('.regurgitation-severity-btn').forEach(btn => btn.classList.remove('active'));
-                const defaultSeverity = getDefaultSeverity(severityParamName);
+                const defaultSeverity = getDefaultRegurgitationSeverityForParam(severityParamName);
                 const defaultBtn = severityButtons.querySelector(`.regurgitation-severity-btn[data-value="${defaultSeverity}"]`);
                 if (defaultBtn) defaultBtn.classList.add('active');
                 delete parameters[severityParamName];
@@ -5327,8 +5417,8 @@ const templateConfig = {
             // 有任何反流：另起一行描述血流异常（同一条结论项内换行）
             if (activeRegurg.length > 0) {
                 const parts = activeRegurg.map(v => {
-                    const sev = (get(v.severityParam, '') || '').trim();
-                    return `${v.label}${sev || ''}反流`;
+                    const sev = (get(v.severityParam, '') || '').trim() || getDefaultRegurgitationSeverityForParam(v.severityParam);
+                    return `${v.label}${sev}反流`;
                 });
 
                 let sentence = `\n    各瓣口血流异常：${parts.join('、')}。`;
@@ -5675,8 +5765,8 @@ const templateConfig = {
                 findings += `  3.彩色多普勒检查  各瓣口未见明显反流、湍流；\n`;
             } else if (activeFlows.length > 0) {
                 const parts = activeFlows.map(v => {
-                    const sev = (get(v.severityParam, '') || '').trim();
-                    return `${v.label}${sev || ''}反流`;
+                    const sev = (get(v.severityParam, '') || '').trim() || getDefaultRegurgitationSeverityForParam(v.severityParam);
+                    return `${v.label}${sev}反流`;
                 });
                 findings += `  3.彩色多普勒检查  ${parts.join('，')}；\n`;
             } else {
@@ -6421,8 +6511,8 @@ const templateConfig = {
 
                 const droop = (get('脱垂程度', '') || '').trim();
                 const droopText = droop ? `${droop}脱垂` : '脱垂';
-                const mitralSev = (get('二尖瓣反流程度', '') || '').trim();
-                const mitralText = mitralSev ? `${mitralSev}反流` : '反流';
+                const mitralSev = (get('二尖瓣反流程度', '') || '').trim() || getDefaultRegurgitationSeverityForParam('二尖瓣反流程度');
+                const mitralText = `${mitralSev}反流`;
                 const chordType = (get('腱索断裂类型', '') || '').trim();
 
                 const mvVelRaw = (get('二尖瓣反流速', '') || '').toString().trim();
@@ -6463,22 +6553,22 @@ const templateConfig = {
                     if (!hasExtraConclusionAny) {
                         // 合并为一行
                         const parts = otherActiveRegurg.map(v => {
-                            const sev = (get(v.severityParam, '') || '').trim();
-                            return `${v.label}${sev || ''}反流`;
+                            const sev = (get(v.severityParam, '') || '').trim() || getDefaultRegurgitationSeverityForParam(v.severityParam);
+                            return `${v.label}${sev}反流`;
                         });
                         mmvdDeferredOtherRegurgLinesRaw = [`${parts.join('、')}。`];
                     } else {
                         // 拆分为多行（顺序：三尖瓣 > 肺动脉瓣 > 主动脉瓣）
                         mmvdDeferredOtherRegurgLinesRaw = [];
                         for (const v of otherActiveRegurg) {
-                            const sev = (get(v.severityParam, '') || '').trim();
-                            let rawLine = `${v.label}${sev || ''}反流。`;
+                            const sev = (get(v.severityParam, '') || '').trim() || getDefaultRegurgitationSeverityForParam(v.severityParam);
+                            let rawLine = `${v.label}${sev}反流。`;
                             if (v.tag === '三尖瓣反流') {
                                 if (tvExtra) {
                                     const doubt = tvVel < 3.4
-                                        ? (sev ? `疑${sev}肺动脉高压。` : '疑肺动脉高压。')
+                                        ? `疑${sev}肺动脉高压。`
                                         : '肺动脉高压。';
-                                    rawLine = `${v.label}${sev || ''}反流，${doubt}`;
+                                    rawLine = `${v.label}${sev}反流，${doubt}`;
                                 }
                             }
                             mmvdDeferredOtherRegurgLinesRaw.push(rawLine);
@@ -6510,8 +6600,8 @@ const templateConfig = {
                 if (!hasExtraConclusion) {
                     // 情况 1：无追加结论 → 合并为一行
                     const parts = activeRegurg.map(v => {
-                        const sev = (get(v.severityParam, '') || '').trim();
-                        return `${v.label}${sev || ''}反流`;
+                        const sev = (get(v.severityParam, '') || '').trim() || getDefaultRegurgitationSeverityForParam(v.severityParam);
+                        return `${v.label}${sev}反流`;
                     });
                     conclusion += `  1.${parts.join('、')}。\n`;
                     conclusion += '  2.心脏各腔室大小未见明显异常。\n';
@@ -6521,8 +6611,8 @@ const templateConfig = {
                     for (const v of regurgTags) {
                         if (!isTagActive(v.tag)) continue;
 
-                        const sev = (get(v.severityParam, '') || '').trim();
-                        let line = `  ${index}.${v.label}${sev || ''}反流。`;
+                        const sev = (get(v.severityParam, '') || '').trim() || getDefaultRegurgitationSeverityForParam(v.severityParam);
+                        let line = `  ${index}.${v.label}${sev}反流。`;
 
                         // 二尖瓣：反流速 > 6.5m/s
                         if (v.tag === '二尖瓣反流') {
@@ -6883,6 +6973,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateEColor();
     updateEAColor();
     calculateEOverEPrime();
+    updateEOverEPrimeColor();
     calculateAtOverEt();
 
     // 页面加载时检查 EA融合 的颜色显示
