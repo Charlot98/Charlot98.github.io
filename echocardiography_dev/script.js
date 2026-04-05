@@ -2958,7 +2958,8 @@ const GUIDE_ITEMS = [
     { date: '2025-12', content: '数据填写：双击PACS系统的图片→图片自动置顶→跳转至此界面进行内容填写' },
     { date: '2026-3-12', content: '结论生成：结论会依据左侧栏填写情况，实时更新，请谨慎参考。' },
     { date: '2026-3-22', content: '支持OCR：直接粘贴心超截图可自动识别并回填 M 型参数（IVSd、LVDd、LVPWd、IVSs、LVDs、LVPWs、EDV、ESV、FS、EF）。<br>数据识别可能有误，请人工核对。<br>尽量减小截图范围，以提高识别准确度。<div class="guide-item-img-wrap"><span class="guide-item-img-label">截图示意图</span><img src="img/image.png" alt="截图示意图" class="guide-item-img"></div>' },
-    { date: '2026-4-1', content: '① 新增 OCR 识别：AO、LA（LA/AO 自动计算）、E、A（E/A 自动计算）等。<br>② 新增右心高阶测量参数。' }
+    { date: '2026-4-1', content: '① 新增 OCR 识别：AO、LA（LA/AO 自动计算）、E、A（E/A 自动计算）等。<br>② 新增右心高阶测量参数。' },
+    { date: '2026-4-5', content: '① OCR识别稳定性提升。' }
 ];
 function setupGuide() {
     const trigger = document.getElementById('guideTrigger');
