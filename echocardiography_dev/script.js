@@ -1328,46 +1328,46 @@ function calculateESVI() {
     parameters['ESVI'] = esviRounded;
 }
 
-// 计算并显示 LVDDN 值
-// LVDDn = LVDd（cm）/[体重（kg）^0.294]
-function calculateLVDDN() {
+// 计算并显示 LVIDDN 值
+// LVIDDN = LVDd（cm）/[体重（kg）^0.294]
+function calculateLVIDDN() {
     const lvddInput = document.querySelector('input[data-param="LVDd"]');
     const weightInput = document.getElementById('weightInput');
-    const lvddnDisplay = document.getElementById('lvddnDisplay');
+    const lviddnDisplay = document.getElementById('lviddnDisplay');
     
-    if (lvddInput && weightInput && lvddnDisplay) {
+    if (lvddInput && weightInput && lviddnDisplay) {
         const lvddValue = parseFloat(lvddInput.value.trim());
         const weightValue = parseFloat(weightInput.value.trim());
         
-        // 计算LVDDN
+        // 计算 LVIDDN
         if (!isNaN(lvddValue) && lvddValue > 0 && !isNaN(weightValue) && weightValue > 0) {
             // LVDd单位是mm，需要转换为cm
             const lvddCm = lvddValue / 10;
-            // 计算公式: LVDDn = LVDd（cm）/[体重（kg）^0.294]
+            // 计算公式: LVIDDN = LVDd（cm）/[体重（kg）^0.294]
             const weightPower = Math.pow(weightValue, 0.294);
-            const lvddn = lvddCm / weightPower;
+            const lviddn = lvddCm / weightPower;
             
             // 保留适当的小数位数（通常保留2位小数）
-            const lvddnRounded = lvddn.toFixed(2);
+            const lviddnRounded = lviddn.toFixed(2);
             
-            lvddnDisplay.textContent = `LVDDN ${lvddnRounded}`;
+            lviddnDisplay.textContent = `LVIDDN ${lviddnRounded}`;
             
-            // 同步到 parameters，供“结论”规则读取（例如 LVDDN >= 1.7）
-            parameters['LVDDN'] = parseFloat(lvddnRounded);
+            // 同步到 parameters，供“结论”规则读取（例如 LVIDDN >= 1.7）
+            parameters['LVIDDN'] = parseFloat(lviddnRounded);
             
-            // 当LVDDN≥1.7时，数值文本显示为红色，否则显示为黑色
-            if (lvddn >= 1.7) {
-                lvddnDisplay.style.color = '#e74c3c'; // 红色
+            // 当 LVIDDN≥1.7 时，数值文本显示为红色，否则显示为黑色
+            if (lviddn >= 1.7) {
+                lviddnDisplay.style.color = '#e74c3c'; // 红色
             } else {
-                lvddnDisplay.style.color = '#000000'; // 黑色
+                lviddnDisplay.style.color = '#000000'; // 黑色
             }
         } else {
             // 即使没有输入值，也显示默认文本
-            lvddnDisplay.textContent = 'LVDDN -';
-            lvddnDisplay.style.color = '#666'; // 灰色，表示暂无数据
+            lviddnDisplay.textContent = 'LVIDDN -';
+            lviddnDisplay.style.color = '#666'; // 灰色，表示暂无数据
             
             // 清空参数，避免旧值影响后续结论生成
-            delete parameters['LVDDN'];
+            delete parameters['LVIDDN'];
         }
     }
 }
@@ -1721,10 +1721,10 @@ function updateEAFusionVisibility() {
     }
 }
 
-// 仅「猫」「猫心超（含体重）」显示 MAX LAD；数值 ≥16 标红（readme）
+// 仅「猫」「猫心超（含体重）」显示 LAD Max；数值 ≥16 标红（readme）
 function updateMaxLadVisibility() {
     const row = document.getElementById('maxLadRow');
-    const input = document.querySelector('input[data-param="MAX LAD"]');
+    const input = document.querySelector('input[data-param="LAD Max"]');
     if (!row || !input) return;
     if (selectedReferenceRange === '猫' || selectedReferenceRange === '猫心超（含体重）') {
         row.style.display = '';
@@ -1732,13 +1732,13 @@ function updateMaxLadVisibility() {
         row.style.display = 'none';
         input.value = '';
         input.style.color = '';
-        delete parameters['MAX LAD'];
+        delete parameters['LAD Max'];
     }
     updateMaxLadColor();
 }
 
 function updateMaxLadColor() {
-    const input = document.querySelector('input[data-param="MAX LAD"]');
+    const input = document.querySelector('input[data-param="LAD Max"]');
     if (!input) return;
     const row = document.getElementById('maxLadRow');
     if (row && row.style.display === 'none') {
@@ -2080,15 +2080,15 @@ function setupInputListeners() {
                 this.dataset.eeManual = '1';
             }
 
-            // 如果体重变化，自动计算LVDDN
+            // 如果体重变化，自动计算 LVIDDN
             if (paramName === '体重') {
-                calculateLVDDN();
+                calculateLVIDDN();
                 updateReferenceValues();
             }
             
-            // 如果LVDd变化，自动计算LVDDN（不再自动计算EDV/FS）
+            // 如果LVDd变化，自动计算 LVIDDN（不再自动计算EDV/FS）
             if (paramName === 'LVDd') {
-                calculateLVDDN();
+                calculateLVIDDN();
                 updateSpecialLogicInputColors();
             }
             
@@ -2207,7 +2207,7 @@ function setupInputListeners() {
                 updateLAOverAOColor();
             }
 
-            if (paramName === 'MAX LAD') {
+            if (paramName === 'LAD Max') {
                 updateMaxLadColor();
             }
 
@@ -2422,7 +2422,7 @@ function setLeftSidebarInputPlaceholders() {
         'AO': 'mm',
         'LA': 'mm',
         'LA/AO': '',
-        'MAX LAD': 'mm',
+        'LAD Max': 'mm',
         'PA': 'mm',
         'AO2': 'mm',
         'PA/Ao': '',
@@ -2534,7 +2534,7 @@ function setupTooltips() {
     const tooltip = document.getElementById('infoTooltip');
     if (!tooltip) return;
     
-    // Tooltip 内容定义（LVDDN、EDV Teich、ESV Teich 使用原生 title，与右下角一致）
+    // Tooltip 内容定义（LVIDDN、EDV Teich、ESV Teich 使用原生 title，与右下角一致）
     const tooltipContent = {
     };
     
@@ -2856,7 +2856,7 @@ function setupRefreshButton() {
             calculateLAVi();
             calculateEDVI();
             calculateESVI();
-            calculateLVDDN();
+            calculateLVIDDN();
             calculateAtOverEt();
             calculateTapseOverAo();
 
@@ -3002,7 +3002,7 @@ const GUIDE_ITEMS = [
     { date: '2026-3-22', content: '支持OCR：直接粘贴心超截图可自动识别并回填 M 型参数（IVSd、LVDd、LVPWd、IVSs、LVDs、LVPWs、EDV、ESV、FS、EF）。<br>数据识别可能有误，请人工核对。<br>尽量减小截图范围，以提高识别准确度。<div class="guide-item-img-wrap"><span class="guide-item-img-label">截图示意图</span><img src="img/image.png" alt="截图示意图" class="guide-item-img"></div>' },
     { date: '2026-4-1', content: '① 新增 OCR 识别：AO、LA（LA/AO 自动计算）、E、A（E/A 自动计算）等。<br>② 新增右心高阶测量参数。' },
     { date: '2026-4-5', content: '① OCR识别稳定性提升。' },
-    { date: '2026-4-6', content: '① 猫的MAX LAD测量参数' }
+    { date: '2026-4-6', content: '① 猫的 LAD Max 测量参数' }
 ];
 function setupGuide() {
     const trigger = document.getElementById('guideTrigger');
@@ -3057,7 +3057,7 @@ function setupGuide() {
     });
 }
 
-// MAX LAD：单击标题复用全屏 imageLightbox 放大示意图
+// LAD Max：单击标题复用全屏 imageLightbox 放大示意图
 function setupMaxLadImageLightbox() {
     if (window.__echoMaxLadLightboxInit) return;
     const btn = document.getElementById('maxLadTitleBtn');
@@ -3071,8 +3071,8 @@ function setupMaxLadImageLightbox() {
         e.preventDefault();
         e.stopPropagation();
         lightboxImg.src = 'img/max_LAD.png';
-        lightboxImg.alt = 'MAX LAD 测量示意图';
-        lightbox.setAttribute('aria-label', 'MAX LAD 测量示意图放大');
+        lightboxImg.alt = 'LAD Max 测量示意图';
+        lightbox.setAttribute('aria-label', 'LAD Max 测量示意图放大');
         lightbox.style.display = 'flex';
     });
     lightbox.addEventListener(
@@ -3776,7 +3776,7 @@ if (document.readyState === 'loading') {
         setupOCR();
         setupGuide();
         setupMaxLadImageLightbox();
-        calculateLVDDN();
+        calculateLVIDDN();
     });
 } else {
     disableInputMemory();
@@ -3787,7 +3787,7 @@ if (document.readyState === 'loading') {
     setupOCR();
     setupGuide();
     setupMaxLadImageLightbox();
-    calculateLVDDN();
+    calculateLVIDDN();
 }
 
 // 为select元素添加change事件监听器
@@ -5049,8 +5049,8 @@ const templateConfig = {
         // 注意：Ao 在 HTML 中使用，但模版中使用 AO，所以需要映射
         // 注意：'二尖瓣反流'、'三尖瓣反流'、'主动脉瓣反流'、'肺动脉瓣反流' 是嵌套占位符，不在这里处理
         // 注意：'二尖瓣反流速'、'二尖瓣压力差' 等是嵌套占位符的内层，也不在这里处理
-        const paramNames = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'EDVI', 'ESVI', 'FS', 'EF', 
-                           'LA', 'AO', 'LA/AO', 'MAX LAD', 'PA', 'AO2', 'PA/Ao', 'FAC', '舒张直径', '收缩直径', 'RPAD', 'LA Volume', 'LAVi', 'VPA', 'VAO', 'VTI', 'AT', 'ET', 'AT/ET', 'E（TV）', 'A（TV）', 'E/A（TV）', "S'", 'GS', 'FWS', 'E', 'A', 'E/A', 'E\'', 'EA融合', 'E/E\'', '心率',
+        const paramNames = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'EDVI', 'ESVI', 'LVIDDN', 'FS', 'EF', 
+                           'LA', 'AO', 'LA/AO', 'LAD Max', 'PA', 'AO2', 'PA/Ao', 'FAC', '舒张直径', '收缩直径', 'RPAD', 'LA Volume', 'LAVi', 'VPA', 'VAO', 'VTI', 'AT', 'ET', 'AT/ET', 'E（TV）', 'A（TV）', 'E/A（TV）', "S'", 'GS', 'FWS', 'E', 'A', 'E/A', 'E\'', 'EA融合', 'E/E\'', '心率',
                            'SAM', '假腱索', '左心房容量',
                            '脱垂程度', '二尖瓣前叶厚度'];
         
@@ -5808,9 +5808,9 @@ const templateConfig = {
             findings += `    ${formatParamWithRef('LA', get('LA', ''), 'LA')}\n`;
             findings += `    LA/AO: ${formatValue(get('LA/AO', ''))}\n`;
             if (referenceRange === '猫' || referenceRange === '猫心超（含体重）') {
-                const maxLadRaw = (get('MAX LAD', '') || '').toString().trim();
+                const maxLadRaw = (get('LAD Max', '') || '').toString().trim();
                 if (maxLadRaw) {
-                    findings += `    MAX LAD: ${formatValue(maxLadRaw)} mm\n`;
+                    findings += `    LAD Max: ${formatValue(maxLadRaw)} mm\n`;
                 }
             }
             const laVolumeDisplay = (get('LA Volume显示', '不显示') || '').toString().trim();
@@ -6401,9 +6401,9 @@ const templateConfig = {
         findings += `     ${aoText}\n`;
         findings += `     LA/AO: ${laAoFormatted || ''}\n`;
         if (referenceRange === '猫' || referenceRange === '猫心超（含体重）') {
-            const maxLadRaw = (get('MAX LAD', '') || '').toString().trim();
+            const maxLadRaw = (get('LAD Max', '') || '').toString().trim();
             if (maxLadRaw) {
-                findings += `     MAX LAD: ${formatValue(maxLadRaw)} mm\n`;
+                findings += `     LAD Max: ${formatValue(maxLadRaw)} mm\n`;
             }
         }
         if (rightHeartAdvancedEnabled) {
@@ -6740,14 +6740,19 @@ const templateConfig = {
 
             // =========================
             // 容量/结构类异常：可单独一行概括（Normal & MMVD 共用）
-            // EDVI 升高 / LVDDN 升高 / LA 增大：LA/AO≥1.6；猫且填写 MAX LAD 时用 MAX LAD 替代 LA/AO 判定（≥16mm≈左心房增大，与标红阈值一致）
+            // EDVI 升高 / LVIDDN 升高 / 猫且 LVDd≥20mm → 左心室容量过载；LA 增大：LA/AO≥1.6；猫且填 LAD Max 时用 LAD Max 替代 LA/AO（≥16mm≈左心房增大）
             // =========================
             const edviNum = parseFloat(get('EDVI', ''));
-            const lvddnNum = parseFloat(get('LVDDN', ''));
+            const lviddnNum = parseFloat(get('LVIDDN', ''));
             const laAoNum = parseFloat(get('LA/AO', ''));
             const isCatRefForMaxLadConclusion =
                 referenceRange === '猫' || referenceRange === '猫心超（含体重）';
-            const maxLadRaw = (get('MAX LAD', '') || '').toString().trim();
+            const lvdMmForCat = parseFloat(get('LVDd', ''));
+            const hasCatLvOverloadByLvdMm =
+                isCatRefForMaxLadConclusion &&
+                !Number.isNaN(lvdMmForCat) &&
+                lvdMmForCat >= 20;
+            const maxLadRaw = (get('LAD Max', '') || '').toString().trim();
             const maxLadNum = parseFloat(maxLadRaw.replace(',', '.'));
             const useMaxLadInsteadOfLaAo =
                 isCatRefForMaxLadConclusion && maxLadRaw !== '' && !Number.isNaN(maxLadNum);
@@ -6760,8 +6765,9 @@ const templateConfig = {
 
             const hasLvOverload =
                 (!Number.isNaN(edviNum) && edviNum > 100) ||
-                (!Number.isNaN(lvddnNum) && lvddnNum >= 1.7);
-            /** 猫：若已填 MAX LAD，仅用其判断（≥16mm），不再用 LA/AO≥1.6；未填 MAX LAD 时仍用 LA/AO */
+                (!Number.isNaN(lviddnNum) && lviddnNum >= 1.7) ||
+                hasCatLvOverloadByLvdMm;
+            /** 猫：若已填 LAD Max，仅用其判断（≥16mm），不再用 LA/AO≥1.6；未填 LAD Max 时仍用 LA/AO */
             const hasLaEnlargement = useMaxLadInsteadOfLaAo
                 ? maxLadNum >= 16
                 : !Number.isNaN(laAoNum) && laAoNum >= 1.6;
