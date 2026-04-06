@@ -997,6 +997,36 @@ body {
     min-width: 0;
 }
 
+/* MAX LAD：占满一行；标题为可点击文字（保留下划线），单击打开全屏示意图 */
+.max-lad-row {
+    grid-column: 1 / -1;
+}
+.max-lad-label-wrap {
+    align-self: flex-start;
+}
+.max-lad-title-trigger {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-weight: 500;
+    color: inherit;
+    cursor: pointer;
+    border-bottom: 1px dotted #94a3b8;
+    line-height: inherit;
+    text-align: left;
+}
+.max-lad-title-trigger:hover {
+    color: #4a90e2;
+    border-bottom-color: #4a90e2;
+}
+.max-lad-title-trigger:focus-visible {
+    outline: 2px solid #4a90e2;
+    outline-offset: 2px;
+}
+
 /* readme 2.2–2.3 PA/Ao + FAC（右心高阶）：首行仅 PA/Ao（PA、AO2 在气泡内）；次行 FAC 全宽 */
 .pa-ao-advanced-row {
     grid-column: 1 / -1;
