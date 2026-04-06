@@ -6741,6 +6741,7 @@ const templateConfig = {
             // =========================
             // 容量/结构类异常：可单独一行概括（Normal & MMVD 共用）
             // EDVI 升高 / LVIDDN 升高 / 猫且 LVDd≥20mm → 左心室容量过载；LA 增大：LA/AO≥1.6；猫且填 LAD Max 时用 LAD Max 替代 LA/AO（≥16mm≈左心房增大）
+            // （LA/AO≥1.6 或 LAD Max≥16）且猫 LVDd≥20mm → 左心容量过载（合并一行，不拆成仅左房+仅左室两句）
             // =========================
             const edviNum = parseFloat(get('EDVI', ''));
             const lviddnNum = parseFloat(get('LVIDDN', ''));
@@ -6773,8 +6774,12 @@ const templateConfig = {
                 : !Number.isNaN(laAoNum) && laAoNum >= 1.6;
 
             let addedChamberSummary = false;
-            if (hasLvOverload && hasLaEnlargement) {
+            if (hasLaEnlargement && hasCatLvOverloadByLvdMm) {
                 conclusion += `  ${idx}.左心容量过载，其余腔室大小尚可。\n`;
+                idx += 1;
+                addedChamberSummary = true;
+            } else if (hasLvOverload && hasLaEnlargement) {
+                conclusion += `  ${idx}.左心房容量过载，其余腔室大小尚可。\n`;
                 idx += 1;
                 addedChamberSummary = true;
             } else if (hasLvOverload) {
@@ -6782,7 +6787,8 @@ const templateConfig = {
                 idx += 1;
                 addedChamberSummary = true;
             } else if (hasLaEnlargement) {
-                conclusion += `  ${idx}.左心房增大，其余各腔室大小尚可。\n`;
+                // LAD Max≥16 与 LA/AO≥1.6：均提示左心房容量过载
+                conclusion += `  ${idx}.左心房容量过载，其余各腔室大小尚可。\n`;
                 idx += 1;
                 addedChamberSummary = true;
             }
@@ -7229,4 +7235,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
