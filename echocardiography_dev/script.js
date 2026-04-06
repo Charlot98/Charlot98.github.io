@@ -1721,6 +1721,43 @@ function updateEAFusionVisibility() {
     }
 }
 
+// 仅「猫」「猫心超（含体重）」显示 MAX LAD；数值 ≥16 标红（readme）
+function updateMaxLadVisibility() {
+    const row = document.getElementById('maxLadRow');
+    const input = document.querySelector('input[data-param="MAX LAD"]');
+    if (!row || !input) return;
+    if (selectedReferenceRange === '猫' || selectedReferenceRange === '猫心超（含体重）') {
+        row.style.display = '';
+    } else {
+        row.style.display = 'none';
+        input.value = '';
+        input.style.color = '';
+        delete parameters['MAX LAD'];
+    }
+    updateMaxLadColor();
+}
+
+function updateMaxLadColor() {
+    const input = document.querySelector('input[data-param="MAX LAD"]');
+    if (!input) return;
+    const row = document.getElementById('maxLadRow');
+    if (row && row.style.display === 'none') {
+        input.style.color = '';
+        return;
+    }
+    const raw = (input.value || '').toString().trim();
+    if (!raw) {
+        input.style.color = '';
+        return;
+    }
+    const v = parseFloat(raw.replace(',', '.'));
+    if (Number.isNaN(v)) {
+        input.style.color = '';
+        return;
+    }
+    input.style.color = v >= 16 ? 'red' : '';
+}
+
 // 根据 EA融合 的值启用/禁用 E、A、E/A 输入框
 function updateEAInputsState() {
     const eaFusionInput = document.querySelector('input[data-param="EA融合"]');
@@ -2170,6 +2207,10 @@ function setupInputListeners() {
                 updateLAOverAOColor();
             }
 
+            if (paramName === 'MAX LAD') {
+                updateMaxLadColor();
+            }
+
             if (paramName === 'PA/Ao') {
                 updatePAOverAoColor();
             }
@@ -2381,6 +2422,7 @@ function setLeftSidebarInputPlaceholders() {
         'AO': 'mm',
         'LA': 'mm',
         'LA/AO': '',
+        'MAX LAD': 'mm',
         'PA': 'mm',
         'AO2': 'mm',
         'PA/Ao': '',
@@ -2959,7 +3001,8 @@ const GUIDE_ITEMS = [
     { date: '2026-3-12', content: '结论生成：结论会依据左侧栏填写情况，实时更新，请谨慎参考。' },
     { date: '2026-3-22', content: '支持OCR：直接粘贴心超截图可自动识别并回填 M 型参数（IVSd、LVDd、LVPWd、IVSs、LVDs、LVPWs、EDV、ESV、FS、EF）。<br>数据识别可能有误，请人工核对。<br>尽量减小截图范围，以提高识别准确度。<div class="guide-item-img-wrap"><span class="guide-item-img-label">截图示意图</span><img src="img/image.png" alt="截图示意图" class="guide-item-img"></div>' },
     { date: '2026-4-1', content: '① 新增 OCR 识别：AO、LA（LA/AO 自动计算）、E、A（E/A 自动计算）等。<br>② 新增右心高阶测量参数。' },
-    { date: '2026-4-5', content: '① OCR识别稳定性提升。' }
+    { date: '2026-4-5', content: '① OCR识别稳定性提升。' },
+    { date: '2026-4-6', content: '① 猫的MAX LAD测量参数' }
 ];
 function setupGuide() {
     const trigger = document.getElementById('guideTrigger');
@@ -3012,6 +3055,34 @@ function setupGuide() {
         if (card.contains(e.target) || trigger.contains(e.target) || (refreshBtn && refreshBtn.contains(e.target)) || (lightbox && lightbox.contains(e.target))) return;
         card.classList.remove('visible', 'expanded');
     });
+}
+
+// MAX LAD：单击标题复用全屏 imageLightbox 放大示意图
+function setupMaxLadImageLightbox() {
+    if (window.__echoMaxLadLightboxInit) return;
+    const btn = document.getElementById('maxLadTitleBtn');
+    const lightbox = document.getElementById('imageLightbox');
+    const lightboxImg = document.getElementById('imageLightboxImg');
+    if (!btn || !lightbox || !lightboxImg) return;
+    window.__echoMaxLadLightboxInit = true;
+    const defaultAlt = lightboxImg.getAttribute('alt') || '截图示意图';
+    const defaultAria = lightbox.getAttribute('aria-label') || '截图示意图放大';
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        lightboxImg.src = 'img/max_LAD.png';
+        lightboxImg.alt = 'MAX LAD 测量示意图';
+        lightbox.setAttribute('aria-label', 'MAX LAD 测量示意图放大');
+        lightbox.style.display = 'flex';
+    });
+    lightbox.addEventListener(
+        'click',
+        function () {
+            lightboxImg.alt = defaultAlt;
+            lightbox.setAttribute('aria-label', defaultAria);
+        },
+        true
+    );
 }
 
 // OCR：粘贴/拖拽/选择图片 → 识别参数 → 自动回填
@@ -3704,6 +3775,7 @@ if (document.readyState === 'loading') {
         setupRightSidebarResize();
         setupOCR();
         setupGuide();
+        setupMaxLadImageLightbox();
         calculateLVDDN();
     });
 } else {
@@ -3714,6 +3786,7 @@ if (document.readyState === 'loading') {
     setupRightSidebarResize();
     setupOCR();
     setupGuide();
+    setupMaxLadImageLightbox();
     calculateLVDDN();
 }
 
@@ -3796,6 +3869,7 @@ function handleDiseaseTypeChange(diseaseType) {
         
         // 更新EA融合输入框的显示状态
         updateEAFusionVisibility();
+        updateMaxLadVisibility();
     
     // 如果当前选择的参考范围是M型、非M型、金毛，自动激活含辛普森测量按钮
     const simpsonButton = document.getElementById('simpsonButton');
@@ -3964,6 +4038,7 @@ if (referenceRangeSelect) {
         
         // 更新EA融合输入框的显示状态
         updateEAFusionVisibility();
+        updateMaxLadVisibility();
         
         // 更新含辛普森测量按钮的显示状态
         updateSimpsonButtonVisibility();
@@ -4975,7 +5050,7 @@ const templateConfig = {
         // 注意：'二尖瓣反流'、'三尖瓣反流'、'主动脉瓣反流'、'肺动脉瓣反流' 是嵌套占位符，不在这里处理
         // 注意：'二尖瓣反流速'、'二尖瓣压力差' 等是嵌套占位符的内层，也不在这里处理
         const paramNames = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'EDVI', 'ESVI', 'FS', 'EF', 
-                           'LA', 'AO', 'LA/AO', 'PA', 'AO2', 'PA/Ao', 'FAC', '舒张直径', '收缩直径', 'RPAD', 'LA Volume', 'LAVi', 'VPA', 'VAO', 'VTI', 'AT', 'ET', 'AT/ET', 'E（TV）', 'A（TV）', 'E/A（TV）', "S'", 'GS', 'FWS', 'E', 'A', 'E/A', 'E\'', 'EA融合', 'E/E\'', '心率',
+                           'LA', 'AO', 'LA/AO', 'MAX LAD', 'PA', 'AO2', 'PA/Ao', 'FAC', '舒张直径', '收缩直径', 'RPAD', 'LA Volume', 'LAVi', 'VPA', 'VAO', 'VTI', 'AT', 'ET', 'AT/ET', 'E（TV）', 'A（TV）', 'E/A（TV）', "S'", 'GS', 'FWS', 'E', 'A', 'E/A', 'E\'', 'EA融合', 'E/E\'', '心率',
                            'SAM', '假腱索', '左心房容量',
                            '脱垂程度', '二尖瓣前叶厚度'];
         
@@ -5732,6 +5807,12 @@ const templateConfig = {
             findings += `    ${formatParamWithRef('AO', get('AO', ''), 'AO')}\n`;
             findings += `    ${formatParamWithRef('LA', get('LA', ''), 'LA')}\n`;
             findings += `    LA/AO: ${formatValue(get('LA/AO', ''))}\n`;
+            if (referenceRange === '猫' || referenceRange === '猫心超（含体重）') {
+                const maxLadRaw = (get('MAX LAD', '') || '').toString().trim();
+                if (maxLadRaw) {
+                    findings += `    MAX LAD: ${formatValue(maxLadRaw)} mm\n`;
+                }
+            }
             const laVolumeDisplay = (get('LA Volume显示', '不显示') || '').toString().trim();
             const lavi = get('LAVi', '');
             if (laVolumeDisplay === '显示') {
@@ -6319,6 +6400,12 @@ const templateConfig = {
         findings += `     ${laText}\n`;
         findings += `     ${aoText}\n`;
         findings += `     LA/AO: ${laAoFormatted || ''}\n`;
+        if (referenceRange === '猫' || referenceRange === '猫心超（含体重）') {
+            const maxLadRaw = (get('MAX LAD', '') || '').toString().trim();
+            if (maxLadRaw) {
+                findings += `     MAX LAD: ${formatValue(maxLadRaw)} mm\n`;
+            }
+        }
         if (rightHeartAdvancedEnabled) {
             const paAoCompact = get('PA/Ao', '');
             findings += `     PA/Ao: ${paAoCompact ? formatValue(paAoCompact) : ''}（正常＜1.1）\n`;
@@ -6653,11 +6740,17 @@ const templateConfig = {
 
             // =========================
             // 容量/结构类异常：可单独一行概括（Normal & MMVD 共用）
-            // EDVI 升高 / LVDDN 升高 / LA/AO 升高
+            // EDVI 升高 / LVDDN 升高 / LA 增大：LA/AO≥1.6；猫且填写 MAX LAD 时用 MAX LAD 替代 LA/AO 判定（≥16mm≈左心房增大，与标红阈值一致）
             // =========================
             const edviNum = parseFloat(get('EDVI', ''));
             const lvddnNum = parseFloat(get('LVDDN', ''));
             const laAoNum = parseFloat(get('LA/AO', ''));
+            const isCatRefForMaxLadConclusion =
+                referenceRange === '猫' || referenceRange === '猫心超（含体重）';
+            const maxLadRaw = (get('MAX LAD', '') || '').toString().trim();
+            const maxLadNum = parseFloat(maxLadRaw.replace(',', '.'));
+            const useMaxLadInsteadOfLaAo =
+                isCatRefForMaxLadConclusion && maxLadRaw !== '' && !Number.isNaN(maxLadNum);
 
             const numberedLinesForIndex = conclusion
                 .trimEnd()
@@ -6668,7 +6761,10 @@ const templateConfig = {
             const hasLvOverload =
                 (!Number.isNaN(edviNum) && edviNum > 100) ||
                 (!Number.isNaN(lvddnNum) && lvddnNum >= 1.7);
-            const hasLaEnlargement = !Number.isNaN(laAoNum) && laAoNum >= 1.6;
+            /** 猫：若已填 MAX LAD，仅用其判断（≥16mm），不再用 LA/AO≥1.6；未填 MAX LAD 时仍用 LA/AO */
+            const hasLaEnlargement = useMaxLadInsteadOfLaAo
+                ? maxLadNum >= 16
+                : !Number.isNaN(laAoNum) && laAoNum >= 1.6;
 
             let addedChamberSummary = false;
             if (hasLvOverload && hasLaEnlargement) {
@@ -6966,6 +7062,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 页面加载时更新EA融合输入框的显示状态
     updateEAFusionVisibility();
+    updateMaxLadVisibility();
     
     // 页面加载时检查 EA融合 的值，更新 E、A、E/A 输入框状态
     updateEAInputsState();
@@ -6988,6 +7085,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 页面加载时检查LA/AO的颜色显示
     updateLAOverAOColor();
+    updateMaxLadColor();
     updatePAOverAoColor();
     updateRPADColor();
     
