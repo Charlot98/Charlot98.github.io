@@ -7,7 +7,8 @@
   <link rel="stylesheet" href="css/common.css" />
   <link rel="stylesheet" href="css/vets.css" />
   <script src="js/auth.js"></script>
-  <script src="js/highcharts.js"></script>
+    <script src="js/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/heatmap.js"></script>
   <script src="js/utils.js"></script>
 </head>
 <body>
@@ -20,8 +21,9 @@
         <a href="vets.html">个人（正常日期）</a>
         <a href="vets2.html">个人（入职时长）</a>
         <a href="ultra_contrast.html">超声造影</a>
-        <a href="time.html" class="active">交单等待</a>
-        <a href="weekend.html">周末与工作日</a>
+        <a href="time.html" class="active">交单及等待时长</a>
+        <a href="weekend.html">各星期病例数</a>
+        <a href="weekend.html">各星期病例等待时长</a>
         <a href="guide.html">使用指南</a>
       </div>
     </div>
@@ -37,17 +39,17 @@
           <select id="end-month"></select>
           <button type="button" id="export-excel-btn" class="btn-export">导出 Excel</button>
         </div>
-        <div class="page-title">2025年数据待修正，请勿使用</div>
+        <div class="page-title">交单时段</div>
 
       </div>
       <div style="margin-top: 16px;">
-        <div class="page-title">图1：交单时段（月平均病例数）</div>
+        <div class="page-title"><b>图1：交单时段（月平均病例数）</b></div>
         <div id="container-time-submit" class="chart-container"></div>
       </div>
 
 
       <div style="margin-top: 16px;">
-        <div class="chart-title" style="text-align:center;">图2：交单时段（总病例数）</div>
+        <div class="page-title"><b>图2：交单时段（总病例数）</b></div>
         <div id="container-time-submit-monthly-bubble" class="chart-container"></div>
       </div>
 
@@ -60,21 +62,19 @@
         <div id="container-time-wait" class="chart-container"></div>
       </div>
 
-      <br>
-      <br>
-
-      <div style="margin-top: 16px; padding-bottom: 20px;">
-        <div class="chart-title" style="text-align:center;"><b>图4：平衡图</b></div>
-        <br>
-        <div class="chart-title" style="text-align:center;">最长等待时长 vs 最低等待时长（月度总病例数）</div>
-        <div id="container-time-wait-extreme-compare" class="chart-container"></div>
+      <div style="margin-top: 24px;">
+        <div class="page-title">图4：各时段报告数</div>
+        <div id="container-report-slot-monthly" class="chart-container"></div>
       </div>
 
-      <div style="margin-top: 16px; padding-bottom: 20px;">
-        <div class="chart-title" style="text-align:center;"><b>图5：平衡图</b></div>
-        <br>
-        <div class="chart-title" style="text-align:center;">最长等待时长 vs 最低等待时长（月度平均病例数）</div>
-        <div id="container-time-wait-extreme-avg-compare" class="chart-container"></div>
+      <div style="margin-top: 24px;">
+        <div class="page-title">图5：各时段报告数平均数</div>
+        <div id="container-report-slot-monthly-avg" class="chart-container"></div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <div class="page-title">图6：心超各报告时段数量</div>
+        <div id="container-heart-report-slot-monthly" class="chart-container"></div>
       </div>
     </div>
   </div>

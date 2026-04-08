@@ -96,9 +96,13 @@ loadCSV('交单时段.csv', function (submitCsv) {
 
   var weekdayOrder = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
   var WEEK_COLORS = ['#7cb5ec', '#434348', '#90ed7d', '#f7a35c', '#f45b5b', '#95a5a6', '#2b908f'];
-  var slotOrder = ['8:30-10:00', '10:00-12:00', '12:00-15:00', '15:00-17:00', '17:00-19:00', '19:00-21:30'];
+  var slotOrder = ['8:30-10:30', '10:30-12:00', '12:00-14:00', '14:00-16:30', '16:30-20:30'];
+  var REPORT_SLOT_ORDER = ['8:30-10:30', '10:30-12:00', '12:00-13:30', '13:30-15:00', '15:00-17:30', '17:30-24:00'];
+  var REPORT_COLORS = ['#3498db', '#9b59b6', '#16a085', '#f39c12', '#e74c3c', '#2ecc71'];
   // 表2使用单独配色，避免与表1混淆
   var SLOT_COLORS = ['#e74c3c', '#9b59b6', '#16a085', '#e67e22', '#2ecc71', '#34495e'];
+  var reportRowsCache = null;
+  var reportIdx = null;
 
   function setWeeklyVisible(weekday) {
     var map = {
@@ -192,8 +196,7 @@ loadCSV('交单时段.csv', function (submitCsv) {
         labels: { formatter: function () { return Highcharts.dateFormat('%Y-%m', this.value); } }
       },
       yAxis: { title: { text: '病例数' }, min: 0, allowDecimals: false },
-      legend: { layout: 'horizontal', align: 'center', verticalAlign: 'top' },
-      credits: { enabled: false },
+            credits: { enabled: false },
       tooltip: {
         shared: false,
         pointFormat: '<span style=\"color:{point.color}\">{series.name}</span>: <b>{point.y}</b><br/>'
@@ -280,8 +283,7 @@ loadCSV('交单时段.csv', function (submitCsv) {
         labels: { formatter: function () { return Highcharts.dateFormat('%Y-%m', this.value); } }
       },
       yAxis: { title: { text: '病例数' }, min: 0, allowDecimals: false },
-      legend: { layout: 'horizontal', align: 'center', verticalAlign: 'top' },
-      credits: { enabled: false },
+            credits: { enabled: false },
       tooltip: {
         shared: false,
         pointFormat: '<span style=\"color:{point.color}\">{series.name}</span>: <b>{point.y}</b><br/>'
@@ -298,6 +300,127 @@ loadCSV('交单时段.csv', function (submitCsv) {
       series: series
     });
   }
+
+  function ensureReportRows(callback) {
+    if (reportRowsCache && reportIdx) {
+      callback(true);
+      return;
+    }
+    loadCSV('报告时段.csv', function (reportCsv) {
+      var rows = parseCSV(reportCsv);
+      if (rows.length <= 1) {
+        callback(false);
+        return;
+      }
+      var h = rows[0].map(function (x) { return (x || '').trim(); });
+      var idxDateR = h.indexOf('日期');
+      var idxSlotR = h.indexOf('报告时段');
+      var idxCntR = h.indexOf('该报告时段对应病例数');
+      if (idxDateR === -1 || idxSlotR === -1 || idxCntR === -1) {
+        callback(false);
+        return;
+      }
+      reportRowsCache = rows;
+      reportIdx = { idxDateR: idxDateR, idxSlotR: idxSlotR, idxCntR: idxCntR };
+      callback(true);
+    });
+  }
+
+  function renderReportSlotMonthly() {
+    var range = getMonthRange();
+    var startMonth = range.startMonth;
+    var endMonth = range.endMonth;
+    var monthsInRange = monthsAll.filter(function (m) { return inRange(m, startMonth, endMonth); });
+
+    if (!monthsInRange.length) {
+      Highcharts.chart('container-report-slot-monthly', {
+        chart: { type: 'column' },
+        title: { text: null },
+        series: []
+      });
+      return;
+    }
+
+    ensureReportRows(function (ok) {
+      if (!ok) {
+        Highcharts.chart('container-report-slot-monthly', {
+          chart: { type: 'column' },
+          title: { text: '报告时段.csv 暂无可用数据', style: { fontSize: '13px' } },
+          series: []
+        });
+        return;
+      }
+
+      var agg = {}; // slot -> monthKey -> sum
+      REPORT_SLOT_ORDER.forEach(function (slot) { agg[slot] = {}; });
+
+      for (var iR = 1; iR < reportRowsCache.length; iR++) {
+        var cols = reportRowsCache[iR];
+        if (!cols || !cols.length) continue;
+        var dateStr = cols[reportIdx.idxDateR];
+        var slot = (cols[reportIdx.idxSlotR] || '').trim();
+        var cnt = parseFloat(cols[reportIdx.idxCntR] || '0');
+        if (!dateStr || !slot || isNaN(cnt)) continue;
+        var mk = dateStr.substring(0, 7);
+        if (!inRange(mk, startMonth, endMonth)) continue;
+        if (!agg[slot]) agg[slot] = {};
+        agg[slot][mk] = (agg[slot][mk] || 0) + cnt;
+      }
+
+      var series = [];
+      REPORT_SLOT_ORDER.forEach(function (slot, idx) {
+        var monthSum = agg[slot] || {};
+        var dataArr = [];
+        monthsInRange.forEach(function (mkey) {
+          var v = monthSum[mkey] || 0;
+          if (!v) return;
+          var parts = mkey.split('-');
+          var year = parseInt(parts[0], 10);
+          var month = parseInt(parts[1], 10) - 1;
+          var xVal = Date.UTC(year, month, 1);
+          dataArr.push([xVal, v]);
+        });
+        if (!dataArr.length) return;
+        series.push({
+          name: slot,
+          type: 'column',
+          data: dataArr,
+          color: REPORT_COLORS[idx % REPORT_COLORS.length]
+        });
+      });
+
+      Highcharts.chart('container-report-slot-monthly', {
+        chart: { type: 'column', zoomType: 'x' },
+        title: { text: null },
+        xAxis: {
+          type: 'datetime',
+          title: { text: null },
+          labels: { formatter: function () { return Highcharts.dateFormat('%Y-%m', this.value); } }
+        },
+        yAxis: { title: { text: '病例数' }, min: 0, allowDecimals: false },
+                credits: { enabled: false },
+        tooltip: {
+          shared: false,
+          pointFormatter: function () {
+            return '月份：<b>' + Highcharts.dateFormat('%Y-%m', this.x) + '</b><br/>' +
+              '报告时段：' + (this.series.name || '') + '<br/>' +
+              '病例数：<b>' + this.y + '</b>';
+          }
+        },
+        plotOptions: {
+          column: {
+            dataLabels: {
+              enabled: true,
+              inside: false,
+              formatter: function () { return this.y ? this.y : ''; }
+            }
+          }
+        },
+        series: series
+      });
+    });
+  }
+
 
   function renderAll() {
     renderWeekdayMonthly();

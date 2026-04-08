@@ -87,6 +87,9 @@ body {
 .dash-menu .nav-row:nth-child(6) .nav-link:hover {
   background-color: rgba(197, 151, 123, 0.85);
 }
+.dash-menu .nav-row:nth-child(7) .nav-link:hover {
+  background-color: rgba(95, 168, 220, 0.85);
+}
 
 /* 窄屏下每行自动折成两行：第一行“工作量”，第二行右侧文字 */
 @media (max-width: 900px) {

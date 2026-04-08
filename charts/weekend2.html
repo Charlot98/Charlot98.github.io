@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <title>weekend.html</title>
+  <link rel="stylesheet" href="css/common.css" />
+  <link rel="stylesheet" href="css/vets.css" />
+  <script src="js/auth.js"></script>
+  <script src="js/highcharts.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="nav-sidebar">
+    <div class="nav-sidebar-inner">
+      <a href="index.html">返回首页</a>
+      <a></a>
+      <div class="nav-sidebar-more">
+        <a href="cases_scatter.html">分级（正常日期）</a>
+        <a href="vets.html">个人（正常日期）</a>
+        <a href="vets2.html">个人（入职时长）</a>
+        <a href="ultra_contrast.html">超声造影</a>
+        <a href="time.html">交单及等待时长</a>
+        <a href="weekend.html">各星期病例数</a>
+        <a href="weekend2.html" class="active">各星期病例等待时长</a>
+        <a href="guide.html">使用指南</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div style="padding: 16px;">
+      <div class="page-header page-header-vets" style="position: sticky; top: 0; z-index: 10; background: #ffffff; padding-top: 4px; padding-bottom: 4px;">
+        <div class="page-controls">
+          <span>开始月份：</span>
+          <select id="start-month"></select>
+          <span>结束月份：</span>
+          <select id="end-month"></select>
+          <button type="button" id="export-excel-btn" class="btn-export">导出 Excel</button>
+        </div>
+      </div>
+
+      <div style="margin-top: 16px;">
+        <div class="page-title">各星期的等待时长病例量总览</div>
+        <div id="container-time-submit-weekday-monthly" class="chart-container"></div>
+      </div>
+
+      <div style="margin-top: 16px; padding-bottom: 20px;">
+        <div style="margin-top: 8px;">
+          <div id="wrap-time-submit-weekly-mon">
+            <div class="chart-title" style="text-align:center; font-size: 15px; font-weight: 600; margin-bottom: 6px;">周一</div>
+            <div id="container-time-submit-weekly-mon" class="chart-container" style="height: 220px; margin-bottom: 8px;"></div>
+          </div>
+          <div id="wrap-time-submit-weekly-tue">
+            <div class="chart-title" style="text-align:center; font-size: 15px; font-weight: 600; margin-bottom: 6px;">周二</div>
+            <div id="container-time-submit-weekly-tue" class="chart-container" style="height: 220px; margin-bottom: 8px;"></div>
+          </div>
+          <div id="wrap-time-submit-weekly-wed">
+            <div class="chart-title" style="text-align:center; font-size: 15px; font-weight: 600; margin-bottom: 6px;">周三</div>
+            <div id="container-time-submit-weekly-wed" class="chart-container" style="height: 220px; margin-bottom: 8px;"></div>
+          </div>
+          <div id="wrap-time-submit-weekly-thu">
+            <div class="chart-title" style="text-align:center; font-size: 15px; font-weight: 600; margin-bottom: 6px;">周四</div>
+            <div id="container-time-submit-weekly-thu" class="chart-container" style="height: 220px; margin-bottom: 8px;"></div>
+          </div>
+          <div id="wrap-time-submit-weekly-fri">
+            <div class="chart-title" style="text-align:center; font-size: 15px; font-weight: 600; margin-bottom: 6px;">周五</div>
+            <div id="container-time-submit-weekly-fri" class="chart-container" style="height: 220px; margin-bottom: 8px;"></div>
+          </div>
+          <div id="wrap-time-submit-weekly-sat">
+            <div class="chart-title" style="text-align:center; font-size: 15px; font-weight: 600; margin-bottom: 6px;">周六</div>
+            <div id="container-time-submit-weekly-sat" class="chart-container" style="height: 220px; margin-bottom: 8px;"></div>
+          </div>
+          <div id="wrap-time-submit-weekly-sun">
+            <div class="chart-title" style="text-align:center; font-size: 15px; font-weight: 600; margin-bottom: 6px;">周日</div>
+            <div id="container-time-submit-weekly-sun" class="chart-container" style="height: 220px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/weekend2.js"></script>
+</body>
+</html>
+
