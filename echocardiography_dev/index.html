@@ -336,32 +336,32 @@
                             </div>
                         </div>
                     </div>
-                    <!-- readme 2.4 RPAD：仅一行；舒张/收缩直径在气泡内，RPAD 只读自动算 -->
+                    <!-- readme 2.4 RPAD：仅一行；RPADmax/RPADmin 在气泡内，RPAD 只读自动算 -->
                     <div class="other-param-item rpad-advanced-row" id="rpadAdvancedRow" style="display: none;">
                         <div class="rpad-adv-item rpad-adv-item--rpad-wrap">
                             <label class="other-param-label" for="rpadRatioInput">RPAD <span class="param-normal-hint">正常＞30%</span></label>
                             <div class="rpad-paa-wrap">
                                 <div class="input-with-unit-suffix">
-                                    <input type="text" id="rpadRatioInput" class="other-param-input" data-param="RPAD" placeholder="" title="可由舒张/收缩直径自动计算，亦可手动修改；聚焦此处展开直径输入">
+                                    <input type="text" id="rpadRatioInput" class="other-param-input" data-param="RPAD" placeholder="" title="可由 RPADmax/RPADmin 自动计算，亦可手动修改；聚焦此处展开输入">
                                     <span class="unit-suffix" aria-hidden="true">%</span>
                                 </div>
-                                <div class="rpad-bubble" id="rpadBubble" role="group" aria-label="舒张直径与收缩直径">
+                                <div class="rpad-bubble" id="rpadBubble" role="group" aria-label="RPADmax 与 RPADmin">
                                     <div class="rpad-bubble-body">
                                         <div class="rpad-bubble-row">
-                                            <span class="rpad-bubble-label">舒张直径</span>
+                                            <span class="rpad-bubble-label">RPADmax</span>
                                             <div class="input-with-unit-suffix">
-                                                <input type="text" class="other-param-input" data-param="舒张直径" placeholder="" autocomplete="off">
+                                                <input type="text" class="other-param-input" data-param="RPADmax" placeholder="" autocomplete="off">
                                                 <span class="unit-suffix" aria-hidden="true">mm</span>
                                             </div>
                                         </div>
                                         <div class="rpad-bubble-row">
-                                            <span class="rpad-bubble-label">收缩直径</span>
+                                            <span class="rpad-bubble-label">RPADmin</span>
                                             <div class="input-with-unit-suffix">
-                                                <input type="text" class="other-param-input" data-param="收缩直径" placeholder="" autocomplete="off">
+                                                <input type="text" class="other-param-input" data-param="RPADmin" placeholder="" autocomplete="off">
                                                 <span class="unit-suffix" aria-hidden="true">mm</span>
                                             </div>
                                         </div>
-                                        <p class="rpad-bubble-hint">RPAD = (舒张直径 − 收缩直径) / 收缩直径 × 100</p>
+                                        <p class="rpad-bubble-hint">RPAD = (RPADmax − RPADmin) / RPADmax × 100</p>
                                     </div>
                                 </div>
                             </div>
