@@ -2047,7 +2047,7 @@ function setupInputListeners() {
                 const el = document.getElementById('paAoRatioInput');
                 if (el) delete el.dataset.paAoManual;
             }
-            if (paramName === '舒张直径' || paramName === '收缩直径') {
+            if (paramName === 'RPADmax' || paramName === 'RPADmin') {
                 const el = document.getElementById('rpadRatioInput');
                 if (el) delete el.dataset.rpadManual;
             }
@@ -2131,7 +2131,7 @@ function setupInputListeners() {
                 calculatePAOverAo();
             }
 
-            if (paramName === '舒张直径' || paramName === '收缩直径') {
+            if (paramName === 'RPADmax' || paramName === 'RPADmin') {
                 calculateRPAD();
             }
             
@@ -2427,8 +2427,8 @@ function setLeftSidebarInputPlaceholders() {
         'AO2': 'mm',
         'PA/Ao': '',
         'FAC': '%',
-        '舒张直径': 'mm',
-        '收缩直径': 'mm',
+        'RPADmax': 'mm',
+        'RPADmin': 'mm',
         'RPAD': '%',
         'LA Volume': 'ml',
         'VPA': 'm/s',
@@ -4260,11 +4260,11 @@ function getSPrimeRefRangeFromWeight(weightStr) {
     };
 }
 
-/** readme 2.4：RPAD = (舒张直径 − 收缩直径) / 收缩直径 × 100；≤30% 标红；主框可手动覆盖 */
+/** readme 2.4：RPAD = (RPADmax − RPADmin) / RPADmax × 100；≤30% 标红；主框可手动覆盖 */
 function calculateRPAD() {
     if (!rightHeartAdvancedEnabled) return;
-    const dIn = document.querySelector('input[data-param="舒张直径"]');
-    const sIn = document.querySelector('input[data-param="收缩直径"]');
+    const dIn = document.querySelector('input[data-param="RPADmax"]');
+    const sIn = document.querySelector('input[data-param="RPADmin"]');
     const rIn = document.querySelector('input[data-param="RPAD"]');
     if (!dIn || !sIn || !rIn) return;
     if (rIn.dataset.rpadManual === '1') {
@@ -4274,8 +4274,8 @@ function calculateRPAD() {
     const d = parseFloat(dIn.value.trim());
     const s = parseFloat(sIn.value.trim());
     rIn.style.color = '';
-    if (!isNaN(d) && !isNaN(s) && s !== 0) {
-        const pct = ((d - s) / s) * 100;
+    if (!isNaN(d) && !isNaN(s) && d !== 0) {
+        const pct = ((d - s) / d) * 100;
         const rounded = pct.toFixed(2);
         rIn.value = rounded;
         parameters['RPAD'] = rounded;
@@ -4380,7 +4380,7 @@ function toggleRightHeartAdvancedInputs() {
         });
 
         if (rpadRow) rpadRow.style.display = 'none';
-        ['舒张直径', '收缩直径', 'RPAD'].forEach((p) => {
+        ['RPADmax', 'RPADmin', 'RPAD'].forEach((p) => {
             const el = document.querySelector(`input[data-param="${p}"]`);
             if (el) {
                 el.value = '';
@@ -5050,7 +5050,7 @@ const templateConfig = {
         // 注意：'二尖瓣反流'、'三尖瓣反流'、'主动脉瓣反流'、'肺动脉瓣反流' 是嵌套占位符，不在这里处理
         // 注意：'二尖瓣反流速'、'二尖瓣压力差' 等是嵌套占位符的内层，也不在这里处理
         const paramNames = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'EDVI', 'ESVI', 'LVIDDN', 'FS', 'EF', 
-                           'LA', 'AO', 'LA/AO', 'LAD Max', 'PA', 'AO2', 'PA/Ao', 'FAC', '舒张直径', '收缩直径', 'RPAD', 'LA Volume', 'LAVi', 'VPA', 'VAO', 'VTI', 'AT', 'ET', 'AT/ET', 'E（TV）', 'A（TV）', 'E/A（TV）', "S'", 'GS', 'FWS', 'E', 'A', 'E/A', 'E\'', 'EA融合', 'E/E\'', '心率',
+                           'LA', 'AO', 'LA/AO', 'LAD Max', 'PA', 'AO2', 'PA/Ao', 'FAC', 'RPADmax', 'RPADmin', 'RPAD', 'LA Volume', 'LAVi', 'VPA', 'VAO', 'VTI', 'AT', 'ET', 'AT/ET', 'E（TV）', 'A（TV）', 'E/A（TV）', "S'", 'GS', 'FWS', 'E', 'A', 'E/A', 'E\'', 'EA融合', 'E/E\'', '心率',
                            'SAM', '假腱索', '左心房容量',
                            '脱垂程度', '二尖瓣前叶厚度'];
         
@@ -7235,3 +7235,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
