@@ -1,679 +1,141 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    <title>心超报告生成器</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e74c3c'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <!-- 提示词显示区域 -->
-    <!-- Tooltip 显示区域 -->
-    <div id="infoTooltip" class="info-tooltip" style="display: none;"></div>
-    <!-- 截图示意图放大层：点击图片放大，再次点击关闭 -->
-    <div id="imageLightbox" class="image-lightbox" role="dialog" aria-label="截图示意图放大" tabindex="-1" style="display: none;">
-        <img id="imageLightboxImg" class="image-lightbox-img" src="" alt="截图示意图">
-    </div>
-    <div class="container">
-            <div class="left-sidebar">
-                <!-- 顶栏：置于左侧栏顶部，置顶显示 -->
-                <div class="top-disease-selector">
-                    <div class="top-row">
-                        <div class="disease-tags-wrap">
-                            <button class="disease-tag" data-value="Normal">正常</button>
-                            <button class="disease-tag" data-value="MMVD">MMVD</button>
-                            <select id="moreDiseaseSelect" class="disease-tag-select">
-                                <option value="">更多选择</option>
-                                <option value="HCM">HCM</option>
-                                <option value="PDA">PDA</option>
-                                <option value="DCM">DCM</option>
-                                <option value="RCM">RCM</option>
-                                <option value="TOF">TOF</option>
-                            </select>
-                        </div>
-                        <div class="reference-weight-wrap">
-                            <div class="reference-range-select-wrapper">
-                                <label class="reference-range-label">参考：</label>
-                                <select id="referenceRangeSelect" class="reference-range-select">
-                                    <option value="">请选择</option>
-                                    <option value="M型">M型（犬≤3kg）</option>
-                                    <option value="非M型">非M型（犬＞3kg）</option>
-                                    <option value="金毛">金毛</option>
-                                    <option value="猫">猫</option>
-                                    <option value="猫心超（含体重）">猫心超（含体重）</option>
-                                    <option value="兔子">兔子</option>
-                                </select>
-                            </div>
-                            <div class="weight-input-wrapper" id="weightInputWrapper">
-                                <label class="weight-label">体重：</label>
-                                <div class="input-with-unit-suffix weight-input-with-unit">
-                                    <input type="text" id="weightInput" class="weight-input" data-param="体重" placeholder="" autocomplete="off">
-                                    <span class="unit-suffix" aria-hidden="true">kg</span>
-                                </div>
-                                <span id="weightReferenceDisplay" class="weight-reference-display"></span>
-                            </div>
-                        </div>
-                        <button id="refreshButton" class="refresh-button" data-tooltip="点击此处刷新页面" title="点击此处刷新页面" aria-label="点击此处刷新页面">
-                            <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-                                <path d="M21 3v5h-5"></path>
-                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-                                <path d="M3 21v-5h5"></path>
-                            </svg>
-                        </button>
-                        <div id="refreshButtonTooltip" class="refresh-button-tooltip" role="tooltip" aria-label="点击此处刷新页面" style="display: none;"></div>
-                    </div>
-                </div>
-                <div class="left-sidebar-scroll">
-                <div class="parameters-container" id="parametersContainer">
-            <!-- 1. M型参数 -->
-            <div class="parameters-section">
-                <div class="parameters-section-header">
-                </div>
-                <div class="parameters-content" id="parametersContent">
-                    <div class="m-mode-title-row">
-                        <h3 class="parameters-section-title">1. M-MODE/2D（mm）</h3>
-                        <span id="ocrStatus" class="ocr-status-tag" aria-live="polite">OCR：可直接粘贴截图到页面</span>
-                    </div>
-                    <div class="simpson-tag-row">
-                        <button type="button" id="simpsonButton" class="simpson-tag">含辛普森测量</button>
-                        <button type="button" id="rightHeartAdvancedButton" class="simpson-tag">右心高阶</button>
-                    </div>
-                    <div class="m-type-grid">
-                    <div class="m-type-item">
-                        <label class="m-type-label">
-                            IVSd
-                            <span class="reference-value" data-param="IVSd" data-csv-key="IVSd"></span>
-                        </label>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="m-type-input" data-param="IVSd" placeholder="" tabindex="1">
-                            <span class="unit-suffix" aria-hidden="true">mm</span>
-                        </div>
-                    </div>
-                    <div class="m-type-item" id="lvddItem">
-                        <label class="m-type-label">
-                            LVDd
-                            <span class="reference-value" data-param="LVDd" data-csv-key="LVDd"></span>
-                            <span class="spherical-display" id="lviddnDisplay" title="LVIDDN = LVDd（cm）/ 体重（kg）^0.294，参考值 LVIDDN＜1.7"></span>
-                        </label>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="m-type-input" data-param="LVDd" placeholder="" tabindex="2">
-                            <span class="unit-suffix" aria-hidden="true">mm</span>
-                        </div>
-                    </div>
-                    <div class="m-type-item">
-                        <label class="m-type-label">
-                            LVWd
-                            <span class="reference-value" data-param="LVPWd" data-csv-key="LVWd"></span>
-                        </label>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="m-type-input" data-param="LVPWd" placeholder="" tabindex="3">
-                            <span class="unit-suffix" aria-hidden="true">mm</span>
-                        </div>
-                    </div>
-                    <div class="m-type-item">
-                        <label class="m-type-label">
-                            IVSs
-                            <span class="reference-value" data-param="IVSs" data-csv-key="IVSs"></span>
-                        </label>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="m-type-input" data-param="IVSs" placeholder="" tabindex="4">
-                            <span class="unit-suffix" aria-hidden="true">mm</span>
-                        </div>
-                    </div>
-                    <div class="m-type-item">
-                        <label class="m-type-label">
-                            LVDs
-                            <span class="reference-value" data-param="LVDs" data-csv-key="LVDs"></span>
-                        </label>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="m-type-input" data-param="LVDs" placeholder="" tabindex="5">
-                            <span class="unit-suffix" aria-hidden="true">mm</span>
-                        </div>
-                    </div>
-                    <div class="m-type-item">
-                        <label class="m-type-label">
-                            LVWs
-                            <span class="reference-value" data-param="LVPWs" data-csv-key="LVWs"></span>
-                        </label>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="m-type-input" data-param="LVPWs" placeholder="" tabindex="6">
-                            <span class="unit-suffix" aria-hidden="true">mm</span>
-                        </div>
-                    </div>
-                    <div class="m-type-item" id="edvItem">
-                        <label class="m-type-label">
-                            EDV
-                            <span class="pressure-gradient-label">EDVI:</span>
-                            <span class="pressure-gradient-display" id="edviDisplay">-</span>
-                        </label>
-                        <div class="combined-input-wrapper">
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="m-type-input" data-param="EDV" placeholder="" tabindex="7">
-                                <span class="unit-suffix" aria-hidden="true">ml</span>
-                            </div>
-                            <div class="input-with-unit-suffix simpson-field-with-unit" id="edvSimpsonInputWrap" style="display: none;">
-                                <input type="text" class="m-type-input" id="edvSimpsonInput" data-param="EDV辛普森" placeholder="辛普森" tabindex="8">
-                                <span class="unit-suffix" aria-hidden="true">ml</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="m-type-item" id="esvItem">
-                        <label class="m-type-label">
-                            ESV
-                            <span class="pressure-gradient-label">ESVI:</span>
-                            <span class="pressure-gradient-display" id="esviDisplay">-</span>
-                        </label>
-                        <div class="combined-input-wrapper">
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="m-type-input" data-param="ESV" placeholder="" tabindex="9">
-                                <span class="unit-suffix" aria-hidden="true">ml</span>
-                            </div>
-                            <div class="input-with-unit-suffix simpson-field-with-unit" id="esvSimpsonInputWrap" style="display: none;">
-                                <input type="text" class="m-type-input" id="esvSimpsonInput" data-param="ESV辛普森" placeholder="辛普森" tabindex="10">
-                                <span class="unit-suffix" aria-hidden="true">ml</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="m-type-item">
-                        <label class="m-type-label">FS</label>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="m-type-input" data-param="FS" placeholder="" tabindex="11">
-                            <span class="unit-suffix" aria-hidden="true">%</span>
-                        </div>
-                    </div>
-                    <div class="m-type-item" id="efItem">
-                        <label class="m-type-label">EF</label>
-                        <div class="combined-input-wrapper">
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="m-type-input" data-param="EF" placeholder="" tabindex="13">
-                                <span class="unit-suffix" aria-hidden="true">%</span>
-                            </div>
-                            <div class="input-with-unit-suffix simpson-field-with-unit" id="efSimpsonInputWrap" style="display: none;">
-                                <input type="text" class="m-type-input" id="efSimpsonInput" data-param="EF辛普森" placeholder="辛普森" tabindex="14">
-                                <span class="unit-suffix" aria-hidden="true">%</span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- readme 2.1 TAPSE：开启「右心高阶」后显示；右侧展示 TAPSE/AO（需 TAPSE 与 AO 均有值） -->
-                    <div class="m-type-item m-type-item-tapse" id="tapseInputRow" style="display: none;">
-                        <label class="m-type-label">
-                            TAPSE
-                            <span class="reference-value" data-param="TAPSE" data-ref-source="formula" data-formula="tapse"></span>
-                        </label>
-                        <div class="tapse-input-with-ratio">
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="m-type-input" data-param="TAPSE" placeholder="" tabindex="12">
-                                <span class="unit-suffix" aria-hidden="true">mm</span>
-                            </div>
-                            <div class="tapse-ao-ratio-wrap" title="TAPSE/Ao正常＞0.65">
-                                <span class="pressure-gradient-label">TAPSE/AO</span>
-                                <span class="pressure-gradient-display" id="tapseAoRatioDisplay">-</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vet Vault</title>
+    <link rel="icon" type="image/x-icon" href="/my_docs/favicon.ico" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #020617;
+        --bg-elev: #0b1222;
+        --line: #1f2937;
+        --text-main: #e5e7eb;
+        --text-sub: #9ca3af;
+        --brand: #22d3ee;
+        --brand-hover: #06b6d4;
+      }
 
-            <!-- 2. 左房大小 -->
-            <div class="parameters-section">
-                <h3 class="parameters-section-title">2. 瓣膜、心肌、左房</h3>
-                <!-- MMVD特定输入框 -->
-                <div id="mmvdSpecificInputs" style="display: none;">
-                    <div class="mmvd-combined-row">
-                        <span class="mmvd-thickness-label">二尖瓣前叶厚度 (mm)：</span>
-                        <div class="input-with-unit-suffix mmvd-thickness-wrap">
-                            <input type="text" class="other-param-input mmvd-thickness-input" data-param="二尖瓣前叶厚度" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">mm</span>
-                        </div>
-                        <span class="mmvd-severity-label">脱垂程度</span>
-                        <div class="regurgitation-severity-buttons" data-param="脱垂程度">
-                            <button class="regurgitation-severity-btn" data-value="轻度">轻度</button>
-                            <button class="regurgitation-severity-btn" data-value="中度">中度</button>
-                            <button class="regurgitation-severity-btn" data-value="重度">重度</button>
-                        </div>
-                        <div class="regurgitation-severity-buttons" data-param="腱索断裂类型">
-                            <button class="regurgitation-severity-btn" data-value="疑部分腱索断裂">疑部分腱索断裂</button>
-                            <button class="regurgitation-severity-btn" data-value="部分腱索断裂">腱索断裂</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="other-params-grid">
-                    <div class="other-param-item la-ao-row">
-                        <div class="la-ao-item">
-                            <label class="other-param-label">
-                                AO
-                                <span class="reference-value" data-param="AO" data-csv-key="AO"></span>
-                            </label>
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="other-param-input" data-param="AO" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">mm</span>
-                            </div>
-                        </div>
-                        <div class="la-ao-item">
-                            <label class="other-param-label">
-                                LA
-                                <span class="reference-value" data-param="LA" data-csv-key="LA"></span>
-                            </label>
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="other-param-input" data-param="LA" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">mm</span>
-                            </div>
-                        </div>
-                        <div class="la-ao-item">
-                            <label class="other-param-label">LA/AO</label>
-                            <div class="input-with-unit-suffix input-with-unit-suffix--bare">
-                                <input type="text" class="other-param-input" data-param="LA/AO" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- LAD Max：仅猫 / 猫心超（含体重）；单击标题在弹窗中放大示意图 -->
-                    <div class="other-param-item max-lad-row" id="maxLadRow" style="display: none;">
-                        <div class="other-param-label max-lad-label-wrap">
-                            <button type="button" class="max-lad-title-trigger" id="maxLadTitleBtn" aria-label="单击放大查看 LAD Max 测量示意图">LAD Max</button>
-                        </div>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" id="maxLadInput" class="other-param-input" data-param="LAD Max" placeholder="" autocomplete="off" aria-labelledby="maxLadTitleBtn">
-                            <span class="unit-suffix" aria-hidden="true">mm</span>
-                        </div>
-                    </div>
-                    <!-- LA Volume / LAVi：位于 PA/Ao 上一行 -->
-                    <div class="la-volume-row">
-                        <span class="la-volume-label">LA Volume</span>
-                        <div class="input-with-unit-suffix la-volume-input-wrap">
-                            <input type="text" class="other-param-input la-volume-input" data-param="LA Volume" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">ml</span>
-                        </div>
-                        <span class="lavi-display" id="laviDisplay">-</span>
-                        <span class="lavi-unit">ml/kg</span>
-                        <div id="laVolumeInputItem" class="la-volume-display-btn-group" aria-label="LA Volume显示开关">
-                            <button type="button" class="la-volume-display-btn" data-param="LA Volume显示" data-value="显示">显示</button>
-                        </div>
-                    </div>
-                    <!-- readme 2.2 PA/Ao：仅「右心高阶」；PA/Ao=PA/AO（2），AO（2）空时用主动脉 AO；PA 与 AO（2）在气泡内编辑 -->
-                    <div class="other-param-item pa-ao-advanced-row" id="paAoAdvancedRow" style="display: none;">
-                        <div class="pa-ao-adv-item pa-ao-adv-item--paa-wrap">
-                            <label class="other-param-label" for="paAoRatioInput">PA/Ao <span class="param-normal-hint">1.108 ± 0.152 (SD)</span></label>
-                            <div class="pa-ao-paa-wrap">
-                                <div class="input-with-unit-suffix input-with-unit-suffix--bare">
-                                    <input type="text" id="paAoRatioInput" class="other-param-input" data-param="PA/Ao" placeholder="" title="可由 PA 与 AO（2）自动计算，亦可手动修改；点击下方或聚焦此处展开输入">
-                                    <span class="unit-suffix" aria-hidden="true"></span>
-                                </div>
-                                <div class="pa-ao-bubble" id="paAoBubble" role="group" aria-label="PA 与肺动脉瓣环 AO（2）">
-                                    <div class="pa-ao-bubble-body">
-                                        <div class="pa-ao-bubble-row">
-                                            <span class="pa-ao-bubble-label">PA</span>
-                                            <div class="input-with-unit-suffix">
-                                                <input type="text" class="other-param-input" data-param="PA" placeholder="" autocomplete="off">
-                                                <span class="unit-suffix" aria-hidden="true">mm</span>
-                                            </div>
-                                        </div>
-                                        <div class="pa-ao-bubble-row">
-                                            <span class="pa-ao-bubble-label">AO（2）</span>
-                                            <div class="input-with-unit-suffix">
-                                                <input type="text" class="other-param-input" data-param="AO2" placeholder="" autocomplete="off">
-                                                <span class="unit-suffix" aria-hidden="true">mm</span>
-                                            </div>
-                                        </div>
-                                        <p class="pa-ao-bubble-hint">未填 AO（2）时用主动脉 AO 参与计算</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- readme 2.3 FAC：第二行全宽；标题与 AO/LA 同结构，公式参考见 .reference-value -->
-                        <div class="pa-ao-adv-item pa-ao-adv-item--fac">
-                            <label class="other-param-label">
-                                RV FAC
-                                <span class="reference-value" data-param="FAC" data-ref-source="formula" data-formula="fac"></span>
-                            </label>
-                            <div class="input-with-unit-suffix pa-ao-fac-input-wrap">
-                                <input type="text" class="other-param-input" data-param="FAC" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">%</span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- readme 2.4 RPAD：仅一行；RPADmax/RPADmin 在气泡内，RPAD 只读自动算 -->
-                    <div class="other-param-item rpad-advanced-row" id="rpadAdvancedRow" style="display: none;">
-                        <div class="rpad-adv-item rpad-adv-item--rpad-wrap">
-                            <label class="other-param-label" for="rpadRatioInput">RPAD <span class="param-normal-hint">正常＞30%</span></label>
-                            <div class="rpad-paa-wrap">
-                                <div class="input-with-unit-suffix">
-                                    <input type="text" id="rpadRatioInput" class="other-param-input" data-param="RPAD" placeholder="" title="可由 RPADmax/RPADmin 自动计算，亦可手动修改；聚焦此处展开输入">
-                                    <span class="unit-suffix" aria-hidden="true">%</span>
-                                </div>
-                                <div class="rpad-bubble" id="rpadBubble" role="group" aria-label="RPADmax 与 RPADmin">
-                                    <div class="rpad-bubble-body">
-                                        <div class="rpad-bubble-row">
-                                            <span class="rpad-bubble-label">RPADmax</span>
-                                            <div class="input-with-unit-suffix">
-                                                <input type="text" class="other-param-input" data-param="RPADmax" placeholder="" autocomplete="off">
-                                                <span class="unit-suffix" aria-hidden="true">mm</span>
-                                            </div>
-                                        </div>
-                                        <div class="rpad-bubble-row">
-                                            <span class="rpad-bubble-label">RPADmin</span>
-                                            <div class="input-with-unit-suffix">
-                                                <input type="text" class="other-param-input" data-param="RPADmin" placeholder="" autocomplete="off">
-                                                <span class="unit-suffix" aria-hidden="true">mm</span>
-                                            </div>
-                                        </div>
-                                        <p class="rpad-bubble-hint">RPAD = (RPADmax − RPADmin) / RPADmax × 100</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      * {
+        box-sizing: border-box;
+      }
 
-            <!-- 3. 彩色多普勒 -->
-            <div class="parameters-section">
-                <h3 class="parameters-section-title">3. 彩色多普勒、频谱多普勒</h3>
-                <!-- 瓣口血流标签按钮 -->
-                <div class="valve-flow-tags">
-                    <button class="valve-flow-tag valve-flow-tag-normal" data-tag="各瓣口血流正常">各瓣口血流正常</button>
-                    <button class="valve-flow-tag valve-flow-tag-red" data-tag="二尖瓣反流">二尖瓣反流</button>
-                    <button class="valve-flow-tag valve-flow-tag-red" data-tag="三尖瓣反流">三尖瓣反流</button>
-                    <button class="valve-flow-tag valve-flow-tag-red" data-tag="肺动脉瓣反流">肺动脉瓣反流</button>
-                    <button class="valve-flow-tag valve-flow-tag-red" data-tag="主动脉瓣反流">主动脉瓣反流</button>
-                </div>
-                <div class="other-params-grid">
-                    <!-- readme 2.5：VPA|VAO 始终同排；右心高阶时下方增加 VTI|AT/ET 整行 -->
-                    <div class="other-param-item vpa-vao-wrap" id="vpaVaoWrap">
-                        <div class="vpa-row">
-                            <label class="other-param-label">VPA</label>
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="other-param-input" data-param="VPA" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">m/s</span>
-                            </div>
-                        </div>
-                        <div class="vao-row">
-                            <label class="other-param-label">VAO</label>
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="other-param-input" data-param="VAO" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">m/s</span>
-                            </div>
-                        </div>
-                        <div class="vti-atet-row" id="vtiAtetRow">
-                            <div class="vti-atet-item">
-                                <label class="other-param-label">VTI</label>
-                                <div class="input-with-unit-suffix">
-                                    <input type="text" class="other-param-input" data-param="VTI" placeholder="">
-                                    <span class="unit-suffix" aria-hidden="true">cm</span>
-                                </div>
-                            </div>
-                            <div class="vti-atet-item atet-wrap">
-                                <label class="other-param-label" for="atetRatioInput">AT/ET <span class="param-normal-hint">正常＞0.43</span></label>
-                                <div class="atet-paa-wrap">
-                                    <div class="input-with-unit-suffix input-with-unit-suffix--bare">
-                                        <input type="text" id="atetRatioInput" class="other-param-input" data-param="AT/ET" placeholder="" title="可由 AT÷ET 自动计算，亦可手动修改；聚焦此处展开 AT、ET 输入">
-                                        <span class="unit-suffix" aria-hidden="true"></span>
-                                    </div>
-                                    <div class="atet-bubble" id="atetBubble" role="group" aria-label="AT 与 ET">
-                                        <div class="atet-bubble-body">
-                                            <div class="atet-bubble-row">
-                                                <span class="atet-bubble-label">AT</span>
-                                                <div class="input-with-unit-suffix">
-                                                    <input type="text" class="other-param-input" data-param="AT" placeholder="" autocomplete="off">
-                                                    <span class="unit-suffix" aria-hidden="true">ms</span>
-                                                </div>
-                                            </div>
-                                            <div class="atet-bubble-row">
-                                                <span class="atet-bubble-label">ET</span>
-                                                <div class="input-with-unit-suffix">
-                                                    <input type="text" class="other-param-input" data-param="ET" placeholder="" autocomplete="off">
-                                                    <span class="unit-suffix" aria-hidden="true">ms</span>
-                                                </div>
-                                            </div>
-                                            <p class="atet-bubble-hint">AT/ET = AT ÷ ET（比值≤0.30 标红）</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="other-param-item e-diastolic-row">
-                        <div class="diastolic-item diastolic-item-e">
-                            <label class="other-param-label">E</label>
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="other-param-input" data-param="E" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">m/s</span>
-                            </div>
-                        </div>
-                        <div class="diastolic-item diastolic-item-a">
-                            <label class="other-param-label">A</label>
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="other-param-input" data-param="A" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">m/s</span>
-                            </div>
-                        </div>
-                        <div class="diastolic-item diastolic-item-ea">
-                            <label class="other-param-label">E/A</label>
-                            <div class="input-with-unit-suffix input-with-unit-suffix--bare">
-                                <input type="text" class="other-param-input" data-param="E/A" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true"></span>
-                            </div>
-                        </div>
-                        <div class="diastolic-item diastolic-item-ee-prime ee-prime-wrap">
-                            <label class="other-param-label" for="eePrimeRatioInput">E/E'</label>
-                            <div class="ee-prime-paa-wrap">
-                                <div class="input-with-unit-suffix input-with-unit-suffix--bare">
-                                    <input type="text" id="eePrimeRatioInput" class="other-param-input" data-param="E/E'" placeholder="" title="可由 E÷E′ 自动计算，亦可手动修改；聚焦此处展开 E′ 输入">
-                                    <span class="unit-suffix" aria-hidden="true"></span>
-                                </div>
-                                <div class="ee-prime-bubble" id="eePrimeBubble" role="group" aria-label="E′">
-                                    <div class="ee-prime-bubble-body">
-                                        <div class="ee-prime-bubble-row">
-                                            <span class="ee-prime-bubble-label">E′</span>
-                                            <div class="input-with-unit-suffix">
-                                                <input type="text" class="other-param-input" data-param="E'" placeholder="" autocomplete="off">
-                                                <span class="unit-suffix" aria-hidden="true">m/s</span>
-                                            </div>
-                                        </div>
-                                        <p class="ee-prime-bubble-hint">E/E′ = E ÷ E′（与左侧 E 联动）</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- readme 2.6 TV：右心高阶时显示；S' 参考为体重公式 -->
-                    <div class="other-param-item tv-tricuspid-row" id="tvTricuspidRow" style="display: none;">
-                        <div class="tv-tv-item">
-                            <label class="other-param-label">E（TV）</label>
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="other-param-input" data-param="E（TV）" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">m/s</span>
-                            </div>
-                        </div>
-                        <div class="tv-tv-item">
-                            <label class="other-param-label">A（TV）</label>
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="other-param-input" data-param="A（TV）" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">m/s</span>
-                            </div>
-                        </div>
-                        <div class="tv-tv-item">
-                            <label class="other-param-label">E/A（TV）</label>
-                            <div class="input-with-unit-suffix input-with-unit-suffix--bare">
-                                <input type="text" class="other-param-input" data-param="E/A（TV）" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true"></span>
-                            </div>
-                        </div>
-                        <div class="tv-tv-item">
-                            <label class="other-param-label">S'
-                                <span class="reference-value" data-param="S'" data-ref-source="formula" data-formula="sprime"></span>
-                            </label>
-                            <div class="input-with-unit-suffix">
-                                <input type="text" class="other-param-input" data-param="S'" placeholder="">
-                                <span class="unit-suffix" aria-hidden="true">cm/s</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="other-param-item">
-                        <label class="other-param-label">EA融合</label>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="other-param-input" data-param="EA融合" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">m/s</span>
-                        </div>
-                    </div>
-                    <div class="other-param-item" id="dpdtInputItem" style="display: none;">
-                        <label class="other-param-label">dP/dt</label>
-                        <div class="input-with-unit-suffix input-with-unit-suffix--long">
-                            <input type="text" class="other-param-input" data-param="dp/dt" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">mmHg/s</span>
-                        </div>
-                        <div class="dpdt-display-btn-group" aria-label="dP/dt显示开关">
-                            <button type="button" class="dpdt-display-btn" data-param="dp/dt显示" data-value="显示">显示</button>
-                        </div>
-                    </div>
-                </div>
-                <!-- 动态添加的标签页输入框 -->
-                <div class="other-params-grid" id="dynamicTagInputs"></div>
-                <!-- 反流速输入框 -->
-                <div class="regurgitation-velocity-inputs" id="regurgitationVelocityInputs">
-                    <div class="regurgitation-velocity-item" id="mitralRegurgVelocityItem" style="display: none;">
-                        <span class="regurgitation-label">二尖瓣反流速：</span>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="other-param-input regurgitation-input" data-param="二尖瓣反流速" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">m/s</span>
-                        </div>
-                        <span class="regurgitation-pressure-display" id="mitralRegurgPressureDisplay">-</span>
-                        <button type="button" class="regurgitation-unknown-btn" data-param="二尖瓣反流速未测得">未测得</button>
-                        <span class="regurgitation-severity-label">程度</span>
-                        <div class="regurgitation-severity-buttons" data-param="二尖瓣反流程度">
-                            <button class="regurgitation-severity-btn" data-value="微量">微量</button>
-                            <button class="regurgitation-severity-btn active" data-value="轻度">轻度</button>
-                            <button class="regurgitation-severity-btn" data-value="中度">中度</button>
-                            <button class="regurgitation-severity-btn" data-value="重度">重度</button>
-                        </div>
-                    </div>
-                    <div class="regurgitation-velocity-item" id="tricuspidRegurgVelocityItem" style="display: none;">
-                        <span class="regurgitation-label">三尖瓣反流速：</span>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="other-param-input regurgitation-input" data-param="三尖瓣反流速" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">m/s</span>
-                        </div>
-                        <span class="regurgitation-pressure-display" id="tricuspidRegurgPressureDisplay">-</span>
-                        <button type="button" class="regurgitation-unknown-btn" data-param="三尖瓣反流速未测得">未测得</button>
-                        <span class="regurgitation-severity-label">程度</span>
-                        <div class="regurgitation-severity-buttons" data-param="三尖瓣反流程度">
-                            <button class="regurgitation-severity-btn" data-value="微量">微量</button>
-                            <button class="regurgitation-severity-btn active" data-value="轻度">轻度</button>
-                            <button class="regurgitation-severity-btn" data-value="中度">中度</button>
-                            <button class="regurgitation-severity-btn" data-value="重度">重度</button>
-                        </div>
-                    </div>
-                    <div class="regurgitation-velocity-item" id="pulmonaryRegurgVelocityItem" style="display: none;">
-                        <span class="regurgitation-label">肺动脉瓣反流速：</span>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="other-param-input regurgitation-input" data-param="肺动脉瓣反流速" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">m/s</span>
-                        </div>
-                        <span class="regurgitation-pressure-display" id="pulmonaryRegurgPressureDisplay">-</span>
-                        <button type="button" class="regurgitation-unknown-btn" data-param="肺动脉瓣反流速未测得">未测得</button>
-                        <span class="regurgitation-severity-label">程度</span>
-                        <div class="regurgitation-severity-buttons" data-param="肺动脉瓣反流程度">
-                            <button class="regurgitation-severity-btn" data-value="微量">微量</button>
-                            <button class="regurgitation-severity-btn active" data-value="轻度">轻度</button>
-                            <button class="regurgitation-severity-btn" data-value="中度">中度</button>
-                            <button class="regurgitation-severity-btn" data-value="重度">重度</button>
-                        </div>
-                    </div>
-                    <div class="regurgitation-velocity-item" id="aorticRegurgVelocityItem" style="display: none;">
-                        <span class="regurgitation-label">主动脉瓣反流速：</span>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" class="other-param-input regurgitation-input" data-param="主动脉瓣反流速" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">m/s</span>
-                        </div>
-                        <span class="regurgitation-pressure-display" id="aorticRegurgPressureDisplay">-</span>
-                        <button type="button" class="regurgitation-unknown-btn" data-param="主动脉瓣反流速未测得">未测得</button>
-                        <span class="regurgitation-severity-label">程度</span>
-                        <div class="regurgitation-severity-buttons" data-param="主动脉瓣反流程度">
-                            <button class="regurgitation-severity-btn" data-value="微量">微量</button>
-                            <button class="regurgitation-severity-btn active" data-value="轻度">轻度</button>
-                            <button class="regurgitation-severity-btn" data-value="中度">中度</button>
-                            <button class="regurgitation-severity-btn" data-value="重度">重度</button>
-                        </div>
-                    </div>
-                    <!-- readme 2.7 GS/FWS：右心高阶；瓣口反流速区域最后一行之下 -->
-                    <div class="regurgitation-velocity-item gs-fws-row" id="gsFwsRow" style="display: none;">
-                        <span class="regurgitation-label">右心室应变</span>
-                        <div class="input-with-unit-suffix gs-fws-input-wrap">
-                            <span class="gs-fws-mini-label">GS</span>
-                            <input type="text" class="other-param-input" data-param="GS" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">%</span>
-                        </div>
-                        <div class="input-with-unit-suffix gs-fws-input-wrap">
-                            <span class="gs-fws-mini-label">FWS</span>
-                            <input type="text" class="other-param-input" data-param="FWS" placeholder="">
-                            <span class="unit-suffix" aria-hidden="true">%</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text-main);
+      }
 
-            <!-- 4. 心率 -->
-            <div class="parameters-section">
-                <div class="heart-rate-section">
-                    <h3 class="parameters-section-title">4.心率</h3>
-                    <div class="input-with-unit-suffix heart-rate-input-wrap">
-                        <input type="text" class="other-param-input heart-rate-input" data-param="心率" placeholder="">
-                        <span class="unit-suffix" aria-hidden="true">bpm</span>
-                    </div>
-                    <button type="button" id="rhythmIrregularButton" class="rhythm-irregular-btn" aria-pressed="false">节律不齐</button>
-                </div>
-            </div>
-                </div>
-                </div>
-                </div>
-            </div>
-            <div class="right-sidebar" id="rightSidebar">
-                <div class="right-sidebar-resize-triangle" id="rightSidebarResizeTriangle" title="拖拽调节大小"></div>
-                <div id="refreshButtonTopSnipHint" class="refresh-button-top-snip-hint" role="status" aria-live="polite" aria-hidden="true" style="display: none;"></div>
-                <div class="template-section">
-                    <div class="section-header">
-                        <h4>所见</h4>
-                        <button class="copy-btn-small" id="copyFindingsBtn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <textarea class="template-text" id="findingsText" rows="20" readonly placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
-                    
-                    <div class="section-header">
-                        <h4 class="conclusion-title">结论</h4>
-                        <button class="copy-btn-small" id="copyConclusionBtn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <textarea class="template-text" id="conclusionText" rows="5" readonly placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
-                    
-                    </div>
-            </div>
-    </div>
+      .topbar {
+        height: 56px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        background: rgba(2, 6, 23, 0.9);
+      }
 
-    <!-- 操作指引：第1层图标，第2/3层卡片 -->
-    <div class="guide-wrapper">
-        <div class="guide-card" id="guideCard">
-            <div class="guide-card-body" id="guideCardBody"></div>
-        </div>
-        <button type="button" class="guide-trigger" id="guideTrigger" title="操作指引" aria-label="操作指引">
-            <svg class="guide-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9v1zm3-19C8.1 2 5 5.1 5 9c0 2.4 1.2 4.5 3 5.7V17c0 .5.4 1 1 1h6c.6 0 1-.5 1-1v-2.3c1.8-1.3 3-3.4 3-5.7 0-3.9-3.1-7-7-7z"/>
-            </svg>
-        </button>
-    </div>
+      .brand {
+        font-size: 15px;
+        font-weight: 600;
+        color: #f3f4f6;
+      }
 
-    <script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="script.js"></script>
-</body>
+      .nav-links {
+        display: flex;
+        gap: 18px;
+      }
+
+      .nav-links a {
+        color: var(--text-sub);
+        text-decoration: none;
+        font-size: 14px;
+      }
+
+      .nav-links a:hover {
+        color: var(--text-main);
+      }
+
+      .main {
+        min-height: calc(100vh - 56px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .panel {
+        width: 100%;
+        max-width: 560px;
+        text-align: center;
+      }
+
+      .title {
+        margin: 0 0 10px;
+        font-size: 44px;
+        line-height: 1.15;
+        font-weight: 700;
+      }
+
+      .desc {
+        margin: 0 0 26px;
+        color: var(--text-sub);
+        font-size: 16px;
+      }
+
+      .links {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 10px;
+      }
+
+      .links a {
+        display: block;
+        text-decoration: none;
+        color: #042f2e;
+        background: var(--brand);
+        border: 1px solid transparent;
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: background 0.2s ease;
+      }
+
+      .links a:hover {
+        background: var(--brand-hover);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">影像知识库</div>
+      <nav class="nav-links">
+        <a href="vetvault_changelog/">更新日志</a>
+        <a href="https://app.paperpile.com/" target="_blank" rel="noopener noreferrer">文献库</a>
+      </nav>
+    </header>
+    <main class="main">
+      <section class="panel">
+        <h1 class="title">Vet Vault</h1>
+        <p class="desc">请选择你要进入的功能页面</p>
+        <ul class="links">
+        <li><a href="echocardiography_dev">心超报告生成器</a></li>
+        <li><a href="vetvault_changelog/">更新日志</a></li>
+        <li><a href="my_docs">知识库</a></li>
+        <li><a href="charts/dashboard.html">统计看板</a></li>
+        <li><a href="dentalchart/dental_chart_pub.html">牙表</a></li>
+        <li><a href="queue_demo/screen1.html">排队操作人员demo</a></li>
+        <li><a href="queue_demo/screen2.html">排队对外显示demo</a></li>
+        <li><a href="https://wwbbx.lanzouw.com/b0fqbk9qd" target="_blank" rel="noopener noreferrer">合图</a></li>
+        </ul>
+      </section>
+    </main>
+  </body>
 </html>
