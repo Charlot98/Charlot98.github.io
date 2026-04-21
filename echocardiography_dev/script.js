@@ -2340,7 +2340,7 @@
             });
         });
 
-        // dp/dt：显示开关（单按钮），影响 MMVD 与 Normal（二尖瓣反流激活）所见是否输出 dp/dt 行
+        // dp/dt：显示开关（单按钮）；所见仅在「二尖瓣反流」激活且选择显示时输出 dp/dt 行
         const dpdtShowBtn = document.querySelector('#dpdtInputItem button[data-param="dp/dt显示"][data-value="显示"]');
         if (dpdtShowBtn) {
             // #region agent log BTN_dpdt_bind
@@ -3814,13 +3814,11 @@
         return !!(btn && btn.classList.contains('active'));
     }
 
-    /** dP/dt：MMVD 始终显示；Normal 仅在勾选「二尖瓣反流」时显示（位置与 MMVD 相同） */
+    /** dP/dt：仅「二尖瓣反流」标签激活时显示（所见/结论/MD 占位符与此一致） */
     function syncDpdtInputItemVisibility() {
         const dpdtItem = document.getElementById('dpdtInputItem');
         if (!dpdtItem) return;
-        const show =
-            selectedDiseaseType === 'MMVD' ||
-            (selectedDiseaseType === 'Normal' && isMitralRegurgitationTagActive());
+        const show = isMitralRegurgitationTagActive();
         if (show) {
             dpdtItem.style.display = 'flex';
             const dpdtShowBtn = dpdtItem.querySelector('button[data-param="dp/dt显示"][data-value="显示"]');
@@ -4977,7 +4975,7 @@
     }
 
     /**
-     * Normal / MMVD 规则路径：左室容量过载与左房增大判定（结论与所见「腔室大小评估」共用）
+     * Normal / MMVD 规则路径：左室容量过载与左房增大判定（用于结论；所见不再输出「腔室大小评估」行）
      * @param {(key: string, defaultValue?: string) => string} get 与 templateConfig.getParam 一致
      */
     function computeRuleBaseChamberAssessment(get, referenceRange) {
@@ -5542,6 +5540,17 @@
             // 只移除含空格/Tab 的空行，不影响模板中真正的空行（只有 \n 的那种）
             result = result.replace(/^[ \t]+\n/gm, '');
 
+            // dP/dt 所见行（DCM/PDA 等 MD 模板 {dP_dt所见行}；与 generateFindings 一致：二尖瓣反流 + 显示开关）
+            let dPdtFindingsLine = '';
+            if (isTagActive('二尖瓣反流')) {
+                const dpdtDisplay = (get('dp/dt显示', '不显示') || '').toString().trim();
+                const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
+                if (dpdtDisplay === '显示') {
+                    dPdtFindingsLine = `    dP/dt：${formatValue(dpdtRaw)}mmHg/s\n`;
+                }
+            }
+            result = result.replace(/{dP_dt所见行}/g, dPdtFindingsLine);
+
             // 3.彩色多普勒检查这一行：如果尾部是中文逗号，统一改为中文分号
             // 例如只激活三尖瓣/肺动脉瓣反流时，会出现“...反流，”的结尾
             result = result.replace(/^(3\.\s*彩色多普勒检查[^\n]*?)，\s*$/gm, '$1；');
@@ -5906,10 +5915,6 @@
                     const rpadVal = get('RPAD', '');
                     findings += `    RPAD: ${rpadVal ? formatValue(rpadVal) : ''}%\n`;
                 }
-                const chamberAssessFindings = computeRuleBaseChamberAssessment(get, referenceRange);
-                if (chamberAssessFindings.chamberLineBody) {
-                    findings += `    腔室大小评估：${chamberAssessFindings.chamberLineBody}。\n`;
-                }
                 findings += `\n`;
 
                 // 3. 彩色多普勒检查：根据左侧标签动态描述各瓣口血流
@@ -5980,8 +5985,8 @@
                     findings += `    TV：  E:${eTV}m/s  A: ${aTV}m/s   E/A: ${eaTV}；  S':${sP}cm/s；\n`;
                 }
 
-                // MMVD 或 Normal（二尖瓣反流激活）：在 E/A 行下一行展示 dp/dt（由 dp/dt 显示开关控制，与 MMVD 相同）
-                if (diseaseType === 'MMVD' || (diseaseType === 'Normal' && isTagActive('二尖瓣反流'))) {
+                // 二尖瓣反流激活：在 E/A 行下一行展示 dp/dt（由 dp/dt 显示开关控制）
+                if (isTagActive('二尖瓣反流')) {
                     const dpdtDisplay = (get('dp/dt显示', '不显示') || '').toString().trim();
                     const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
                     if (dpdtDisplay === '显示') {
@@ -6903,16 +6908,15 @@
                     }
                 }
 
-                const dpdtMitralContext = diseaseType === 'MMVD' || (diseaseType === 'Normal' && mitralActive);
                 let dpdtNum = NaN;
-                if (dpdtMitralContext) {
+                if (mitralActive) {
                     const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
                     dpdtNum = dpdtRaw ? parseFloat(dpdtRaw) : NaN;
                 }
 
                 // ESVI≥35 且 dP/dt＞1800：不采用「轻度下降/下降」表述，收缩功能按「尚可」与后文组合（覆盖纯 ESVI 结论）
                 if (
-                    dpdtMitralContext &&
+                    mitralActive &&
                     !Number.isNaN(dpdtNum) &&
                     dpdtNum > 1800 &&
                     !Number.isNaN(esvi) &&
@@ -6921,9 +6925,9 @@
                     systolicStatus = '未见明显异常';
                 }
 
-                // MMVD 或 Normal（二尖瓣反流）：dP/dt＜1800mmHg/s 时，认为收缩功能“下降”（优先于上条尚可）
+                // 二尖瓣反流激活：dP/dt＜1800mmHg/s 时，认为收缩功能“下降”（优先于上条尚可）
                 let dpdtIndicatesSystolicDecline = false;
-                if (dpdtMitralContext && !Number.isNaN(dpdtNum) && dpdtNum < 1800) {
+                if (mitralActive && !Number.isNaN(dpdtNum) && dpdtNum < 1800) {
                     dpdtIndicatesSystolicDecline = true;
                     systolicStatus = '下降';
                 }
