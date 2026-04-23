@@ -6,10 +6,10 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
-    /* 背景：左侧50%与左侧栏一致(#fff)，右侧50%波点，固定不随滚动/鼠标变换 */
-    background-color: #fff;
+    /* 背景：略灰底，左侧50%与左侧栏区域同色遮罩，右侧纹理，固定不随滚动 */
+    background-color: #f1f3f5;
     background-image:
-        linear-gradient(to right, #fff 0%, #fff 50%, transparent 50%),
+        linear-gradient(to right, #f1f3f5 0%, #f1f3f5 50%, transparent 50%),
         radial-gradient(circle, #d1d5db 1px, transparent 1px);
     background-size: 100% 100%, 20px 20px;
     background-position: 0 0, 0 0;
@@ -25,54 +25,51 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* 页面顶部的控制栏 */
+/* 顶栏：置于左侧栏顶部，2行显示 */
 .top-disease-selector {
     background: linear-gradient(to bottom, #ffffff, #f8f9fa);
-    padding: 0px 20px;
+    padding: 10px 14px 12px;
     min-height: 42px;
     box-shadow: none;
     border-bottom: 1px solid #818181;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
+    flex-shrink: 0;
     display: flex;
-    align-items: center;
-    gap: 20px;
-    flex-wrap: nowrap;
+    flex-direction: column;
+    gap: 8px;
     width: 100%;
     box-sizing: border-box;
 }
 
-.top-left-controls {
+.top-row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    width: 50%;
-    flex: 0 0 50%;
-    box-sizing: border-box;
-    min-width: 0;
-}
-
-.top-right-controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    width: 50%;
-    flex: 0 0 50%;
-    box-sizing: border-box;
     justify-content: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
     min-width: 0;
 }
 
-.ocr-controls {
+/* 疾病模型选择：顶栏最左侧 */
+.top-row .disease-tags-wrap {
     display: flex;
     align-items: center;
-    gap: 4px;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 40%;
     min-width: 0;
+    flex-shrink: 0;
+}
+
+/* 参考、体重等：顶栏 40% 处起左对齐 */
+.top-row .reference-weight-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+    margin-left: 0;
 }
 
 .ocr-status-tag {
@@ -80,7 +77,7 @@ body {
     align-items: center;
     padding: 2px 8px;
     border-radius: 999px;
-    background-color: #eef2ff;
+    background-color: #ffffff;
     color: #4b5563;
     font-size: 11px;
     white-space: nowrap;
@@ -96,123 +93,300 @@ body {
 /* 响应式设计：当屏幕宽度非常小时，才换行 */
 /* 响应式设计暂时关闭 */
 /* @media (max-width: 768px) {
-    .top-disease-selector {
-        flex-wrap: wrap;
-    }
-    
-    .top-left-controls,
-    .top-right-controls {
+    .top-row {
         width: 100%;
-        flex: 0 0 100%;
     }
 } */
 
-/* 顶栏疾病类型按钮 */
-.top-disease-selector .disease-buttons {
+/* 疾病类型选择：顶栏最左侧，风格同反流程度选择框 */
+.disease-tags-row,
+.disease-tags-wrap {
     display: flex;
-    flex-direction: row;
-    gap: 10px;
-    align-items: center;
     flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
 }
 
-.top-disease-selector .disease-button {
-    width: auto;
-    min-width: 90px;
-    padding: 6px 16px;
-    flex-shrink: 0;
-    border: 1px solid #818181;
+.disease-tag {
+    padding: 4px 12px;
+    border: 1px solid #ddd;
     border-radius: 4px;
-    background-color: #fff;
-    font-size: 13px;
-    font-weight: 600;
-    color: #555;
+    background-color: #f5f5f5;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
     cursor: pointer;
     text-align: center;
-    box-shadow: none;
+    white-space: nowrap;
     transition: all 0.2s ease;
 }
 
-.top-disease-selector .disease-button:hover {
+.disease-tag:hover {
     border-color: #4a90e2;
-    color: #4a90e2;
     background-color: #e8f2ff;
-    box-shadow: none;
+    color: #4a90e2;
 }
 
-.top-disease-selector .disease-button.active {
+.disease-tag:focus {
+    outline: none;
     border-color: #4a90e2;
-    background: #4a90e2;
+}
+
+.disease-tag.active {
+    border-color: #4a90e2;
+    background-color: #4a90e2;
+    color: #fff;
+    font-weight: 600;
+}
+
+.disease-tag-select {
+    padding: 4px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f5f5f5;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.disease-tag-select:hover {
+    border-color: #4a90e2;
+    background-color: #e8f2ff;
+    color: #4a90e2;
+}
+
+.disease-tag-select:focus {
+    outline: none;
+    border-color: #4a90e2;
+}
+
+.disease-tag-select.active {
+    border-color: #4a90e2;
+    background-color: #4a90e2;
     color: #fff;
 }
 
-/* 更多选择下拉框 - 参考"参考"下拉框格式 */
-.more-disease-select-wrapper {
-    display: flex;
-    align-items: center;
-}
-
-.more-disease-select {
-    padding: 7px 14px;
-    border: 1px solid  #818181;
-    border-radius: 4px;
-    font-size: 13px;
-    background-color: #fff;
-    color: #333;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 100px;
-}
-
-.more-disease-select:hover {
-    border-color: #4a90e2;
-    color: #4a90e2;
-}
-
-.more-disease-select:focus {
-    outline: none;
-    border-color: #4a90e2;
-    color: #4a90e2;
-}
-
-.more-disease-select.active {
-    border-color: #4a90e2;
-    background-color: #fff;
-    color: #4a90e2;
-}
-
-.more-disease-select.active:hover {
-    border-color: #4a90e2;
-}
-
-/* 刷新按钮样式 */
+/* 刷新按钮 - 背景和边框始终透明，顶栏最右侧 */
 .refresh-button {
-    padding: 6px;
-    border: none;
+    padding: 4px 12px;
+    border: 1px solid transparent;
     border-radius: 4px;
-    background-color: #4a91e200;
-    color: #101010;
+    background-color: transparent;
+    color: #666;
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: auto;
+    height: auto;
+    min-width: 28px;
+    min-height: 28px;
     flex-shrink: 0;
     box-shadow: none;
+    position: relative;
+    margin-left: auto;
 }
 
 .refresh-button:hover {
-    background-color: #e8f2ff;
-    box-shadow: none;
-    transform: translateY(-1px);
-    border: 1px solid #4a90e2;
+    border-color: transparent;
+    background-color: transparent;
+    color: #4a90e2;
+}
+
+.refresh-button:focus {
+    outline: none;
+    border-color: transparent;
 }
 
 .refresh-button:active {
-    transform: translateY(0);
+    transform: none;
+}
+
+.refresh-button::after {
+    /* 移除刷新按钮右上角红点提示 */
+    content: none;
+}
+
+.refresh-button::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    top: 50%;
+    left: auto;
+    right: 0;
+    transform: translateY(-50%) translateX(-8px);
+    opacity: 0; /* 交由 JS 计算并固定定位的提示层显示 */
+    padding: 4px 8px;
+    background-color: rgba(17, 24, 39, 0.95);
+    color: #fff;
+    font-size: 11px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 10001;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.refresh-button:hover::before,
+.refresh-button:focus::before {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-8px);
+}
+
+/* 刷新旁提示：白底、深灰边；字体与 body 一致 */
+.refresh-button-tooltip {
+    position: fixed;
+    z-index: 10001;
+    background-color: #fff;
+    color: #333;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 400;
+    letter-spacing: normal;
+    border-radius: 8px;
+    white-space: nowrap;
+    padding: 6px 11px;
+    pointer-events: none;
+    border: 1px solid #6b7280;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.06),
+        0 6px 16px rgba(15, 23, 42, 0.08);
+    display: none;
+    overflow: visible;
+    background-clip: padding-box;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* 右侧栏顶部「快速截图」：白底、深灰边，可拖动 */
+.refresh-button-top-snip-hint {
+    position: fixed;
+    left: 50%;
+    top: 0px;
+    transform: translateX(-50%);
+    z-index: 10001;
+    display: none;
+    width: fit-content;
+    max-width: calc(100vw - 16px);
+    pointer-events: auto;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    padding: 5px 10px 5px 9px;
+    border-radius: 8px;
+    border: 1px solid #6b7280;
+    background: #fff;
+    color: #333;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.6;
+    font-weight: 400;
+    box-shadow:
+        0 1px 2px rgba(15, 23, 42, 0.06),
+        0 6px 16px rgba(15, 23, 42, 0.08);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.snip-hint-inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.snip-hint-keys {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.refresh-button-top-snip-hint:active {
+    cursor: grabbing;
+}
+
+.snip-hint-label {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 400;
+    color: #333;
+    letter-spacing: normal;
+}
+
+.refresh-button-top-snip-hint kbd {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    padding: 3px 7px;
+    border-radius: 5px;
+    color: #fff;
+    background: #000;
+    border: none;
     box-shadow: none;
+}
+
+/* 刷新按钮提示框：循环向左轻微移动 */
+.refresh-tooltip-left-loop {
+    animation: refreshTooltipLeftLoop 1.4s ease-in-out infinite;
+}
+
+@keyframes refreshTooltipLeftLoop {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-4px); }
+}
+
+/* 箭头：双层三角（外边框色 + 内与卡片同色） */
+.refresh-button-tooltip::before,
+.refresh-button-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    pointer-events: none;
+    border-style: solid;
+    border-color: transparent;
+}
+
+.refresh-button-tooltip::before {
+    z-index: 0;
+}
+
+.refresh-button-tooltip::after {
+    z-index: 1;
+}
+
+.refresh-button-tooltip[data-placement="right"]::before {
+    left: -7px;
+    right: auto;
+    border-width: 7px 7px 7px 0;
+    border-right-color: #6b7280;
+}
+
+.refresh-button-tooltip[data-placement="right"]::after {
+    left: -6px;
+    right: auto;
+    border-width: 6px 6px 6px 0;
+    border-right-color: #fff;
+}
+
+.refresh-button-tooltip[data-placement="left"]::before {
+    right: -7px;
+    left: auto;
+    border-width: 7px 0 7px 7px;
+    border-left-color: #6b7280;
+}
+
+.refresh-button-tooltip[data-placement="left"]::after {
+    right: -6px;
+    left: auto;
+    border-width: 6px 0 6px 6px;
+    border-left-color: #fff;
 }
 
 .refresh-icon {
@@ -226,77 +400,82 @@ body {
     transform: rotate(180deg);
 }
 
-/* 含辛普森测量按钮 */
-.simpson-button {
-    padding: 7px 14px;
-    border: 1px solid #818181;
+/* 含辛普森测量按钮 - 左侧栏1.M-mode标题下，风格同反流程度选择框 */
+.simpson-tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 0;
+    margin-bottom: 8px;
+}
+
+.simpson-tag {
+    padding: 4px 12px;
+    border: 1px solid #ddd;
     border-radius: 4px;
-    background-color: #ffffff;
-    font-size: 13px;
+    background-color: #f5f5f5;
+    font-size: 12px;
     font-weight: 500;
     color: #666;
     cursor: pointer;
-    transition: all 0.2s ease;
     text-align: center;
     white-space: nowrap;
-    flex-shrink: 0;
-    min-width: fit-content;
+    transition: all 0.2s ease;
 }
 
-.simpson-button:hover {
+.simpson-tag:hover {
     border-color: #4a90e2;
-    color: #4a90e2;
     background-color: #e8f2ff;
+    color: #4a90e2;
 }
 
-.simpson-button:focus {
+.simpson-tag:focus {
     outline: none;
     border-color: #4a90e2;
 }
 
-.simpson-button.active {
+.simpson-tag.active {
     border-color: #4a90e2;
     background-color: #4a90e2;
     color: #fff;
-    box-shadow: none;
     font-weight: 600;
 }
 
 
-/* 顶栏参考范围选择框 */
+/* 顶栏参考范围选择框 - 风格同疾病类型 */
 .reference-range-select-wrapper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 1;
     min-width: 0;
 }
 
-/* 参考 */
 .reference-range-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #666;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
     white-space: nowrap;
     flex-shrink: 0;
 }
 
 .reference-range-select {
-    padding: 7px 14px;
-    border: 1px solid #818181;
-    border-radius: 4px;
-    font-size: 13px;
-    background-color: #ffffff00;
+    padding: 4px 10px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 2px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    background-color: #f9fafb;
     cursor: pointer;
     transition: all 0.2s ease;
-    min-width: 150px;
-    max-width: 200px;
+    min-width: 100px;
     flex-shrink: 1;
 }
 
 .reference-range-select:hover {
-    border-color: #4a90e2;
-    color: #4a90e2;
+    border-color: #bbb;
+    background-color: #e8e8e8;
 }
 
 .reference-range-select:focus {
@@ -304,39 +483,49 @@ body {
     border-color: #4a90e2;
 }
 
-/*体重*/
+/* 体重输入 - 风格同疾病类型 */
 .weight-input-wrapper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-shrink: 0;
-    min-width: 200px;
 }
 
 .weight-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #666;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
     white-space: nowrap;
     flex-shrink: 0;
 }
 
+.weight-input-wrapper .input-with-unit-suffix.weight-input-with-unit {
+    width: 120px;
+    min-width: 120px;
+    flex-shrink: 0;
+}
+
+.weight-input-wrapper .weight-input-with-unit .weight-input {
+    width: 100%;
+    min-width: 0;
+}
+
 .weight-input {
-    padding: 7px 14px;
-    border: 1px solid #818181;
-    border-radius: 4px;
-    background-color: transparent;
-    font-size: 13px;
+    padding: 4px 10px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 2px;
+    background-color: #f9fafb;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
     transition: all 0.2s ease;
-    width: 80px;
-    min-width: 70px;
     flex-shrink: 0;
     text-align: center;
 }
 
-
 .weight-input:hover {
-    border-color: #4a90e2;
+    border-color: #bbb;
+    background-color: #e8e8e8;
 }
 
 .weight-input:focus {
@@ -348,13 +537,13 @@ body {
     font-size: 10px;
     color: #888;
     font-style: italic;
-    margin-left: 4px;
+    margin-left: 2px;
     white-space: nowrap;
     flex-shrink: 0;
-    padding: 1px 14px;
+    padding: 0;
     background-color: transparent;
-    border-radius: 4px;
-    min-width: 150px;
+    border-radius: 0;
+    min-width: 0;
     text-align: left;
     display: inline-block;
 }
@@ -391,19 +580,28 @@ body {
 }
 
 
-/* 左侧栏（50%） - 位置固定，高度自适应，外侧边缘与右侧栏对齐，实线分隔 */
+/* 左侧栏（50%） - 顶栏置顶，参数区可滚动 */
 .left-sidebar {
     position: fixed;
     left: 0;
-    top: 42px;
+    top: 0;
     width: 50%;
-    height: calc(100vh - 42px);
-    padding: 14px 14px 18px 14px;
-    overflow-y: auto;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: visible; /* 允许刷新按钮右侧 tooltip 横向溢出显示 */
+    overflow-y: hidden; /* 纵向由 left-sidebar-scroll 控制滚动 */
     background-color: #fff;
     border-right: 1px solid #818181;
     z-index: 10;
     box-sizing: border-box;
+}
+
+.left-sidebar-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 14px 18px 14px;
 }
 
 /* 左侧栏首行空白边框 */
@@ -411,6 +609,19 @@ body {
     margin-bottom: 8px;
     padding-bottom: 4px;
     border-bottom: none;
+}
+
+/* 1.M-mode标题行：标题与OCR状态同一行 */
+.m-mode-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.m-mode-title-row .parameters-section-title {
+    margin: 0;
 }
 
 /* 左侧栏首行标题 */
@@ -427,6 +638,10 @@ body {
     margin-bottom: 0;
     padding-bottom: 8px;
     border-bottom: none;
+}
+/* 一级标题与前一区块的间距，便于区分不同内容 */
+.parameters-section:not(:first-child) {
+    margin-top: 14px;
 }
 
 .parameters-section:last-child {
@@ -489,8 +704,9 @@ body {
     gap: 8px;
 }
 
-.combined-input-wrapper .m-type-input {
+.combined-input-wrapper .input-with-unit-suffix {
     flex: 1;
+    min-width: 0;
 }
 
 /* 确保所有combined-input-wrapper中的input-with-label-wrapper宽度一致 */
@@ -500,8 +716,8 @@ body {
     max-width: 100%;
 }
 
-/* EDV辛普森、ESV辛普森、EF辛普森输入框宽度保持一致 */
-.combined-input-wrapper .simpson-input {
+/* EDV辛普森、ESV辛普森、EF辛普森：与 Teich 并排，各占约一半（内含单位后缀） */
+.combined-input-wrapper .simpson-field-with-unit {
     flex: 0 0 50%;
     width: 50%;
     min-width: 0;
@@ -596,11 +812,126 @@ body {
     grid-column: span 2;
 }
 
+/* TAPSE（右心高阶）：跨两列；输入框右侧展示 TAPSE/AO */
+.m-type-item-tapse {
+    grid-column: span 2;
+}
+
+.tapse-input-with-ratio {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+}
+
+.tapse-input-with-ratio .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.tapse-ao-ratio-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* 输入框内常显单位（不再用 placeholder 显示单位，避免与常显重复） */
+.input-with-unit-suffix {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.input-with-unit-suffix .m-type-input,
+.input-with-unit-suffix .other-param-input,
+.input-with-unit-suffix .weight-input {
+    padding-right: 2.75rem;
+    box-sizing: border-box;
+}
+
+/* 无单位字段：不预留右侧占位（LA/AO、E/A、E/E' 等） */
+.input-with-unit-suffix--bare .m-type-input,
+.input-with-unit-suffix--bare .other-param-input {
+    padding-right: 8px;
+}
+
+/* dp/dt 等较长单位 */
+.input-with-unit-suffix.input-with-unit-suffix--long .m-type-input,
+.input-with-unit-suffix.input-with-unit-suffix--long .other-param-input {
+    padding-right: 3.75rem;
+}
+
+.input-with-unit-suffix .unit-suffix {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #888;
+    pointer-events: none;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.mmvd-thickness-wrap {
+    width: 100px;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.mmvd-thickness-wrap .mmvd-thickness-input {
+    width: 100%;
+}
+
+.la-volume-input-wrap {
+    width: 100px;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.la-volume-input-wrap .la-volume-input {
+    width: 100%;
+}
+
+.regurgitation-velocity-item .input-with-unit-suffix {
+    width: 100px;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.regurgitation-velocity-item .input-with-unit-suffix .other-param-input.regurgitation-input {
+    width: 100%;
+}
+
+.heart-rate-section .input-with-unit-suffix.heart-rate-input-wrap {
+    width: 180px;
+    min-width: 180px;
+    flex-shrink: 0;
+}
+
+.heart-rate-section .heart-rate-input-wrap .heart-rate-input {
+    width: 100%;
+}
+
 .pressure-gradient-display {
     font-size: 13px;
     color: #2c3e50;
     font-weight: 500;
     margin-left: 4px;
+}
+
+/* TAPSE/Ao 比值：≤0.65 异常标红（与 .pressure-gradient-display 颜色冲突时用 class + !important） */
+#tapseAoRatioDisplay.tapse-ao-ratio--low {
+    color: #c0392b !important;
+}
+
+#tapseAoRatioDisplay.tapse-ao-ratio--muted {
+    color: #666 !important;
 }
 
 .pressure-gradient-display-wrapper {
@@ -652,7 +983,533 @@ body {
     flex-direction: column;
 }
 
-/* dp/dt：单独占一行（跨越两列） */
+/* AO、LA、LA/AO 同行三列布局 */
+.la-ao-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.la-ao-row .la-ao-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* LAD Max：占满一行；标题为可点击文字（保留下划线），单击打开全屏示意图 */
+.max-lad-row {
+    grid-column: 1 / -1;
+}
+.max-lad-label-wrap {
+    align-self: flex-start;
+}
+.max-lad-title-trigger {
+    display: inline;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-weight: 500;
+    color: inherit;
+    cursor: pointer;
+    border-bottom: 1px dotted #94a3b8;
+    line-height: inherit;
+    text-align: left;
+}
+.max-lad-title-trigger:hover {
+    color: #4a90e2;
+    border-bottom-color: #4a90e2;
+}
+.max-lad-title-trigger:focus-visible {
+    outline: 2px solid #4a90e2;
+    outline-offset: 2px;
+}
+
+/* readme 2.2–2.3 PA/Ao + FAC（右心高阶）：首行仅 PA/Ao（PA、AO2 在气泡内）；次行 FAC 全宽 */
+.pa-ao-advanced-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    align-items: start;
+}
+
+.pa-ao-advanced-row .pa-ao-adv-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.pa-ao-adv-item--paa-wrap {
+    overflow: visible;
+}
+
+.pa-ao-paa-wrap {
+    position: relative;
+    width: 100%;
+}
+
+/* PA/Ao 比值：默认灰底，可手动输入或点击展开气泡 */
+#paAoRatioInput {
+    background-color: #f8f9fa;
+    cursor: text;
+}
+
+/* PA、AO（2）气泡：聚焦 PA/Ao 或气泡内输入时显示 */
+.pa-ao-bubble {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 240px;
+    max-width: min(100vw - 24px, 320px);
+    z-index: 120;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #818181;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.pa-ao-paa-wrap:focus-within .pa-ao-bubble {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.pa-ao-bubble-body {
+    padding: 8px 10px 6px;
+}
+
+.pa-ao-bubble-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.pa-ao-bubble-row:last-of-type {
+    margin-bottom: 4px;
+}
+
+.pa-ao-bubble-label {
+    flex: 0 0 3.25em;
+    font-size: 12px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.pa-ao-bubble-row .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.pa-ao-bubble-hint {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+    margin: 0;
+    padding-top: 2px;
+    border-top: 1px solid #eee;
+}
+
+.pa-ao-advanced-row .pa-ao-adv-item--fac {
+    grid-column: 1 / -1;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.pa-ao-advanced-row .pa-ao-fac-input-wrap {
+    width: 100%;
+    max-width: 100%;
+}
+
+.pa-ao-advanced-row .pa-ao-fac-input-wrap .other-param-input {
+    width: 100%;
+    min-width: 0;
+}
+
+/* readme 2.4 RPAD：单行 + 气泡内舒张/收缩直径 */
+.rpad-advanced-row {
+    grid-column: 1 / -1;
+    display: block;
+}
+
+.rpad-adv-item--rpad-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: visible;
+}
+
+.rpad-paa-wrap {
+    position: relative;
+    width: 100%;
+}
+
+#rpadRatioInput {
+    background-color: #f8f9fa;
+    cursor: text;
+}
+
+.rpad-bubble {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 240px;
+    max-width: min(100vw - 24px, 320px);
+    z-index: 120;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #818181;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.rpad-paa-wrap:focus-within .rpad-bubble {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.rpad-bubble-body {
+    padding: 8px 10px 6px;
+}
+
+.rpad-bubble-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.rpad-bubble-row:last-of-type {
+    margin-bottom: 4px;
+}
+
+.rpad-bubble-label {
+    flex: 0 0 4.5em;
+    font-size: 12px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.rpad-bubble-row .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.rpad-bubble-hint {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+    margin: 0;
+    padding-top: 2px;
+    border-top: 1px solid #eee;
+}
+
+/* 参数标题旁：正常范围提示 / 「参考值」说明（与 .reference-value 搭配） */
+.param-normal-hint {
+    font-size: 11px;
+    font-weight: 400;
+    color: #888;
+    margin-left: 4px;
+    white-space: nowrap;
+}
+
+/* readme 2.5 VPA/VAO：默认横向；右心高阶时 VPA|VAO 仍与未开启时同排，VTI|AT/ET 另起整行 */
+.vpa-vao-wrap {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: flex-start;
+}
+
+/* VPA、VAO：与左栏其它项一致，标签在输入框上一行 */
+.vpa-vao-wrap .vpa-row,
+.vpa-vao-wrap .vao-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+}
+
+.vpa-vao-wrap:not(.right-heart-advanced) .vti-atet-row {
+    display: none !important;
+}
+
+/* 右心高阶开启：不改变 VPA/VAO 的并排宽度，仅让 VTI/AT/ET 行占满换行 */
+.vpa-vao-wrap.right-heart-advanced .vti-atet-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 100%;
+}
+
+.vti-atet-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.vti-atet-item.atet-wrap {
+    overflow: visible;
+}
+
+.atet-paa-wrap {
+    position: relative;
+    width: 100%;
+}
+
+#atetRatioInput {
+    background-color: #f8f9fa;
+    cursor: text;
+}
+
+.atet-bubble {
+    position: absolute;
+    left: 0;
+    top: calc(100% + 4px);
+    min-width: 220px;
+    max-width: min(100vw - 24px, 300px);
+    z-index: 120;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #818181;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.atet-paa-wrap:focus-within .atet-bubble {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.atet-bubble-body {
+    padding: 8px 10px 6px;
+}
+
+.atet-bubble-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.atet-bubble-label {
+    flex: 0 0 2em;
+    font-size: 12px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.atet-bubble-row .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.atet-bubble-hint {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+    margin: 0;
+    padding-top: 6px;
+    border-top: 1px solid #eee;
+}
+
+/* readme 2.6 三尖瓣 TV 行 */
+.tv-tricuspid-row {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    align-items: start;
+}
+
+.tv-tricuspid-row .tv-tv-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+@media (max-width: 1200px) {
+    .tv-tricuspid-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* readme 2.7 GS/FWS：反流速区域末行之下 */
+.gs-fws-row {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.gs-fws-row .regurgitation-label {
+    width: auto;
+    min-width: 5em;
+}
+
+.gs-fws-input-wrap {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+}
+
+.gs-fws-mini-label {
+    font-size: 12px;
+    color: #555;
+    white-space: nowrap;
+}
+
+.gs-fws-input-wrap .input-with-unit-suffix {
+    width: auto;
+    min-width: 4rem;
+}
+
+/* 舒张参数四联行：E、A、E/A、E/E'（E′ 在 E/E' 气泡内） */
+.e-diastolic-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+    gap: 6px;
+}
+
+.e-diastolic-row .diastolic-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.e-diastolic-row .other-param-label {
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.e-diastolic-row .input-with-unit-suffix .other-param-input {
+    width: 100%;
+    min-width: 0;
+    padding: 4px 6px;
+    font-size: 12px;
+}
+
+.e-diastolic-row .input-with-unit-suffix:not(.input-with-unit-suffix--bare) .other-param-input {
+    padding-right: 2.75rem;
+}
+
+/* 窄宽度兜底：避免极端情况下被挤压不可读 */
+@media (max-width: 1200px) {
+    .e-diastolic-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.diastolic-item-ee-prime.ee-prime-wrap {
+    overflow: visible;
+}
+
+.ee-prime-paa-wrap {
+    position: relative;
+    width: 100%;
+}
+
+#eePrimeRatioInput {
+    background-color: #f8f9fa;
+    cursor: text;
+}
+
+/* 末列向右易超出左栏被裁剪：右对齐锚点，向左展开 */
+.ee-prime-bubble {
+    position: absolute;
+    left: auto;
+    right: 0;
+    top: calc(100% + 4px);
+    min-width: 220px;
+    max-width: min(100vw - 24px, 300px);
+    z-index: 200;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #818181;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.ee-prime-paa-wrap:focus-within .ee-prime-bubble {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.ee-prime-bubble-body {
+    padding: 8px 10px 6px;
+}
+
+.ee-prime-bubble-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.ee-prime-bubble-label {
+    flex: 0 0 2em;
+    font-size: 12px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.ee-prime-bubble-row .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.ee-prime-bubble-hint {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+    margin: 0;
+    padding-top: 6px;
+    border-top: 1px solid #eee;
+}
+
+/* dP/dt：单独占一行（跨越两列） */
 #dpdtInputItem {
     grid-column: 1 / -1;
     flex-direction: row;
@@ -660,7 +1517,7 @@ body {
     gap: 8px;
 }
 
-#dpdtInputItem .other-param-input {
+#dpdtInputItem .input-with-unit-suffix {
     width: 140px;
     min-width: 140px;
     flex: 0 0 140px;
@@ -671,26 +1528,19 @@ body {
     margin-bottom: 0;
 }
 
-/* dp/dt 同行显示：输入框与选择框略缩窄 */
-#dpdtInputItem input[data-param="dp/dt"] {
-    width: 110px;
-    min-width: 110px;
-    flex: 0 0 110px;
-}
-
-
 #dpdtInputItem .dpdt-display-btn-group {
     display: inline-flex;
-    gap: 6px;
+    gap: 4px;
     align-items: center;
 }
 
+/* dP/dt 显示/不显示按钮 - 风格同反流程度选择框 */
 #dpdtInputItem .dpdt-display-btn {
-    padding: 4px 10px;
+    padding: 4px 12px;
     border: 1px solid #ddd;
-    border-radius: 999px;
+    border-radius: 4px;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
     color: #666;
     background-color: #f5f5f5;
     cursor: pointer;
@@ -702,6 +1552,7 @@ body {
     border-color: #4a90e2;
     background-color: #4a90e2;
     color: #fff;
+    font-weight: 600;
 }
 
 #dpdtInputItem .dpdt-display-btn:hover:not(.active) {
@@ -747,16 +1598,16 @@ body {
 
 
 
-/* 右侧栏（50%） - 尽量占满页面垂直高度，支持垂直方向手动调节 */
+/* 右侧栏 - 默认居中于右侧区域（左右、上下居中），可拖动、右下角可缩放 */
 .right-sidebar {
     position: fixed;
-    top: 42px;
-    right: 0;
-    width: 50%;
-    height: calc(100vh - 42px);
+    left: 60%;
+    top: calc(100vh * 0.1);
+    width: 30%;
+    height: calc(100vh * 0.8);
+    min-width: 280px;
     min-height: 200px;
-    max-height: calc(100vh - 66px); /* 顶栏42px + 底部预留24px，防止拖拽超出视口 */
-    padding: 14px 14px 18px 14px;
+    padding: 14px;
     overflow: auto;
     background-color: transparent;
     z-index: 10;
@@ -764,32 +1615,28 @@ body {
     flex-direction: column;
     box-sizing: border-box;
 }
-
-/* 右侧栏垂直高度调节 - 右下角拖拽区域，增大接触面积 */
-.right-sidebar-resize-handle {
+/* 右下角缩放小三角 - 边缘紧贴虚线（right-sidebar padding 14px = 虚线位置） */
+.right-sidebar-resize-triangle {
     position: absolute;
-    right: 0;
-    bottom: 0;
-    width: 40px;
-    height: 24px;
-    cursor: ns-resize;
+    right: 14px;
+    bottom: 14px;
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(135deg, transparent 50%, #20c7ec98 50%);
+    cursor: nwse-resize;
     z-index: 20;
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
+    transition: background 0.2s;
+    opacity: 0.6;
 }
-
-/* 简单提示 - 虚线与外边框统一 */
-.right-sidebar-resize-handle::after {
-    content: '';
-    width: 14px;
-    height: 0;
-    border-top: 1px dashed #818181;
-    margin-right: 4px;
-    margin-bottom: 4px;
+.right-sidebar-resize-triangle:hover {
+    background: linear-gradient(135deg, transparent 50%, #4a90e2 50%);
+    opacity: 1;
 }
 /* 模板生成区域 - 占满右侧栏高度 */
 .template-section {
+    position: relative;
+    z-index: 2;
+    pointer-events: none;
     background-color: #fff;
     border-radius: 0;
     padding: 8px 12px;
@@ -801,6 +1648,10 @@ body {
     flex-direction: column;
     min-height: 0;
     box-sizing: border-box;
+}
+
+.template-section > * {
+    pointer-events: auto;
 }
 
 .template-content {
@@ -1099,8 +1950,6 @@ body {
 }
 
 .regurgitation-input {
-    width: 100px;
-    min-width: 100px;
     flex-shrink: 0;
 }
 
@@ -1196,12 +2045,10 @@ body {
 }
 
 .heart-rate-input {
-    width: 100px;
-    min-width: 100px;
     flex-shrink: 0;
 }
 
-/* 节律不齐按钮 */
+/* 节律不齐按钮 - 风格同反流程度选择框 */
 .rhythm-irregular-btn {
     padding: 4px 12px;
     border: 1px solid #ddd;
@@ -1222,6 +2069,11 @@ body {
     border-color: #4a90e2;
     background-color: #e8f2ff;
     color: #4a90e2;
+}
+
+.rhythm-irregular-btn:focus {
+    outline: none;
+    border-color: #4a90e2;
 }
 
 .rhythm-irregular-btn.active {
@@ -1247,8 +2099,6 @@ body {
 }
 
 .mmvd-thickness-input {
-    width: 100px;
-    min-width: 100px;
     flex-shrink: 0;
 }
 
@@ -1274,13 +2124,15 @@ body {
     margin-left: 16px;
 }
 
-/* LA Volume和LAVi样式 */
+/* LA Volume和LAVi样式（在 .other-params-grid 内占满一行，位于 PA/Ao 上一行） */
 .la-volume-row {
+    grid-column: 1 / -1;
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 5px 0;
     margin-bottom: 0;
+    flex-wrap: wrap;
 }
 
 .la-volume-label {
@@ -1291,16 +2143,7 @@ body {
 }
 
 .la-volume-input {
-    width: 100px;
-    min-width: 100px;
     flex-shrink: 0;
-}
-
-.unit-label {
-    font-size: 12px;
-    color: #999;
-    font-weight: normal;
-    white-space: nowrap;
 }
 
 .lavi-display {
@@ -1319,6 +2162,39 @@ body {
     color: #999;
     font-weight: normal;
     white-space: nowrap;
+}
+
+/* LA Volume：显示/不显示按钮（逻辑同 MMVD 的 dP/dt 显示开关） */
+#laVolumeInputItem {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+}
+
+#laVolumeInputItem .la-volume-display-btn {
+    padding: 4px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    background-color: #f5f5f5;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+#laVolumeInputItem .la-volume-display-btn.active {
+    border-color: #4a90e2;
+    background-color: #4a90e2;
+    color: #fff;
+    font-weight: 600;
+}
+
+#laVolumeInputItem .la-volume-display-btn:hover:not(.active) {
+    border-color: #4a90e2;
+    background-color: #e8f2ff;
+    color: #4a90e2;
 }
 
 /* 参考值样式 */
@@ -1369,11 +2245,16 @@ body {
 .container {
     display: flex !important;
     flex-direction: row !important;
-    height: calc(100vh - 42px);
-    margin-top: 42px;
+    height: 100vh;
     align-items: flex-start;
     width: 100%;
     gap: 0;
+}
+/* 左侧占位，因 left-sidebar 为 fixed 脱离流 */
+.container::before {
+    content: '';
+    flex: 0 0 50%;
+    min-width: 50%;
 }
 
 /* Tooltip 提示样式 */
@@ -1467,4 +2348,238 @@ body {
     border-radius: 2px;
 }
 
+/* 操作指引：右下角三层显示，图2风格垂直卡片 */
+.guide-wrapper {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+.guide-trigger {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    margin: 0;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    color: #818181;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+.guide-trigger:hover {
+    background: #e8f2ff;
+    color: #4a90e2;
+    box-shadow: 0 2px 8px rgba(74,144,226,0.2);
+}
+.guide-icon {
+    display: block;
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    pointer-events: none;
+}
+/* 外层容器：背景透明，卡片之间可见页面背景 */
+.guide-card {
+    display: none;
+    width: 300px;
+    max-height: 360px;
+    background: transparent;
+    flex-direction: column;
+    overflow: visible;
+}
+.guide-card.visible {
+    display: flex !important;
+}
+.guide-card.visible:not(.expanded) {
+    cursor: pointer;
+}
+.guide-card-body {
+    overflow-y: auto;
+    max-height: 88px;
+    transition: max-height 0.25s ease;
+    position: relative;
+    padding: 0;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.guide-card.expanded .guide-card-body {
+    max-height: 300px;
+}
+/* 单张卡片：白底、顶部彩色条、卡片间间隙透明 */
+.guide-item {
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #374151;
+    background: #fff;
+    border: 1px solid #e8eaed;
+    border-top: 3px solid;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    flex-shrink: 0;
+}
+.guide-item:nth-child(1) { border-top-color: #f472b6; }
+.guide-item:nth-child(2) { border-top-color: #a78bfa; }
+.guide-item:nth-child(3) { border-top-color: #6366f1; }
+.guide-item:nth-child(4) { border-top-color: #34d399; }
+.guide-item:nth-child(5) { border-top-color: #22d3ee; }
+.guide-item:nth-child(n+6) { border-top-color: #94a3b8; }
+/* 今日更新：固定置顶，顶条强调色（覆盖 nth-child 配色） */
+.guide-item.guide-item--today {
+    border-top-color: #e11d48;
+}
+.guide-item.guide-item--today .guide-item-date {
+    color: #be123c;
+    font-weight: 600;
+}
+.guide-item-date {
+    font-size: 11px;
+    color: #9ca3af;
+    margin-bottom: 6px;
+}
+.guide-item a {
+    color: #4a90e2;
+    text-decoration: underline;
+}
+.guide-item a:hover {
+    color: #357abd;
+}
+.guide-item-img-wrap {
+    margin-top: 10px;
+}
+.guide-item-img-label {
+    display: block;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 6px;
+}
+.guide-item-img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid #e8eaed;
+    cursor: pointer;
+}
+.guide-item-img:hover {
+    border-color: #4a90e2;
+}
+
+/* 截图示意图放大层 */
+.image-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.image-lightbox-img {
+    max-width: 95vw;
+    max-height: 95vh;
+    object-fit: contain;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+/* 手机宽度：左侧栏与右侧栏上下分行显示，左侧为主、右侧紧凑 */
+@media (max-width: 768px) {
+    body {
+        background-image: none;
+        background-color: #fff;
+    }
+    .container {
+        flex-direction: column !important;
+        height: auto !important;
+        min-height: 100vh;
+    }
+    .container::before {
+        display: none;
+    }
+    .left-sidebar {
+        position: relative;
+        width: 100%;
+        height: 72vh;
+        min-height: 420px;
+        border-right: none;
+        border-bottom: 1px solid #818181;
+    }
+    .right-sidebar {
+        position: relative !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: auto !important;
+        min-height: 0;
+        max-height: 26vh;
+        padding: 8px 10px;
+        margin: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    .right-sidebar .template-section {
+        padding: 6px 8px;
+        min-height: 0;
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .right-sidebar .template-section h4 {
+        font-size: 13px;
+    }
+    .right-sidebar .template-text {
+        font-size: 11px;
+        padding: 6px 8px;
+        line-height: 1.45;
+    }
+    .right-sidebar #findingsText {
+        min-height: 70px;
+        flex: 1 1 auto;
+        max-height: 14vh;
+    }
+    .right-sidebar #conclusionText {
+        min-height: 45px;
+        flex: 0 0 auto;
+        max-height: 7vh;
+    }
+    .right-sidebar-resize-triangle {
+        display: none;
+    }
+}
+
+/* 左栏「右心高阶」相关参数：输入框淡红底（含气泡内；覆盖只读灰底）。VPA/VAO 非高阶专属，保持默认底 */
+#tapseInputRow .m-type-input,
+#paAoAdvancedRow .other-param-input,
+#rpadAdvancedRow .other-param-input,
+.vpa-vao-wrap.right-heart-advanced .vti-atet-row .other-param-input,
+#tvTricuspidRow .other-param-input,
+#gsFwsRow .other-param-input {
+    background-color: #fff0f2;
+}
+
+#paAoAdvancedRow #paAoRatioInput,
+#rpadAdvancedRow #rpadRatioInput,
+.vpa-vao-wrap.right-heart-advanced #atetRatioInput {
+    background-color: #fff0f2;
+}
 
