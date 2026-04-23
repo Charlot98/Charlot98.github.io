@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <title>门诊挂号医生接诊量散点图</title>
+  <link rel="stylesheet" href="css/common.css" />
+  <script src="js/auth.js"></script>
+  <script src="js/highcharts.js"></script>
+  <script src="js/utils.js"></script>
+  <style>
+    .doctor-filter-panel {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      gap: 12px 18px;
+      width: 100%;
+      background: #f8fafc;
+      border: 1px solid #dbe4ee;
+      border-radius: 10px;
+      padding: 12px 14px;
+      box-sizing: border-box;
+    }
+    .doctor-filter-left {
+      min-width: 90px;
+      font-size: 15px;
+      color: #374151;
+      padding-top: 4px;
+    }
+    .doctor-filter-right {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+      min-width: 260px;
+    }
+    .doctor-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .doctor-select-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .doctor-search {
+      width: 300px;
+      max-width: 100%;
+      box-sizing: border-box;
+      font-size: 14px;
+      padding: 6px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      outline: none;
+    }
+    .doctor-search:focus {
+      border-color: #0074a6;
+      box-shadow: 0 0 0 2px rgba(0, 116, 166, 0.12);
+    }
+    .doctor-checkbox-list {
+      min-width: 240px;
+      width: 100%;
+      max-width: 100%;
+      max-height: 240px;
+      overflow-y: auto;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      background: #fff;
+      padding: 8px 10px;
+      box-sizing: border-box;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 5px 12px;
+    }
+    .doctor-checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      color: #1f2937;
+      line-height: 1.5;
+      margin: 0;
+      white-space: nowrap;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    .doctor-checkbox-item:hover {
+      background: #f3f8fc;
+    }
+    .doctor-checkbox-item input[type="checkbox"] {
+      margin: 0;
+    }
+    .doctor-filter-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .doctor-status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .doctor-count {
+      color: #374151;
+      font-size: 14px;
+      background: #eef6fb;
+      border: 1px solid #d6eaf7;
+      border-radius: 14px;
+      padding: 2px 10px;
+      line-height: 1.8;
+    }
+    .doctor-filter-tip {
+      font-size: 13px;
+      color: #6b7280;
+      margin: 0;
+    }
+    .month-range-controls {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #374151;
+    }
+    .month-range-controls select {
+      font-size: 14px;
+      padding: 3px 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-top">
+    <a href="index.html">返回首页</a>
+  </div>
+  <div class="main-content" style="margin-left: 16px;">
+    <div class="page-header page-header-cases">
+      <div class="page-controls doctor-filter-panel">
+        <div class="doctor-filter-left">医生筛选</div>
+        <div class="doctor-filter-right">
+          <div class="doctor-toolbar">
+            <input id="doctor-search" class="doctor-search" type="text" placeholder="输入医生姓名查找（实时过滤）" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+            <div class="doctor-filter-actions">
+              <button type="button" id="select-all-btn" class="btn-export">全选</button>
+              <button type="button" id="clear-btn" class="btn-export">清空</button>
+            </div>
+          </div>
+          <div class="doctor-select-wrap">
+            <div id="doctor-list" class="doctor-checkbox-list"></div>
+            <div class="doctor-status-row">
+              <p class="doctor-filter-tip">使用复选框手动勾选医生，已选医生少于 18 位时会显示回归曲线。</p>
+              <span id="doctor-count" class="doctor-count"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="month-range-controls">
+        <span>开始月份：</span>
+        <select id="start-month"></select>
+        <span>结束月份：</span>
+        <select id="end-month"></select>
+      </div>
+      <div class="page-title">不同医生每日总接诊量</div>
+    </div>
+
+    <div id="container-doctor-scatter" class="chart-container"></div>
+  </div>
+
+  <script>
+    (function () {
+      var csvPath = '2026年门诊挂号数据.csv';
+      var doctorList = document.getElementById('doctor-list');
+      var doctorSearch = document.getElementById('doctor-search');
+      var startMonthSel = document.getElementById('start-month');
+      var endMonthSel = document.getElementById('end-month');
+      var countEl = document.getElementById('doctor-count');
+      var selectAllBtn = document.getElementById('select-all-btn');
+      var clearBtn = document.getElementById('clear-btn');
+      var GAP_FROM = Date.UTC(2026, 1, 16);
+      var GAP_TO = Date.UTC(2026, 1, 23, 23, 59, 59);
+      var GAP_SIZE = GAP_TO - GAP_FROM;
+
+      function compressAxisX(ts) {
+        if (ts > GAP_TO) return ts - GAP_SIZE;
+        return ts;
+      }
+
+      function restoreAxisX(ts) {
+        if (ts > GAP_FROM) return ts + GAP_SIZE;
+        return ts;
+      }
+
+      function safeNum(v) {
+        var n = parseFloat(v);
+        return isNaN(n) ? 0 : n;
+      }
+
+      function toUTC(dateStr) {
+        if (!dateStr) return NaN;
+        var core = String(dateStr).trim().slice(0, 10);
+        var p = core.split('-');
+        if (p.length !== 3) return NaN;
+        var y = parseInt(p[0], 10);
+        var m = parseInt(p[1], 10) - 1;
+        var d = parseInt(p[2], 10);
+        if (isNaN(y) || isNaN(m) || isNaN(d)) return NaN;
+        return Date.UTC(y, m, d);
+      }
+
+      function polynomialRegression(data) {
+        var n = data.length;
+        if (n < 3) return null;
+
+        var xs = data.map(function (p) { return p.x; });
+        var xMin = Math.min.apply(null, xs);
+        var xMax = Math.max.apply(null, xs);
+        var xRange = xMax - xMin;
+        if (xRange < 1e-10) return null;
+
+        var A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+        var B = [0, 0, 0];
+        var i, r, c;
+
+        for (i = 0; i < n; i++) {
+          var t = (data[i].x - xMin) / xRange;
+          var y = data[i].y;
+          var t0 = 1;
+          var t1 = t;
+          var t2 = t * t;
+          var ts = [t0, t1, t2];
+          for (r = 0; r < 3; r++) {
+            for (c = 0; c < 3; c++) A[r][c] += ts[r] * ts[c];
+            B[r] += y * ts[r];
+          }
+        }
+
+        var coeffs = solve3(A, B);
+        if (!coeffs) return null;
+        return { coeffs: coeffs, xMin: xMin, xRange: xRange };
+      }
+
+      function solve3(A, B) {
+        var n = 3;
+        var m = [];
+        var i, j, k;
+        for (i = 0; i < n; i++) {
+          m[i] = [A[i][0], A[i][1], A[i][2], B[i]];
+        }
+        for (k = 0; k < n; k++) {
+          var pivot = k;
+          var maxAbs = Math.abs(m[k][k]);
+          for (i = k + 1; i < n; i++) {
+            var v = Math.abs(m[i][k]);
+            if (v > maxAbs) {
+              maxAbs = v;
+              pivot = i;
+            }
+          }
+          if (maxAbs < 1e-12) return null;
+          if (pivot !== k) {
+            var tmp = m[k];
+            m[k] = m[pivot];
+            m[pivot] = tmp;
+          }
+          for (i = k + 1; i < n; i++) {
+            var f = m[i][k] / m[k][k];
+            for (j = k; j <= n; j++) m[i][j] -= f * m[k][j];
+          }
+        }
+        var x = [0, 0, 0];
+        for (i = n - 1; i >= 0; i--) {
+          var s = m[i][n];
+          for (j = i + 1; j < n; j++) s -= m[i][j] * x[j];
+          x[i] = s / m[i][i];
+        }
+        return x;
+      }
+
+      function buildRegressionLine(data, fit, points) {
+        var out = [];
+        var coeffs = fit.coeffs;
+        var xMin = fit.xMin;
+        var xRange = fit.xRange;
+        var total = points || 120;
+        for (var i = 0; i < total; i++) {
+          var x = xMin + (i / (total - 1)) * xRange;
+          var t = (x - xMin) / xRange;
+          var y = coeffs[0] + coeffs[1] * t + coeffs[2] * t * t;
+          out.push([x, y]);
+        }
+        return out;
+      }
+
+      loadCSV(csvPath, function (csv) {
+        var rows = parseCSV(csv);
+        if (!rows.length || rows.length === 1) {
+          alert('CSV 无可用数据');
+          return;
+        }
+
+        var header = rows[0].map(function (h) { return (h || '').trim(); });
+        var idxDate = header.indexOf('日期');
+        var idxDoctor = header.indexOf('医生');
+        var idxTotal = header.indexOf('总接诊数');
+        var idxOfflineAdd = header.indexOf('线下加号数');
+        if (idxDate < 0 || idxDoctor < 0 || idxTotal < 0 || idxOfflineAdd < 0) {
+          alert('缺少必要列：日期 / 医生 / 总接诊数 / 线下加号数');
+          return;
+        }
+
+        var aggregate = {};
+        for (var i = 1; i < rows.length; i++) {
+          var cols = rows[i];
+          if (!cols || !cols.length) continue;
+          var doctor = (cols[idxDoctor] || '').trim();
+          var rawDate = (cols[idxDate] || '').trim();
+          var total = safeNum(cols[idxTotal]);
+          var offlineAdd = safeNum(cols[idxOfflineAdd]);
+          var x = toUTC(rawDate);
+          if (!doctor || isNaN(x)) continue;
+          var dayKey = String(rawDate).slice(0, 10);
+          var key = doctor + '||' + dayKey;
+          if (!aggregate[key]) {
+            aggregate[key] = { doctor: doctor, x: x, y: 0, offlineAdd: 0, dayKey: dayKey };
+          }
+          aggregate[key].y += total;
+          aggregate[key].offlineAdd += offlineAdd;
+        }
+
+        var doctorMap = {};
+        Object.keys(aggregate).forEach(function (k) {
+          var p = aggregate[k];
+          if (!doctorMap[p.doctor]) doctorMap[p.doctor] = [];
+          doctorMap[p.doctor].push({
+            x: p.x,
+            y: p.y,
+            doctor: p.doctor,
+            offlineAdd: p.offlineAdd,
+            dayKey: p.dayKey
+          });
+        });
+
+        var doctors = Object.keys(doctorMap);
+        doctors.sort(function (a, b) {
+          var sa = doctorMap[a].reduce(function (s, p) { return s + p.y; }, 0);
+          var sb = doctorMap[b].reduce(function (s, p) { return s + p.y; }, 0);
+          return sb - sa;
+        });
+        if (!doctors.length) {
+          alert('没有可绘图的数据（请检查日期/医生/总接诊数）');
+          return;
+        }
+
+        doctors.forEach(function (name) {
+          var label = document.createElement('label');
+          label.className = 'doctor-checkbox-item';
+          label.setAttribute('data-doctor', name.toLowerCase());
+
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.value = name;
+          cb.checked = true;
+
+          var text = document.createElement('span');
+          text.textContent = name;
+
+          label.appendChild(cb);
+          label.appendChild(text);
+          doctorList.appendChild(label);
+        });
+
+        var monthSet = {};
+        doctors.forEach(function (doc) {
+          doctorMap[doc].forEach(function (p) {
+            var mk = (p.dayKey || '').slice(0, 7);
+            if (mk) monthSet[mk] = true;
+          });
+        });
+        var months = Object.keys(monthSet).sort();
+        months.forEach(function (m) {
+          var o1 = document.createElement('option');
+          o1.value = m;
+          o1.textContent = m;
+          startMonthSel.appendChild(o1);
+          var o2 = document.createElement('option');
+          o2.value = m;
+          o2.textContent = m;
+          endMonthSel.appendChild(o2);
+        });
+        if (months.length) {
+          startMonthSel.value = months[0];
+          endMonthSel.value = months[months.length - 1];
+        }
+
+        function selectedDoctors() {
+          var out = [];
+          var boxes = doctorList.querySelectorAll('input[type="checkbox"]');
+          for (var i = 0; i < boxes.length; i++) if (boxes[i].checked) out.push(boxes[i].value);
+          return out;
+        }
+
+        function applyDoctorFilter() {
+          var kw = (doctorSearch.value || '').trim().toLowerCase();
+          var visible = 0;
+          var items = doctorList.querySelectorAll('.doctor-checkbox-item');
+          for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            var doctorName = item.getAttribute('data-doctor') || '';
+            var hit = !kw || doctorName.indexOf(kw) !== -1;
+            item.style.display = hit ? '' : 'none';
+            if (hit) visible++;
+          }
+          doctorSearch.title = '匹配医生：' + visible + ' 位';
+        }
+
+        function render() {
+          var picked = selectedDoctors();
+          if (!picked.length) {
+            countEl.textContent = '当前已选 0 位医生';
+            Highcharts.chart('container-doctor-scatter', {
+              title: { text: null },
+              series: []
+            });
+            return;
+          }
+
+          countEl.textContent = '当前已选 ' + picked.length + ' 位医生';
+          var showRegression = picked.length < 18;
+          var showLegend = picked.length < 18;
+          if (showRegression) {
+            countEl.textContent += '（显示回归曲线）';
+          } else {
+            countEl.textContent += '（医生≥18，隐藏回归曲线与图例）';
+          }
+
+          var series = [];
+          var palette = (Highcharts.getOptions && Highcharts.getOptions().colors) || [];
+          var crowdedColor = '#7cb5ec';
+          var startMonth = startMonthSel.value;
+          var endMonth = endMonthSel.value;
+          if (startMonth > endMonth) {
+            var tempMonth = startMonth;
+            startMonth = endMonth;
+            endMonth = tempMonth;
+          }
+          picked.forEach(function (doc, idx) {
+            var ptsRaw = doctorMap[doc]
+              .filter(function (p) {
+                var mk = (p.dayKey || '').slice(0, 7);
+                return mk >= startMonth && mk <= endMonth;
+              })
+              .sort(function (a, b) { return a.x - b.x; });
+            var pts = ptsRaw.map(function (p) {
+              return {
+                x: compressAxisX(p.x),
+                rawX: p.x,
+                y: p.y,
+                doctor: p.doctor,
+                offlineAdd: p.offlineAdd,
+                dayKey: p.dayKey
+              };
+            });
+            if (!pts.length) return;
+            var doctorColor = showLegend
+              ? (palette.length ? palette[idx % palette.length] : undefined)
+              : crowdedColor;
+            series.push({
+              name: doc,
+              id: 'doctor-' + doc,
+              type: 'scatter',
+              data: pts,
+              color: doctorColor,
+              marker: { radius: 4, symbol: 'circle' }
+            });
+            if (showRegression && pts.length >= 3) {
+              var fit = polynomialRegression(pts);
+              if (fit) {
+                series.push({
+                  name: doc + ' 回归曲线',
+                  type: 'spline',
+                  data: buildRegressionLine(pts, fit, 120),
+                  color: doctorColor,
+                  linkedTo: 'doctor-' + doc,
+                  showInLegend: false,
+                  marker: { enabled: false },
+                  lineWidth: 2,
+                  enableMouseTracking: true
+                });
+              }
+            }
+          });
+
+          Highcharts.chart('container-doctor-scatter', {
+            chart: { zoomType: 'x' },
+            title: { text: null },
+            xAxis: {
+              type: 'datetime',
+              title: { text: null },
+              crosshair: {
+                color: '#94a3b8',
+                width: 1,
+                dashStyle: 'ShortDot',
+                zIndex: 5
+              },
+              labels: {
+                formatter: function () {
+                  return Highcharts.dateFormat('%Y-%m-%d', restoreAxisX(this.value));
+                }
+              }
+            },
+            yAxis: {
+              title: { text: '总接诊量' },
+              min: 0,
+              allowDecimals: false
+            },
+            legend: {
+              enabled: showLegend,
+              layout: 'horizontal',
+              align: 'center',
+              verticalAlign: 'top'
+            },
+            credits: { enabled: false },
+            tooltip: {
+              useHTML: true,
+              headerFormat: '',
+              pointFormatter: function () {
+                if (this.doctor) {
+                  return '日期：<b>' + Highcharts.dateFormat('%Y-%m-%d', (this.rawX || this.x)) + '</b><br/>' +
+                    '医生：' + this.doctor + '<br/>' +
+                    '总接诊数：<b>' + this.y + '</b><br/>' +
+                    '线下加号数：<b>' + (this.offlineAdd || 0) + '</b>';
+                }
+                return '日期：<b>' + Highcharts.dateFormat('%Y-%m-%d', restoreAxisX(this.x)) + '</b><br/>' +
+                  '拟合总接诊量：<b>' + Highcharts.numberFormat(this.y, 2) + '</b>';
+              }
+            },
+            plotOptions: {
+              series: {
+                turboThreshold: 0,
+                findNearestPointBy: 'xy'
+              },
+              scatter: {
+                stickyTracking: false,
+                tooltip: { snap: 24 },
+                marker: {
+                  states: { hover: { radiusPlus: 3 } }
+                },
+                states: { hover: { halo: { size: 8 } } }
+              },
+              spline: {
+                stickyTracking: false,
+                tooltip: { snap: 2 },
+                states: { hover: { lineWidthPlus: 0, halo: { size: 0 } } }
+              }
+            },
+            series: series
+          });
+        }
+
+        doctorList.addEventListener('change', function (e) {
+          if (e.target && e.target.type === 'checkbox') render();
+        });
+        doctorSearch.addEventListener('input', applyDoctorFilter);
+        startMonthSel.addEventListener('change', render);
+        endMonthSel.addEventListener('change', render);
+        selectAllBtn.addEventListener('click', function () {
+          var items = doctorList.querySelectorAll('.doctor-checkbox-item');
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].style.display === 'none') continue;
+            var cb = items[i].querySelector('input[type="checkbox"]');
+            if (cb) cb.checked = true;
+          }
+          render();
+        });
+        clearBtn.addEventListener('click', function () {
+          var boxes = doctorList.querySelectorAll('input[type="checkbox"]');
+          for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
+          render();
+        });
+
+        applyDoctorFilter();
+        render();
+      });
+    })();
+  </script>
+</body>
+</html>

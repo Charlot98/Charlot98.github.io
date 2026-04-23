@@ -183,3 +183,38 @@ body {
   color: #6b7280;
   margin-top: 8px;
 }
+
+/* 页面跳转加载动画 */
+.page-loading-overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background:  rgb(245, 118, 152);
+  z-index: 20000;
+}
+.page-loading-overlay.show {
+  display: flex;
+}
+.page-loading-spinner {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 34px;
+  color: #ffffff;
+  letter-spacing: 2px;
+  line-height: 1;
+  min-width: 10ch;
+  text-align: center;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.page-loading-spinner::before {
+  content: '...-....-';
+  animation: page-loading-text 1.1s steps(1, end) infinite;
+}
+@keyframes page-loading-text {
+  0% { content: '...-....-'; }
+  25% { content: '..-....-.'; }
+  50% { content: '.-....-..'; }
+  75% { content: '-....-...'; }
+  100% { content: '...-....-'; }
+}

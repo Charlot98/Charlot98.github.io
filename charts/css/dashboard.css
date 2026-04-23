@@ -82,13 +82,16 @@ body {
   background-color: rgba(151, 115, 189, 0.85);
 }
 .dash-menu .nav-row:nth-child(5) .nav-link:hover {
-  background-color: rgba(255, 238, 80, 0.878);
+  background-color: rgba(202, 183, 10, 0.878);
 }
 .dash-menu .nav-row:nth-child(6) .nav-link:hover {
-  background-color: rgba(197, 151, 123, 0.85);
+  background-color: rgba(123, 197, 137, 0.85);
 }
 .dash-menu .nav-row:nth-child(7) .nav-link:hover {
-  background-color: rgba(95, 168, 220, 0.85);
+  background-color: rgba(0, 156, 219, 0.85);
+}
+.dash-menu .nav-row:nth-child(8) .nav-link:hover {
+  background-color:  rgba(255, 80, 126, 0.85);
 }
 
 /* 窄屏下每行自动折成两行：第一行“工作量”，第二行右侧文字 */
