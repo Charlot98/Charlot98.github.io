@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="logo2.png" type="image/png" />
+  <title>超声排队 Dashboard</title>
+  <style>
+    body { font-family: Arial, "Microsoft YaHei", sans-serif; margin: 0; background: #f5f7fb; color: #222; }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 16px; }
+    h1 { margin: 0 0 12px; font-size: 22px; }
+    .card { background: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08); padding: 12px; margin-bottom: 12px; }
+    .controls { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 10px; align-items: end; }
+    label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
+    input, select, button { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #d0d7e2; border-radius: 8px; font: inherit; }
+    button { background: #2d6cdf; color: #fff; border: none; cursor: pointer; }
+    button:hover { background: #245ac0; }
+    .meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: #444; }
+    .stats { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 10px; }
+    .stat { background: #f8fbff; border: 1px solid #e2ecff; border-radius: 8px; padding: 10px; cursor: pointer; user-select: none; }
+    .stat:hover { border-color: #b8ccef; }
+    .stat.active { border-color: #2d6cdf; box-shadow: 0 0 0 2px rgba(45,108,223,0.12) inset; }
+    .stat .k { font-size: 12px; color: #6d7b94; }
+    .stat .v { font-size: 22px; margin-top: 4px; font-weight: 700; color: #1f2d3d; }
+    .table-wrap { overflow: auto; max-height: 70vh; border: 1px solid #e5eaf3; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+    th, td { border-bottom: 1px solid #eef2f8; padding: 8px 10px; white-space: nowrap; text-align: left; }
+    th { position: sticky; top: 0; background: #eef4ff; z-index: 1; }
+    th.sortable { cursor: pointer; user-select: none; }
+    th.sortable:hover { background: #e3edff; }
+    .tag { padding: 2px 8px; border-radius: 999px; font-size: 12px; color: #fff; display: inline-block; }
+    .s1 { background: #f39c12; } .s2 { background: #3498db; } .s9 { background: #27ae60; } .s0 { background: #7f8c8d; }
+    .muted { color: #7a8596; font-size: 12px; }
+    .status-select {
+      min-width: 96px;
+      padding: 4px 6px;
+      border-radius: 999px;
+      border: 1px solid #ccd7ea;
+      color: #fff;
+      font-weight: 700;
+      font-size: 12px;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
+    .status-select.v-nocall { background: #3498db; border-color: #3498db; }
+    .status-select.v-calling { background: #7f8c8d; border-color: #7f8c8d; }
+    .status-select.v-pass { background: #7f8c8d; border-color: #7f8c8d; }
+    .status-select.v-hold { background: #f1c40f; border-color: #f1c40f; color: #222; }
+    .status-select.v-completed { background: #27ae60; border-color: #27ae60; }
+    .status-cell { padding: 4px 6px; }
+    .status-cell.v-nocall { background: #eef7ff; }
+    .status-cell.v-calling { background: #f1f3f5; }
+    .status-cell.v-pass { background: #f1f3f5; }
+    .status-cell.v-hold { background: #fff9e7; }
+    .status-cell.v-completed { background: #e9f9ef; }
+    .status-cell .status-select { box-shadow: none; }
+    tr.row-status-nocall td { background: #f2f8ff; }
+    tr.row-status-calling td { background: #f7f8fa; }
+    tr.row-status-pass td { background: #f7f8fa; }
+    tr.row-status-hold td { background: #fffbef; }
+    tr.row-status-completed td { background: #eefbf3; }
+    tr.row-status-nocall .status-cell { background: #eef7ff; }
+    tr.row-status-calling .status-cell { background: #f1f3f5; }
+    tr.row-status-pass .status-cell { background: #f1f3f5; }
+    tr.row-status-hold .status-cell { background: #fff9e7; }
+    tr.row-status-completed .status-cell { background: #e9f9ef; }
+    .phone-cell { cursor: text; }
+    .phone-cell:hover { background: #fffbe8; }
+    .item-cell.manual-item { cursor: text; }
+    .item-cell.manual-item:hover { background: #fffbe8; }
+    .phone-inline-input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 4px 6px;
+      border: 1px solid #2d6cdf;
+      border-radius: 6px;
+      font: inherit;
+      background: #fff;
+      color: #222;
+      outline: none;
+    }
+    .manual-add {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px solid #dce6f8;
+      border-radius: 10px;
+      background: #f7faff;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr 120px;
+      gap: 10px;
+      align-items: end;
+    }
+    .kind-multi {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      min-height: 36px;
+    }
+    .kind-multi label {
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: #334;
+    }
+    .kind-multi input { width: auto; }
+    .manual-del-btn {
+      width: auto;
+      padding: 4px 8px;
+      min-width: 32px;
+      background: #dc3545;
+      line-height: 1;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .manual-del-btn.armed {
+      animation: shakeX 260ms linear 2;
+      box-shadow: 0 0 0 2px rgba(220,53,69,0.25);
+    }
+    @keyframes shakeX {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-2px); }
+      50% { transform: translateX(2px); }
+      75% { transform: translateX(-2px); }
+      100% { transform: translateX(0); }
+    }
+  </style>
+  <script src="demo-static-api.js"></script>
+  <script src="demo-shared-defaults.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <h1>超声排队用户信息 Dashboard</h1>
+
+    <div class="card">
+      <div class="controls">
+        <div>
+          <label>日期</label>
+          <input id="date" type="date" />
+        </div>
+        <div>
+          <label>类型筛选</label>
+          <select id="kindFilter"><option value="">全部</option></select>
+        </div>
+        <div>
+          <label>关键词（姓名/宠主/电话/申请单号）</label>
+          <input id="keyword" placeholder="输入关键词" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <div style="display:flex;justify-content:flex-end;gap:10px;">
+            <button id="refreshBtn" style="background:#17a2b8;width:120px;">刷新</button>
+            <button id="resetBtn" style="background:#6c757d;width:120px;">重置筛选</button>
+          </div>
+        </div>
+      </div>
+      <div class="manual-add">
+        <div>
+          <label>宠物名</label>
+          <input id="manualPetName" placeholder="请输入宠物名" />
+        </div>
+        <div>
+          <label>宠主名</label>
+          <input id="manualOwnerName" placeholder="请输入宠主名" />
+        </div>
+        <div>
+          <label>检查类型（可多选）</label>
+          <div class="kind-multi">
+            <label><input type="checkbox" class="manual-kind" value="心脏" />心超</label>
+            <label><input type="checkbox" class="manual-kind" value="腹部" />腹部</label>
+            <label><input type="checkbox" class="manual-kind" value="其它" />其它</label>
+          </div>
+        </div>
+        <div>
+          <button id="manualCreateBtn" style="background:#0f8b5f;">创建</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stats">
+        <div class="stat active" data-stat-filter="all"><div class="k">总记录</div><div class="v" id="statTotal">0</div></div>
+        <div class="stat" data-stat-filter="nocall"><div class="k">未叫号</div><div class="v" id="statNoCall">0</div></div>
+        <div class="stat" data-stat-filter="pass"><div class="k">叫号未到</div><div class="v" id="statPass">0</div></div>
+        <div class="stat" data-stat-filter="hold"><div class="k">暂离留号</div><div class="v" id="statHold">0</div></div>
+        <div class="stat" data-stat-filter="completed"><div class="k">已完成</div><div class="v" id="statDone">0</div></div>
+      </div>
+    </div>
+
+    <div class="card table-wrap">
+      <table id="table">
+        <thead>
+          <tr>
+            <th class="sortable" data-sort-key="status">状态</th>
+            <th class="sortable" data-sort-key="kind">类型</th>
+            <th class="sortable" data-sort-key="xh">序号</th>
+            <th class="sortable" data-sort-key="name">宠物名</th>
+            <th class="sortable" data-sort-key="pat_name">宠主</th>
+            <th class="sortable" data-sort-key="pat_phone">手机号</th>
+            <th class="sortable" data-sort-key="patient_id">病历号</th>
+            <th class="sortable" data-sort-key="serial_no">申请单号</th>
+            <th class="sortable" data-sort-key="signtime">签到时间</th>
+            <th class="sortable" data-sort-key="item_name">检查项目</th>
+            <th class="sortable" data-sort-key="diag">诊断/主诉</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const FORCE_REFRESH_KEY = "queue_force_refresh_at";
+    const stateText = { "1": "未叫号", "2": "叫号未到", "3": "叫号未到", "9": "已完成" };
+    const DEFAULT_ROOM = params.get("room")
+      || (typeof window.QUEUE_DEMO_DEFAULT_ROOM === "string" && String(window.QUEUE_DEMO_DEFAULT_ROOM).trim())
+      || "15";
+    const PHONE_OVERRIDES_KEY_PREFIX = "dashboard_phone_overrides";
+    let allRows = [];
+    let autoRefreshTimer = null;
+    let sortState = { key: "", direction: "asc" };
+    let phoneOverrides = {};
+    let activeStatFilter = "all";
+    /** 演示：false = 关闭定时拉取，仅用「刷新」、改日期、跨页 storage */
+    const ENABLE_LIVE_POLLING = false;
+    function todayLocalISO() {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+    const QUEUE_SHARED_WORK_DATE_KEY = "queue_demo_shared_work_date";
+    const QUEUE_WORK_DATE_BC = "queue_demo_work_date_v1";
+    function isIsoDate(s) {
+      return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+    }
+    function readSharedWorkDateSeed() {
+      const u = params.get("date");
+      if (isIsoDate(u)) return u;
+      try {
+        const def = typeof window.QUEUE_DEMO_DEFAULT_WORK_DATE === "string"
+          ? String(window.QUEUE_DEMO_DEFAULT_WORK_DATE).trim()
+          : "";
+        if (isIsoDate(def)) return def;
+      } catch {}
+      try {
+        const s = localStorage.getItem(QUEUE_SHARED_WORK_DATE_KEY);
+        if (isIsoDate(s)) return s;
+      } catch {}
+      return todayLocalISO();
+    }
+    const workDateBroadcast = typeof BroadcastChannel !== "undefined"
+      ? new BroadcastChannel(QUEUE_WORK_DATE_BC)
+      : null;
+    function persistSharedWorkDate(d) {
+      if (!isIsoDate(d)) return;
+      try {
+        localStorage.setItem(QUEUE_SHARED_WORK_DATE_KEY, d);
+      } catch {}
+      try {
+        if (workDateBroadcast) workDateBroadcast.postMessage({ date: d, ts: Date.now() });
+      } catch {}
+    }
+    function syncDateQueryToUrl(dateStr) {
+      const u = new URL(window.location.href);
+      u.searchParams.set("date", dateStr);
+      window.history.replaceState({}, "", u);
+    }
+
+    function updateStats(rows) {
+      const total = rows.length;
+      const noCall = rows.filter(r => getStatusSelectValue(r) === "nocall").length;
+      const pass = rows.filter(r => getStatusSelectValue(r) === "pass").length;
+      const hold = rows.filter(r => getStatusSelectValue(r) === "hold").length;
+      const done = rows.filter(r => getStatusSelectValue(r) === "completed").length;
+      document.getElementById("statTotal").textContent = total;
+      document.getElementById("statNoCall").textContent = noCall;
+      document.getElementById("statPass").textContent = pass;
+      document.getElementById("statHold").textContent = hold;
+      document.getElementById("statDone").textContent = done;
+    }
+    function applyStatFilterClasses() {
+      document.querySelectorAll(".stat[data-stat-filter]").forEach((el) => {
+        el.classList.toggle("active", (el.dataset.statFilter || "all") === activeStatFilter);
+      });
+    }
+
+    function statusHtml(v) {
+      const key = String(v || "0");
+      const cls = key === "1" ? "s1" : key === "2" ? "s2" : key === "9" ? "s9" : "s0";
+      return `<span class="tag ${cls}">${stateText[key] || key}</span>`;
+    }
+
+    function getStatusSelectValue(row) {
+      const s = String(row.case_status || "").trim();
+      if (s === "hold" || s === "leave") return "hold";
+      if (s === "calling") return "pass";
+      if (s) return s;
+      if (String(row.rh_status) === "1") return "nocall";
+      if (String(row.rh_status) === "9") return "completed";
+      // 未写入 case_states 时，不把 rh_status=2/3 默认当作「叫号未到」
+      return "nocall";
+    }
+    function queueBucketByStatus(statusValue, fallbackBucket = "") {
+      if (statusValue === "completed") return "listcallover";
+      if (statusValue === "pass") return "listnocall";
+      if (statusValue === "nocall" || statusValue === "hold" || statusValue === "calling") return "listnocall";
+      return fallbackBucket || "listnocall";
+    }
+    function getDisplayQueueBucket(row) {
+      const statusValue = getStatusSelectValue(row);
+      return queueBucketByStatus(statusValue, String(row.queue_bucket || ""));
+    }
+    function statusTheme(statusValue) {
+      const v = String(statusValue || "nocall");
+      if (v === "calling") return { bg: "#7f8c8d", border: "#7f8c8d", fg: "#ffffff" };
+      if (v === "pass") return { bg: "#7f8c8d", border: "#7f8c8d", fg: "#ffffff" };
+      if (v === "hold") return { bg: "#f1c40f", border: "#f1c40f", fg: "#222222" };
+      if (v === "completed") return { bg: "#27ae60", border: "#27ae60", fg: "#ffffff" };
+      return { bg: "#3498db", border: "#3498db", fg: "#ffffff" };
+    }
+    function applyStatusSelectTheme(selectEl, statusValue) {
+      if (!selectEl) return;
+      const t = statusTheme(statusValue);
+      selectEl.style.backgroundColor = t.bg;
+      selectEl.style.borderColor = t.border;
+      selectEl.style.color = t.fg;
+    }
+
+    function statusSelectHtml(row) {
+      const v = getStatusSelectValue(row);
+      const fallbackCaseKey = buildCaseKey(row);
+      return `
+        <select class="status-select v-${v}"
+          data-case-key="${row.case_key || fallbackCaseKey}"
+          data-patient-id="${row.patient_id || ""}"
+          data-serial-no="${row.serial_no || ""}"
+          data-xh="${row.xh || ""}"
+          data-name="${row.name || ""}"
+          data-pat-name="${row.pat_name || ""}">
+          <option value="nocall" ${v === "nocall" ? "selected" : ""} style="background:#3498db;color:#ffffff;">未叫号</option>
+          <option value="pass" ${v === "pass" ? "selected" : ""} style="background:#7f8c8d;color:#ffffff;">叫号未到</option>
+          <option value="hold" ${v === "hold" ? "selected" : ""} style="background:#f1c40f;color:#222222;">暂离留号</option>
+          <option value="completed" ${v === "completed" ? "selected" : ""} style="background:#27ae60;color:#ffffff;">已完成</option>
+        </select>
+      `;
+    }
+
+    function formatQueueNo(row) {
+      const no = String(row?.xh ?? "").trim();
+      if (!no) return "-";
+      if (/^M\d+$/i.test(no)) return no.toUpperCase();
+      const prefix = String(row?.kind || row?.kind_group || "").includes("心") ? "X" : "Y";
+      return `${prefix}${no}`;
+    }
+
+    function flatten99(rawData) {
+      const out = [];
+      for (const group of rawData || []) {
+        const kindGroup = group.kind || "";
+        for (const bucket of ["listnocall", "listcalling", "listpass", "listcallover"]) {
+          for (const item of (group[bucket] || [])) {
+            const normalizedBucket = (bucket === "listcalling" || bucket === "listpass") ? "listnocall" : bucket;
+            out.push({ ...item, queue_bucket: normalizedBucket, kind_group: kindGroup });
+          }
+        }
+      }
+      return out;
+    }
+
+    async function fetchCustomRows(date, room, nonce = 0) {
+      const proxyBase = `${window.location.protocol}//${window.location.hostname}:18080`;
+      try {
+        const resp = await fetch(
+          `${proxyBase}/custom_rows?date=${encodeURIComponent(date)}&room=${encodeURIComponent(room)}&t=${encodeURIComponent(String(nonce || Date.now()))}`,
+          { cache: "no-store" }
+        );
+        const data = await resp.json();
+        if (!resp.ok || !data.ok || !Array.isArray(data.rows)) return [];
+        return data.rows;
+      } catch {
+        return [];
+      }
+    }
+
+    function buildCaseKey(row) {
+      const patientId = String(row?.patient_id || "").trim();
+      if (patientId) return `pid:${patientId}`;
+      const serialNo = String(row?.serial_no || "").trim();
+      if (serialNo) return `sn:${serialNo}`;
+      return `tmp:${row?.xh ?? ""}-${row?.name ?? ""}-${row?.pat_name ?? ""}`;
+    }
+
+    async function fetchCaseStates(date, room, nonce = 0) {
+      const proxyBase = `${window.location.protocol}//${window.location.hostname}:18080`;
+      try {
+        const resp = await fetch(
+          `${proxyBase}/case_states?date=${encodeURIComponent(date)}&room=${encodeURIComponent(room)}&t=${encodeURIComponent(String(nonce || Date.now()))}`,
+          { cache: "no-store" }
+        );
+        const data = await resp.json();
+        const map = new Map();
+        if (resp.ok && data.ok && Array.isArray(data.rows)) {
+          data.rows.forEach(r => map.set(r.case_key, r));
+        }
+        return map;
+      } catch {
+        return new Map();
+      }
+    }
+
+    function fillSelect(selectId, values) {
+      const sel = document.getElementById(selectId);
+      const old = sel.value;
+      sel.innerHTML = '<option value="">全部</option>' + [...values].sort().map(v => `<option value="${v}">${v}</option>`).join("");
+      sel.value = [...values].includes(old) ? old : "";
+    }
+    function nowSqlText() {
+      return new Date().toLocaleString("sv-SE").replace("T", " ");
+    }
+    function nextManualQueueNo() {
+      const nums = allRows
+        .map(r => String(r?.xh ?? "").trim().toUpperCase())
+        .filter(v => /^M\d+$/.test(v))
+        .map(v => Number(v.slice(1)))
+        .filter(n => Number.isFinite(n) && n > 0);
+      const next = (nums.length ? Math.max(...nums) : 0) + 1;
+      return `M${String(next).padStart(2, "0")}`;
+    }
+    async function createManualRows() {
+      const petName = document.getElementById("manualPetName").value.trim();
+      const ownerName = document.getElementById("manualOwnerName").value.trim();
+      const checkedKinds = [...document.querySelectorAll(".manual-kind:checked")].map(el => el.value);
+      if (!petName) {
+        alert("请先输入宠物名");
+        return;
+      }
+      if (checkedKinds.length === 0) {
+        alert("请至少选择一个检查类型");
+        return;
+      }
+      const createKinds = [];
+      if (checkedKinds.includes("心脏")) createKinds.push("心脏");
+      if (checkedKinds.includes("腹部") || checkedKinds.includes("其它")) createKinds.push("腹部");
+      const date = document.getElementById("date").value.trim();
+      const room = DEFAULT_ROOM;
+      const proxyBase = `${window.location.protocol}//${window.location.hostname}:18080`;
+      const manualNo = nextManualQueueNo();
+      const signtime = nowSqlText();
+      for (const kind of createKinds) {
+        const payload = {
+          date,
+          room,
+          kind,
+          xh: manualNo,
+          name: petName,
+          pat_name: ownerName || "-",
+          rh_status: "1",
+          signtime,
+          callingroom: room
+        };
+        const resp = await fetch(`${proxyBase}/custom_rows`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+      }
+      document.getElementById("manualPetName").value = "";
+      document.getElementById("manualOwnerName").value = "";
+      document.querySelectorAll(".manual-kind").forEach(el => { el.checked = false; });
+      await loadData();
+    }
+    function phoneOverridesStorageKey(date, room) {
+      return `${PHONE_OVERRIDES_KEY_PREFIX}:${date}:${room}`;
+    }
+    function loadPhoneOverrides(date, room) {
+      try {
+        const raw = localStorage.getItem(phoneOverridesStorageKey(date, room));
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch {
+        return {};
+      }
+    }
+    function savePhoneOverrides(date, room, overrides) {
+      localStorage.setItem(phoneOverridesStorageKey(date, room), JSON.stringify(overrides || {}));
+    }
+    function applyPhoneToLocal(caseKey, phoneText) {
+      allRows.forEach(r => {
+        if (String(r.case_key || "") === String(caseKey || "")) r.pat_phone = phoneText;
+      });
+    }
+    async function deleteManualRow(rowId, caseKey) {
+      const date = document.getElementById("date").value.trim();
+      const room = DEFAULT_ROOM;
+      const proxyBase = `${window.location.protocol}//${window.location.hostname}:18080`;
+      const resp = await fetch(`${proxyBase}/custom_rows?date=${encodeURIComponent(date)}&room=${encodeURIComponent(room)}&id=${encodeURIComponent(String(rowId))}`, {
+        method: "DELETE"
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+      if (caseKey && Object.prototype.hasOwnProperty.call(phoneOverrides, caseKey)) {
+        delete phoneOverrides[caseKey];
+        savePhoneOverrides(date, room, phoneOverrides);
+      }
+      await loadData();
+    }
+    async function updateManualRowItem(rowId, itemName) {
+      const date = document.getElementById("date").value.trim();
+      const room = DEFAULT_ROOM;
+      const proxyBase = `${window.location.protocol}//${window.location.hostname}:18080`;
+      const resp = await fetch(`${proxyBase}/custom_rows`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: Number(rowId),
+          date,
+          room,
+          item_name: itemName
+        })
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+    }
+    function startPhoneInlineEdit(cell) {
+      if (!cell || cell.dataset.editing === "1") return;
+      const caseKey = cell.dataset.caseKey || "";
+      if (!caseKey) return;
+      cell.dataset.editing = "1";
+      const oldText = cell.textContent === "-" ? "" : String(cell.textContent || "");
+      const input = document.createElement("input");
+      input.type = "text";
+      input.className = "phone-inline-input";
+      input.value = oldText;
+      input.placeholder = "可输入多个手机号，用 / 、 , ; 分隔";
+      const finish = (save) => {
+        if (cell.dataset.editing !== "1") return;
+        delete cell.dataset.editing;
+        const nextText = save ? String(input.value || "").trim() : oldText;
+        if (save) {
+          phoneOverrides[caseKey] = nextText;
+          const date = document.getElementById("date").value.trim();
+          savePhoneOverrides(date, DEFAULT_ROOM, phoneOverrides);
+          applyPhoneToLocal(caseKey, nextText);
+        }
+        applyFilters();
+      };
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          finish(true);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          finish(false);
+        }
+      });
+      input.addEventListener("blur", () => finish(true));
+      cell.innerHTML = "";
+      cell.appendChild(input);
+      input.focus();
+      input.select();
+    }
+
+    function render(rows) {
+      const tbody = document.querySelector("#table tbody");
+      tbody.innerHTML = rows.map(r => `
+        <tr class="row-status-${getStatusSelectValue(r)}">
+          <td class="status-cell v-${getStatusSelectValue(r)}">${statusSelectHtml(r)}</td>
+          <td>${r.kind || r.kind_group || "-"}</td>
+          <td>${formatQueueNo(r)}</td>
+          <td>${r.name || "-"}</td>
+          <td>${r.pat_name || "-"}</td>
+          <td class="phone-cell" data-case-key="${r.case_key || buildCaseKey(r)}" title="双击修改，可输入多个手机号">${r.pat_phone || "-"}</td>
+          <td>${r.patient_id || "-"}</td>
+          <td>${r.serial_no || "-"}</td>
+          <td>${r.signtime || "-"}</td>
+          <td class="item-cell ${r.id ? "manual-item" : ""}" data-row-id="${r.id || ""}" title="${r.id ? "双击修改检查项目" : ""}">${r.item_name || "-"}</td>
+          <td>${r.diag || "-"}</td>
+          <td>
+            ${r.id ? `
+              <div class="manual-del-wrap" data-row-id="${r.id}" data-case-key="${r.case_key || buildCaseKey(r)}">
+                <button class="manual-del-btn" title="删除（点两次确认）">×</button>
+              </div>
+            ` : "-"}
+          </td>
+        </tr>
+      `).join("");
+      tbody.querySelectorAll(".status-select").forEach(sel => {
+        applyStatusSelectTheme(sel, sel.value);
+        sel.addEventListener("change", async (e) => {
+          let caseKey = e.target.dataset.caseKey;
+          if (!caseKey) {
+            const rowLike = {
+              patient_id: e.target.dataset.patientId || "",
+              serial_no: e.target.dataset.serialNo || "",
+              xh: e.target.dataset.xh || "",
+              name: e.target.dataset.name || "",
+              pat_name: e.target.dataset.patName || ""
+            };
+            caseKey = buildCaseKey(rowLike);
+          }
+          if (!caseKey) {
+            alert("状态更新失败：case_key 缺失，请先刷新页面。");
+            e.target.value = getStatusSelectValue({});
+            return;
+          }
+          const value = e.target.value;
+          e.target.className = `status-select v-${value}`;
+          applyStatusSelectTheme(e.target, value);
+          const statusCell = e.target.closest(".status-cell");
+          if (statusCell) statusCell.className = `status-cell v-${value}`;
+          const tr = e.target.closest("tr");
+          if (tr) tr.className = `row-status-${value}`;
+          const date = document.getElementById("date").value.trim();
+          const room = DEFAULT_ROOM;
+          const proxyBase = `${window.location.protocol}//${window.location.hostname}:18080`;
+          const now = new Date().toLocaleString("sv-SE").replace("T", " ");
+          const prev = allRows.find(r => String(r.case_key || "") === String(caseKey || ""));
+          const prevValue = prev ? getStatusSelectValue(prev) : "nocall";
+          try {
+            const resp = await fetch(`${proxyBase}/case_state`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                date,
+                room,
+                case_key: caseKey,
+                is_shaved: false,
+                status: value,
+                start_check_time: value === "completed" ? now : ""
+              })
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+            applyStatusToLocal(caseKey, value, now);
+            updateStats(allRows);
+            applyFilters();
+          } catch (err) {
+            alert(`状态更新失败：${err.message}`);
+            e.target.value = prevValue;
+            e.target.className = `status-select v-${prevValue}`;
+            applyStatusSelectTheme(e.target, prevValue);
+            const revertTr = e.target.closest("tr");
+            if (revertTr) revertTr.className = `row-status-${prevValue}`;
+          }
+        });
+      });
+      tbody.querySelectorAll(".phone-cell").forEach(cell => {
+        cell.addEventListener("dblclick", () => startPhoneInlineEdit(cell));
+      });
+      tbody.querySelectorAll(".item-cell.manual-item").forEach(cell => {
+        cell.addEventListener("dblclick", () => {
+          const rowId = cell.dataset.rowId || "";
+          if (!rowId || cell.dataset.editing === "1") return;
+          cell.dataset.editing = "1";
+          const oldText = cell.textContent === "-" ? "" : String(cell.textContent || "");
+          const input = document.createElement("input");
+          input.type = "text";
+          input.className = "phone-inline-input";
+          input.value = oldText;
+          const finish = async (save) => {
+            if (cell.dataset.editing !== "1") return;
+            delete cell.dataset.editing;
+            const nextText = save ? String(input.value || "").trim() : oldText;
+            if (save) {
+              try {
+                await updateManualRowItem(rowId, nextText);
+                await loadData();
+                return;
+              } catch (e) {
+                alert(`更新检查项目失败：${e.message}`);
+              }
+            }
+            applyFilters();
+          };
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              finish(true);
+            } else if (e.key === "Escape") {
+              e.preventDefault();
+              finish(false);
+            }
+          });
+          input.addEventListener("blur", () => finish(true));
+          cell.innerHTML = "";
+          cell.appendChild(input);
+          input.focus();
+          input.select();
+        });
+      });
+      tbody.querySelectorAll(".manual-del-wrap").forEach(wrap => {
+        const btnDelete = wrap.querySelector(".manual-del-btn");
+        if (!btnDelete) return;
+        btnDelete.addEventListener("click", async () => {
+          const rowId = wrap.dataset.rowId || "";
+          const caseKey = wrap.dataset.caseKey || "";
+          if (!rowId) return;
+          const isArmed = btnDelete.dataset.armed === "1";
+          if (!isArmed) {
+            btnDelete.dataset.armed = "1";
+            btnDelete.classList.add("armed");
+            btnDelete.title = "再次点击确认删除";
+            window.setTimeout(() => {
+              btnDelete.dataset.armed = "0";
+              btnDelete.classList.remove("armed");
+              btnDelete.title = "删除（点两次确认）";
+            }, 1600);
+            return;
+          }
+          try {
+            await deleteManualRow(rowId, caseKey);
+          } catch (e) {
+            alert(`删除失败：${e.message}`);
+          }
+        });
+      });
+    }
+
+    function parseDateTimeToMs(v) {
+      const s = String(v || "").trim();
+      if (!s) return Number.POSITIVE_INFINITY;
+      const t = new Date(s.replace(" ", "T")).getTime();
+      return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+    }
+
+    function sortRows(rows) {
+      if (!sortState.key) return rows;
+      const dir = sortState.direction === "desc" ? -1 : 1;
+      const key = sortState.key;
+      const statusOrder = { nocall: 1, hold: 2, pass: 3, completed: 4 };
+      const getVal = (r) => {
+        switch (key) {
+          case "status": return statusOrder[getStatusSelectValue(r)] ?? 99;
+          case "xh": return Number(r.xh || 0);
+          case "signtime":
+            return parseDateTimeToMs(r[key]);
+          case "kind": return String(r.kind || r.kind_group || "");
+          case "queue_bucket": return String(getDisplayQueueBucket(r) || "");
+          default: return String(r[key] || "");
+        }
+      };
+      return rows.slice().sort((a, b) => {
+        const va = getVal(a);
+        const vb = getVal(b);
+        if (typeof va === "number" && typeof vb === "number") return (va - vb) * dir;
+        return String(va).localeCompare(String(vb), "zh-Hans-CN") * dir;
+      });
+    }
+
+    function applyFilters() {
+      const kw = document.getElementById("keyword").value.trim();
+      const kind = document.getElementById("kindFilter").value;
+      const rows = allRows.filter(r => {
+        const mapped = getStatusSelectValue(r);
+        if (activeStatFilter !== "all" && mapped !== activeStatFilter) return false;
+        if (kind && String(r.kind || r.kind_group || "") !== kind) return false;
+        if (!kw) return true;
+        const hay = [r.name, r.pat_name, r.pat_phone, r.serial_no, r.patient_id, r.item_name, r.diag].join(" ");
+        return hay.includes(kw);
+      });
+      render(sortRows(rows));
+    }
+
+    function applyStatusToLocal(caseKey, value, now) {
+      const i = allRows.findIndex(r => String(r.case_key || "") === String(caseKey || ""));
+      if (i < 0) return;
+      allRows[i].case_status = value;
+      allRows[i].queue_bucket = queueBucketByStatus(value, allRows[i].queue_bucket);
+      allRows[i].start_check_time = value === "completed" ? now : "";
+      if (value === "completed") allRows.splice(i, 1);
+    }
+
+    async function loadData(forceLatest = false) {
+      const date = document.getElementById("date").value.trim();
+      const room = DEFAULT_ROOM;
+      if (date) syncDateQueryToUrl(date);
+      const file = `../exports/RH_GET99LIST_${date}_room${room}.json`;
+      const nonce = Date.now();
+      try {
+        const res = await fetch(`${file}?t=${nonce}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const json = await res.json();
+        const rawRows = flatten99(json.data || []);
+        const customRows = await fetchCustomRows(date, room, nonce);
+        const caseStates = await fetchCaseStates(date, room, nonce);
+        phoneOverrides = loadPhoneOverrides(date, room);
+        allRows = rawRows
+          .concat(customRows)
+          .map(r => {
+            const caseKey = r.case_key || buildCaseKey(r);
+            const st = caseStates.get(caseKey) || {};
+            const srcBucket = String(r.queue_bucket || "");
+            const normalizedBucket = (srcBucket === "listcalling" || srcBucket === "listpass") ? "listnocall" : srcBucket;
+            return {
+              ...r,
+              queue_bucket: queueBucketByStatus(st.status || "", normalizedBucket),
+              case_key: caseKey,
+              pat_phone: Object.prototype.hasOwnProperty.call(phoneOverrides, caseKey) ? (phoneOverrides[caseKey] || "") : (r.pat_phone || ""),
+              start_check_time: st.start_check_time || "",
+              case_status: st.status || ""
+            };
+          });
+        updateStats(allRows);
+        fillSelect("kindFilter", new Set(allRows.map(r => String(r.kind || r.kind_group || "")).filter(Boolean)));
+        applyFilters();
+      } catch (e) {
+        alert(`加载失败：${file}\n${e.message}\n\n请确认文件存在，并使用 http 服务打开页面。`);
+      }
+    }
+
+    document.getElementById("refreshBtn").addEventListener("click", () => {
+      triggerGlobalRefresh();
+      loadData(true);
+    });
+    document.getElementById("manualCreateBtn").addEventListener("click", async () => {
+      try {
+        await createManualRows();
+      } catch (e) {
+        alert(`创建失败：${e.message}`);
+      }
+    });
+    document.getElementById("keyword").addEventListener("input", applyFilters);
+    document.getElementById("kindFilter").addEventListener("change", applyFilters);
+    document.querySelectorAll(".stat[data-stat-filter]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const target = el.dataset.statFilter || "all";
+        activeStatFilter = activeStatFilter === target ? "all" : target;
+        applyStatFilterClasses();
+        applyFilters();
+      });
+    });
+    document.querySelectorAll("#table thead th.sortable").forEach(th => {
+      th.addEventListener("click", () => {
+        const key = th.dataset.sortKey || "";
+        if (!key) return;
+        if (sortState.key === key) {
+          sortState.direction = sortState.direction === "asc" ? "desc" : "asc";
+        } else {
+          sortState.key = key;
+          sortState.direction = "asc";
+        }
+        applyFilters();
+      });
+    });
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("kindFilter").value = "";
+      document.getElementById("keyword").value = "";
+      activeStatFilter = "all";
+      applyStatFilterClasses();
+      applyFilters();
+    });
+
+    function startAutoRefresh() {
+      if (!ENABLE_LIVE_POLLING) return;
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+      autoRefreshTimer = setInterval(() => {
+        loadData();
+      }, 5000);
+    }
+    function triggerGlobalRefresh() {
+      try {
+        localStorage.setItem(FORCE_REFRESH_KEY, String(Date.now()));
+      } catch {}
+    }
+
+    function applyExternalWorkDate(d) {
+      if (!isIsoDate(d)) return;
+      const el = document.getElementById("date");
+      if (!el || el.value.trim() === d) return;
+      el.value = d;
+      syncDateQueryToUrl(d);
+      loadData(true);
+    }
+    const dateInput = document.getElementById("date");
+    const dashDateSeed = readSharedWorkDateSeed();
+    persistSharedWorkDate(dashDateSeed);
+    dateInput.value = dashDateSeed;
+    syncDateQueryToUrl(dashDateSeed);
+    dateInput.addEventListener("click", () => {
+      if (typeof dateInput.showPicker === "function") dateInput.showPicker();
+    });
+    dateInput.addEventListener("change", () => {
+      const d = dateInput.value.trim();
+      if (isIsoDate(d)) persistSharedWorkDate(d);
+      loadData();
+    });
+    window.addEventListener("storage", (e) => {
+      if (e.key === QUEUE_SHARED_WORK_DATE_KEY && e.newValue && isIsoDate(e.newValue)) {
+        applyExternalWorkDate(e.newValue);
+        return;
+      }
+      if (e.key !== FORCE_REFRESH_KEY) return;
+      loadData(true);
+    });
+    if (workDateBroadcast) {
+      workDateBroadcast.onmessage = (ev) => {
+        const d = ev.data && ev.data.date;
+        if (isIsoDate(d)) applyExternalWorkDate(d);
+      };
+    }
+    applyStatFilterClasses();
+    startAutoRefresh();
+    loadData();
+  </script>
+</body>
+</html>
