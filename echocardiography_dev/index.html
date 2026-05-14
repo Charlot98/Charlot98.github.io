@@ -236,7 +236,7 @@
                             <button class="regurgitation-severity-btn" data-value="重度">重度</button>
                         </div>
                         <div class="regurgitation-severity-buttons" data-param="腱索断裂类型">
-                            <button class="regurgitation-severity-btn" data-value="疑部分腱索断裂">疑部分腱索断裂</button>
+                            <button class="regurgitation-severity-btn" data-value="疑腱索断裂">疑腱索断裂</button>
                             <button class="regurgitation-severity-btn" data-value="部分腱索断裂">腱索断裂</button>
                         </div>
                     </div>
@@ -290,8 +290,19 @@
                         </div>
                         <span class="lavi-display" id="laviDisplay">-</span>
                         <span class="lavi-unit">ml/kg</span>
-                        <div id="laVolumeInputItem" class="la-volume-display-btn-group" aria-label="LA Volume显示开关">
-                            <button type="button" class="la-volume-display-btn" data-param="LA Volume显示" data-value="显示">显示</button>
+                        <div id="laVolumeInputItem" class="la-volume-display-btn-group" aria-label="LA Volume 显示开关">
+                            <button type="button" class="la-volume-display-btn" data-param="LA Volume显示" data-value="显示" title="在所见中显示 LA volume" aria-label="切换是否在所见中显示 LA volume">
+                                <svg class="la-volume-eye la-volume-eye--open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <svg class="la-volume-eye la-volume-eye--closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.257 2.429"/>
+                                    <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/>
+                                    <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 1.636-1.029"/>
+                                    <path d="M2 2 22 22"/>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                     <!-- readme 2.2 PA/Ao：仅「右心高阶」；PA/Ao=PA/AO（2），AO（2）空时用主动脉 AO；PA 与 AO（2）在气泡内编辑 -->
