@@ -7,6 +7,9 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>心超报告生成器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Long+Cang&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e74c3c'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,10 +17,6 @@
     <!-- 提示词显示区域 -->
     <!-- Tooltip 显示区域 -->
     <div id="infoTooltip" class="info-tooltip" style="display: none;"></div>
-    <!-- 截图示意图放大层：点击图片放大，再次点击关闭 -->
-    <div id="imageLightbox" class="image-lightbox" role="dialog" aria-label="截图示意图放大" tabindex="-1" style="display: none;">
-        <img id="imageLightboxImg" class="image-lightbox-img" src="" alt="截图示意图">
-    </div>
     <div class="container">
             <div class="left-sidebar">
                 <!-- 顶栏：置于左侧栏顶部，置顶显示 -->
@@ -40,11 +39,11 @@
                                 <label class="reference-range-label">参考：</label>
                                 <select id="referenceRangeSelect" class="reference-range-select">
                                     <option value="">请选择</option>
-                                    <option value="M型">M型（犬≤3kg）</option>
-                                    <option value="非M型">非M型（犬＞3kg）</option>
+                                    <option value="犬≤3kg">犬≤3kg</option>
+                                    <option value="犬＞3kg">犬＞3kg</option>
                                     <option value="金毛">金毛</option>
                                     <option value="猫">猫</option>
-                                    <option value="猫心超（含体重）">猫心超（含体重）</option>
+                                    <option value="猫（含体重）">猫（含体重）</option>
                                     <option value="兔子">兔子</option>
                                 </select>
                             </div>
@@ -57,20 +56,19 @@
                                 <span id="weightReferenceDisplay" class="weight-reference-display"></span>
                             </div>
                         </div>
-                        <button id="refreshButton" class="refresh-button" data-tooltip="点击此处刷新页面" title="点击此处刷新页面" aria-label="点击此处刷新页面">
-                            <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <button type="button" id="refreshButton" class="refresh-button" title="清空表单并恢复默认" aria-label="清空">
+                            <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                 <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
                                 <path d="M21 3v5h-5"></path>
                                 <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
                                 <path d="M3 21v-5h5"></path>
                             </svg>
                         </button>
-                        <div id="refreshButtonTooltip" class="refresh-button-tooltip" role="tooltip" aria-label="点击此处刷新页面" style="display: none;"></div>
                     </div>
                 </div>
                 <div class="left-sidebar-scroll">
                 <div class="parameters-container" id="parametersContainer">
-            <!-- 1. M型参数 -->
+            <!-- 1. 心超测量参数 -->
             <div class="parameters-section">
                 <div class="parameters-section-header">
                 </div>
@@ -199,6 +197,44 @@
                             </div>
                         </div>
                     </div>
+                    <!-- DCM：EPSS / SI（球形指数），位于 FS 所在行的下一行 -->
+                    <div id="dcmSpecificInputs" class="m-type-dcm-epss-si-row" style="display: none;">
+                        <div class="m-type-item">
+                            <label class="m-type-label">EPSS</label>
+                            <div class="input-with-unit-suffix">
+                                <input type="text" class="m-type-input" data-param="EPSS" placeholder="">
+                                <span class="unit-suffix" aria-hidden="true">mm</span>
+                            </div>
+                        </div>
+                        <div class="m-type-item">
+                            <label class="m-type-label">SI（球形指数）</label>
+                            <div class="si-paa-wrap">
+                                <div class="input-with-unit-suffix input-with-unit-suffix--bare">
+                                    <input type="text" id="siRatioInput" class="m-type-input" data-param="SI" placeholder="" title="可由左心室长度与左心室宽度自动计算，亦可手动修改；点击下方或聚焦此处展开输入">
+                                    <span class="unit-suffix" aria-hidden="true"></span>
+                                </div>
+                                <div class="si-bubble" id="siBubble" role="group" aria-label="左心室长度与左心室宽度">
+                                    <div class="si-bubble-body">
+                                        <div class="si-bubble-row">
+                                            <span class="si-bubble-label">左心室长度</span>
+                                            <div class="input-with-unit-suffix">
+                                                <input type="text" class="m-type-input" data-param="左心室长度" placeholder="" autocomplete="off">
+                                                <span class="unit-suffix" aria-hidden="true">mm</span>
+                                            </div>
+                                        </div>
+                                        <div class="si-bubble-row">
+                                            <span class="si-bubble-label">左心室宽度</span>
+                                            <div class="input-with-unit-suffix">
+                                                <input type="text" class="m-type-input" data-param="左心室宽度" placeholder="" autocomplete="off">
+                                                <span class="unit-suffix" aria-hidden="true">mm</span>
+                                            </div>
+                                        </div>
+                                        <p class="si-bubble-hint">SI = 左心室长度 ÷ 左心室宽度（SI&lt;1.65 标红）</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <!-- readme 2.1 TAPSE：开启「右心高阶」后显示；右侧展示 TAPSE/AO（需 TAPSE 与 AO 均有值） -->
                     <div class="m-type-item m-type-item-tapse" id="tapseInputRow" style="display: none;">
                         <label class="m-type-label">
@@ -236,9 +272,16 @@
                             <button class="regurgitation-severity-btn" data-value="重度">重度</button>
                         </div>
                         <div class="regurgitation-severity-buttons" data-param="腱索断裂类型">
-                            <button class="regurgitation-severity-btn" data-value="疑部分腱索断裂">疑部分腱索断裂</button>
+                            <button class="regurgitation-severity-btn" data-value="疑腱索断裂">疑腱索断裂</button>
                             <button class="regurgitation-severity-btn" data-value="部分腱索断裂">腱索断裂</button>
                         </div>
+                    </div>
+                </div>
+                <!-- HCM 特征标签（SAM / 左心室流出道湍流） -->
+                <div id="hcmSpecificInputs" style="display: none;">
+                    <div class="hcm-feature-tag-row">
+                        <button type="button" class="valve-flow-tag valve-flow-tag-hcm" data-tag="SAM">SAM</button>
+                        <button type="button" class="valve-flow-tag valve-flow-tag-hcm" data-tag="左心室流出道湍流">左心室流出道湍流</button>
                     </div>
                 </div>
                 <div class="other-params-grid">
@@ -271,18 +314,16 @@
                             </div>
                         </div>
                     </div>
-                    <!-- LAD Max：仅猫 / 猫心超（含体重）；单击标题在弹窗中放大示意图 -->
+                    <!-- LAD Max：仅猫 / 猫（含体重）；单击标题在弹窗中放大示意图 -->
                     <div class="other-param-item max-lad-row" id="maxLadRow" style="display: none;">
-                        <div class="other-param-label max-lad-label-wrap">
-                            <button type="button" class="max-lad-title-trigger" id="maxLadTitleBtn" aria-label="单击放大查看 LAD Max 测量示意图">LAD Max</button>
-                        </div>
+                        <label class="other-param-label max-lad-label-wrap" for="maxLadInput">LAD Max</label>
                         <div class="input-with-unit-suffix">
                             <input type="text" id="maxLadInput" class="other-param-input" data-param="LAD Max" placeholder="" autocomplete="off" aria-labelledby="maxLadTitleBtn">
                             <span class="unit-suffix" aria-hidden="true">mm</span>
                         </div>
                     </div>
                     <!-- LA Volume / LAVi：位于 PA/Ao 上一行 -->
-                    <div class="la-volume-row">
+                    <div id="laVolumeRow" class="la-volume-row">
                         <span class="la-volume-label">LA Volume</span>
                         <div class="input-with-unit-suffix la-volume-input-wrap">
                             <input type="text" class="other-param-input la-volume-input" data-param="LA Volume" placeholder="">
@@ -290,8 +331,19 @@
                         </div>
                         <span class="lavi-display" id="laviDisplay">-</span>
                         <span class="lavi-unit">ml/kg</span>
-                        <div id="laVolumeInputItem" class="la-volume-display-btn-group" aria-label="LA Volume显示开关">
-                            <button type="button" class="la-volume-display-btn" data-param="LA Volume显示" data-value="显示">显示</button>
+                        <div id="laVolumeInputItem" class="la-volume-display-btn-group" aria-label="LA Volume 显示开关">
+                            <button type="button" class="la-volume-display-btn" data-param="LA Volume显示" data-value="显示" title="在所见中显示 LA volume" aria-label="切换是否在所见中显示 LA volume">
+                                <svg class="la-volume-eye la-volume-eye--open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                                <svg class="la-volume-eye la-volume-eye--closed" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.257 2.429"/>
+                                    <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/>
+                                    <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 1.636-1.029"/>
+                                    <path d="M2 2 22 22"/>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                     <!-- readme 2.2 PA/Ao：仅「右心高阶」；PA/Ao=PA/AO（2），AO（2）空时用主动脉 AO；PA 与 AO（2）在气泡内编辑 -->
@@ -319,7 +371,7 @@
                                                 <span class="unit-suffix" aria-hidden="true">mm</span>
                                             </div>
                                         </div>
-                                        <p class="pa-ao-bubble-hint">未填 AO（2）时用主动脉 AO 参与计算</p>
+                                        <p class="pa-ao-bubble-hint">未填 AO（2）时用上一行的 AO 参与计算</p>
                                     </div>
                                 </div>
                             </div>
@@ -633,10 +685,10 @@
             </div>
             <div class="right-sidebar" id="rightSidebar">
                 <div class="right-sidebar-resize-triangle" id="rightSidebarResizeTriangle" title="拖拽调节大小"></div>
-                <div id="refreshButtonTopSnipHint" class="refresh-button-top-snip-hint" role="status" aria-live="polite" aria-hidden="true" style="display: none;"></div>
                 <div class="template-section">
                     <div class="section-header">
                         <h4>所见</h4>
+                        <button class="regenerate-btn" id="regenerateFindingsBtn" style="display:none" title="重新生成（覆盖手动编辑）">&#8635;</button>
                         <button class="copy-btn-small" id="copyFindingsBtn">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -644,10 +696,11 @@
                             </svg>
                         </button>
                     </div>
-                    <textarea class="template-text" id="findingsText" rows="20" readonly placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
+                    <textarea class="template-text" id="findingsText" rows="20" readonly placeholder="请选择疾病类型和参考，模板将自动生成。" title="双击进入编辑"></textarea>
                     
                     <div class="section-header">
                         <h4 class="conclusion-title">结论</h4>
+                        <button class="regenerate-btn" id="regenerateConclusionBtn" style="display:none" title="重新生成（覆盖手动编辑）">&#8635;</button>
                         <button class="copy-btn-small" id="copyConclusionBtn">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -655,25 +708,46 @@
                             </svg>
                         </button>
                     </div>
-                    <textarea class="template-text" id="conclusionText" rows="5" readonly placeholder="请选择疾病类型和参考，模板将自动生成。"></textarea>
+                    <textarea class="template-text" id="conclusionText" rows="5" readonly placeholder="请选择疾病类型和参考，模板将自动生成。" title="双击进入编辑"></textarea>
                     
                     </div>
             </div>
-    </div>
-
-    <!-- 操作指引：第1层图标，第2/3层卡片 -->
-    <div class="guide-wrapper">
-        <div class="guide-card" id="guideCard">
-            <div class="guide-card-body" id="guideCardBody"></div>
-        </div>
-        <button type="button" class="guide-trigger" id="guideTrigger" title="操作指引" aria-label="操作指引">
-            <svg class="guide-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M9 21c0 .5.4 1 1 1h4c.6 0 1-.5 1-1v-1H9v1zm3-19C8.1 2 5 5.1 5 9c0 2.4 1.2 4.5 3 5.7V17c0 .5.4 1 1 1h6c.6 0 1-.5 1-1v-2.3c1.8-1.3 3-3.4 3-5.7 0-3.9-3.1-7-7-7z"/>
-            </svg>
-        </button>
+            <div id="rightSidebarHintsLayer" class="right-sidebar-hints-layer" aria-hidden="true">
+                <div class="right-sidebar-clear-hint" aria-hidden="true">
+                    <span class="right-sidebar-clear-hint-arrow" aria-hidden="true">
+                        <svg class="right-sidebar-clear-hint-arrow-svg" width="40" height="14" viewBox="0 0 40 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M38 7H10M10 7L16 2M10 7L16 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <span class="right-sidebar-clear-hint-text">点击此处清空数值</span>
+                </div>
+                <div class="right-sidebar-snip-hint" role="note" aria-label="系统截图快捷键：Shift+Win+S">
+                    <span class="right-sidebar-snip-hint-intro">截图</span>
+                    <span class="right-sidebar-snip-hint-keys">
+                        <kbd class="right-sidebar-kbd">Shift</kbd><span class="right-sidebar-snip-plus" aria-hidden="true">+</span><kbd class="right-sidebar-kbd">Win</kbd><span class="right-sidebar-snip-plus" aria-hidden="true">+</span><kbd class="right-sidebar-kbd">S</kbd>
+                    </span>
+                </div>
+            </div>
     </div>
 
     <script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="script.js"></script>
+    <script src="js/globals.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/data-loader.js"></script>
+    <script src="js/template-loader.js"></script>
+    <script src="js/reference-values.js"></script>
+    <script src="js/calculations.js"></script>
+    <script src="js/ui-inputs.js"></script>
+    <script src="js/refresh.js"></script>
+    <script src="js/resize.js"></script>
+    <script src="js/ocr.js"></script>
+    <script src="js/disease-selector.js"></script>
+    <script src="js/right-heart.js"></script>
+    <script src="js/valve-tags.js"></script>
+    <script src="js/template-findings.js"></script>
+    <script src="js/template-conclusion.js"></script>
+    <script src="js/template-config.js"></script>
+    <script src="js/generate-template.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>

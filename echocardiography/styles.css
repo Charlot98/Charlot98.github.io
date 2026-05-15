@@ -139,51 +139,77 @@ body {
     font-weight: 600;
 }
 
+/* 顶栏参考下拉、疾病「更多选择」下拉：与 .disease-tag 同高、同圆角与同线框 */
+.reference-range-select,
 .disease-tag-select {
     padding: 4px 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    background-color: #f5f5f5;
     font-size: 12px;
     font-weight: 500;
     color: #666;
+    background-color: #f5f5f5;
     cursor: pointer;
     transition: all 0.2s ease;
-    min-width: 80px;
+    font-family: inherit;
+    line-height: 1.4;
+    min-height: 28px;
+    box-sizing: border-box;
 }
 
+.reference-range-select {
+    min-width: 100px;
+    flex-shrink: 1;
+}
+
+.disease-tag-select {
+    min-width: 100px;
+    flex-shrink: 1;
+}
+
+.reference-range-select:hover,
 .disease-tag-select:hover {
     border-color: #4a90e2;
-    background-color: #e8f2ff;
-    color: #4a90e2;
+    background-color: #ececec;
 }
 
+.reference-range-select:focus,
 .disease-tag-select:focus {
     outline: none;
     border-color: #4a90e2;
 }
 
+/* 已从「更多」选中 HCM 等时：同语系的选中强调，不用整块填充蓝 */
 .disease-tag-select.active {
     border-color: #4a90e2;
-    background-color: #4a90e2;
-    color: #fff;
+    background-color: #eff6ff;
+    color: #1e40af;
 }
 
-/* 刷新按钮 - 背景和边框始终透明，顶栏最右侧 */
+.disease-tag-select.active:hover {
+    border-color: #3b82c4;
+    background-color: #e8f0fe;
+}
+
+/* 顶栏「清空」：图标 + 文字，顶栏最右侧 */
 .refresh-button {
-    padding: 4px 12px;
+    padding: 4px 10px;
+    gap: 5px;
     border: 1px solid transparent;
     border-radius: 4px;
     background-color: transparent;
     color: #666;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
     cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     width: auto;
     height: auto;
-    min-width: 28px;
     min-height: 28px;
     flex-shrink: 0;
     box-shadow: none;
@@ -206,198 +232,112 @@ body {
     transform: none;
 }
 
-.refresh-button::after {
-    /* 移除刷新按钮右上角红点提示 */
-    content: none;
-}
-
-.refresh-button::before {
-    content: attr(data-tooltip);
-    position: absolute;
-    top: 50%;
-    left: auto;
-    right: 0;
-    transform: translateY(-50%) translateX(-8px);
-    opacity: 0; /* 交由 JS 计算并固定定位的提示层显示 */
-    padding: 4px 8px;
-    background-color: rgba(17, 24, 39, 0.95);
-    color: #fff;
-    font-size: 11px;
-    border-radius: 4px;
-    white-space: nowrap;
-    pointer-events: none;
-    z-index: 10001;
-    transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.refresh-button:hover::before,
-.refresh-button:focus::before {
-    opacity: 0;
-    transform: translateY(-50%) translateX(-8px);
-}
-
-/* 刷新旁提示：白底、深灰边；字体与 body 一致 */
-.refresh-button-tooltip {
-    position: fixed;
-    z-index: 10001;
-    background-color: #fff;
-    color: #333;
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 1.6;
-    font-weight: 400;
-    letter-spacing: normal;
-    border-radius: 8px;
-    white-space: nowrap;
-    padding: 6px 11px;
-    pointer-events: none;
-    border: 1px solid #6b7280;
-    box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.06),
-        0 6px 16px rgba(15, 23, 42, 0.08);
-    display: none;
-    overflow: visible;
-    background-clip: padding-box;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-/* 右侧栏顶部「快速截图」：白底、深灰边，可拖动 */
-.refresh-button-top-snip-hint {
-    position: fixed;
-    left: 50%;
-    top: 0px;
-    transform: translateX(-50%);
-    z-index: 10001;
-    display: none;
-    width: fit-content;
-    max-width: calc(100vw - 16px);
-    pointer-events: auto;
-    cursor: grab;
-    user-select: none;
-    touch-action: none;
-    padding: 5px 10px 5px 9px;
-    border-radius: 8px;
-    border: 1px solid #6b7280;
-    background: #fff;
-    color: #333;
-    font-family: inherit;
-    font-size: 14px;
-    line-height: 1.6;
-    font-weight: 400;
-    box-shadow:
-        0 1px 2px rgba(15, 23, 42, 0.06),
-        0 6px 16px rgba(15, 23, 42, 0.08);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-.snip-hint-inner {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.snip-hint-keys {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-}
-
-.refresh-button-top-snip-hint:active {
-    cursor: grabbing;
-}
-
-.snip-hint-label {
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 400;
-    color: #333;
-    letter-spacing: normal;
-}
-
-.refresh-button-top-snip-hint kbd {
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 1.4;
-    padding: 3px 7px;
-    border-radius: 5px;
-    color: #fff;
-    background: #000;
-    border: none;
-    box-shadow: none;
-}
-
-/* 刷新按钮提示框：循环向左轻微移动 */
-.refresh-tooltip-left-loop {
-    animation: refreshTooltipLeftLoop 1.4s ease-in-out infinite;
-}
-
-@keyframes refreshTooltipLeftLoop {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(-4px); }
-}
-
-/* 箭头：双层三角（外边框色 + 内与卡片同色） */
-.refresh-button-tooltip::before,
-.refresh-button-tooltip::after {
-    content: '';
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 0;
-    height: 0;
-    pointer-events: none;
-    border-style: solid;
-    border-color: transparent;
-}
-
-.refresh-button-tooltip::before {
-    z-index: 0;
-}
-
-.refresh-button-tooltip::after {
-    z-index: 1;
-}
-
-.refresh-button-tooltip[data-placement="right"]::before {
-    left: -7px;
-    right: auto;
-    border-width: 7px 7px 7px 0;
-    border-right-color: #6b7280;
-}
-
-.refresh-button-tooltip[data-placement="right"]::after {
-    left: -6px;
-    right: auto;
-    border-width: 6px 6px 6px 0;
-    border-right-color: #fff;
-}
-
-.refresh-button-tooltip[data-placement="left"]::before {
-    right: -7px;
-    left: auto;
-    border-width: 7px 0 7px 7px;
-    border-left-color: #6b7280;
-}
-
-.refresh-button-tooltip[data-placement="left"]::after {
-    right: -6px;
-    left: auto;
-    border-width: 6px 0 6px 6px;
-    border-left-color: #fff;
+@keyframes refreshIconClickSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(720deg);
+    }
 }
 
 .refresh-icon {
     width: 16px;
     height: 16px;
+    flex-shrink: 0;
     stroke: currentColor;
     transition: transform 0.2s ease;
 }
 
 .refresh-button:hover .refresh-icon {
     transform: rotate(180deg);
+}
+
+/* 点击清空：图标快速旋转两圈 */
+.refresh-button.refresh-button--spin-once .refresh-icon,
+.refresh-button.refresh-button--post-copy.refresh-button--spin-once .refresh-icon,
+.refresh-button.refresh-button--post-copy.refresh-button--spin-once:hover .refresh-icon {
+    transition: none;
+    animation: refreshIconClickSpin 0.38s ease-out 1;
+}
+
+/* 右侧复制成功后：提示顶栏「清空」可开始新一轮填写 */
+.refresh-button.refresh-button--post-copy {
+    color: #dc2626;
+    border-color: rgba(220, 38, 38, 0.45);
+}
+
+.refresh-button.refresh-button--post-copy .refresh-icon {
+    stroke: currentColor;
+}
+
+.refresh-button.refresh-button--post-copy:hover {
+    color: #b91c1c;
+    border-color: rgba(185, 28, 28, 0.55);
+    background-color: rgba(254, 226, 226, 0.45);
+}
+
+.refresh-button.refresh-button--post-copy:hover .refresh-icon {
+    transform: rotate(180deg);
+}
+
+.refresh-button.refresh-button--post-copy:focus {
+    border-color: rgba(220, 38, 38, 0.55);
+    color: #b91c1c;
+}
+
+/* 右侧栏：截图快捷键说明（浅灰字 + 圆角描边键帽，不拦截点击） */
+.right-sidebar-snip-hint {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin: 0 0 10px 0;
+    padding: 6px 8px 12px;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 400;
+    color: #999;
+    pointer-events: none;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+}
+
+.right-sidebar-snip-hint-intro {
+    color: #999;
+}
+
+.right-sidebar-snip-hint-keys {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.right-sidebar-snip-plus {
+    color: #c4c4c4;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 0 1px;
+    user-select: none;
+}
+
+.right-sidebar-kbd {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: #666;
+    background: #fafafa;
+    border: 1px solid #d0d0d0;
+    border-radius: 5px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    font-family: inherit;
 }
 
 /* 含辛普森测量按钮 - 左侧栏1.M-mode标题下，风格同反流程度选择框 */
@@ -442,7 +382,7 @@ body {
 }
 
 
-/* 顶栏参考范围选择框 - 风格同疾病类型 */
+/* 顶栏参考范围标签 + 下拉 */
 .reference-range-select-wrapper {
     display: flex;
     align-items: center;
@@ -459,31 +399,8 @@ body {
     flex-shrink: 0;
 }
 
-.reference-range-select {
-    padding: 4px 10px;
-    border: 1.5px solid #d1d5db;
-    border-radius: 2px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #6b7280;
-    background-color: #f9fafb;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    min-width: 100px;
-    flex-shrink: 1;
-}
+/* 下拉本体样式与 .disease-tag-select 共用（见「顶栏参考下拉、疾病「更多选择」下拉」） */
 
-.reference-range-select:hover {
-    border-color: #bbb;
-    background-color: #e8e8e8;
-}
-
-.reference-range-select:focus {
-    outline: none;
-    border-color: #4a90e2;
-}
-
-/* 体重输入 - 风格同疾病类型 */
 .weight-input-wrapper {
     display: flex;
     align-items: center;
@@ -500,8 +417,8 @@ body {
 }
 
 .weight-input-wrapper .input-with-unit-suffix.weight-input-with-unit {
-    width: 120px;
-    min-width: 120px;
+    width: 90px;
+    min-width: 90px;
     flex-shrink: 0;
 }
 
@@ -511,21 +428,25 @@ body {
 }
 
 .weight-input {
-    padding: 4px 10px;
-    border: 1.5px solid #d1d5db;
-    border-radius: 2px;
-    background-color: #f9fafb;
+    padding: 4px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f5f5f5;
     font-size: 12px;
     font-weight: 500;
-    color: #6b7280;
+    color: #666;
     transition: all 0.2s ease;
     flex-shrink: 0;
     text-align: center;
+    min-height: 28px;
+    box-sizing: border-box;
+    line-height: 1.4;
 }
 
 .weight-input:hover {
-    border-color: #bbb;
-    background-color: #e8e8e8;
+    border-color: #4a90e2;
+    background-color: #e8f2ff;
+    color: #4a90e2;
 }
 
 .weight-input:focus {
@@ -546,37 +467,6 @@ body {
     min-width: 0;
     text-align: left;
     display: inline-block;
-}
-
-.weight-option-btn {
-    background-color: transparent;
-    border: 1px solid #d1d5db;
-    border-radius: 2px;
-    padding: 1px 2px;
-    font-size: 11px;
-    color: #666;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-style: italic;
-    margin: 0;
-}
-
-.weight-option-btn:hover {
-    background-color: #e8f2ff;
-    border-color: #4a90e2;
-    color: #4a90e2;
-}
-
-.weight-option-btn.active {
-    background-color: #4a90e2;
-    border-color: #4a90e2;
-    color: #fff;
-    font-weight: 500;
-}
-
-.weight-option-btn.active:hover {
-    background-color: #357abd;
-    border-color: #357abd;
 }
 
 
@@ -654,7 +544,7 @@ body {
 
 
 
-/* M型参数 - 2列布局*/
+/* 心超测量参数 - 2列布局 */
 .m-type-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -813,6 +703,78 @@ body {
 }
 
 /* TAPSE（右心高阶）：跨两列；输入框右侧展示 TAPSE/AO */
+/* DCM：EPSS / SI 行（占满 M 型参数区整行，两列） */
+.m-type-dcm-epss-si-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+.si-paa-wrap {
+    position: relative;
+    width: 100%;
+}
+
+.si-bubble {
+    position: absolute;
+    left: 0;
+    right: auto;
+    top: calc(100% + 4px);
+    min-width: 260px;
+    max-width: min(100vw - 24px, 340px);
+    z-index: 200;
+    padding: 0;
+    margin: 0;
+    background: #fff;
+    border: 1px solid #818181;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+}
+
+.si-paa-wrap:focus-within .si-bubble {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.si-bubble-body {
+    padding: 8px 10px 6px;
+}
+
+.si-bubble-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.si-bubble-label {
+    flex: 0 0 5.5em;
+    font-size: 12px;
+    color: #444;
+    white-space: nowrap;
+}
+
+.si-bubble-row .input-with-unit-suffix {
+    flex: 1;
+    min-width: 0;
+}
+
+.si-bubble-hint {
+    font-size: 11px;
+    color: #888;
+    line-height: 1.35;
+    margin: 0;
+    padding-top: 6px;
+    border-top: 1px solid #eee;
+}
+
 .m-type-item-tapse {
     grid-column: span 2;
 }
@@ -997,34 +959,12 @@ body {
     min-width: 0;
 }
 
-/* LAD Max：占满一行；标题为可点击文字（保留下划线），单击打开全屏示意图 */
+/* LAD Max：占满一行 */
 .max-lad-row {
     grid-column: 1 / -1;
 }
 .max-lad-label-wrap {
     align-self: flex-start;
-}
-.max-lad-title-trigger {
-    display: inline;
-    padding: 0;
-    margin: 0;
-    border: none;
-    background: none;
-    font: inherit;
-    font-weight: 500;
-    color: inherit;
-    cursor: pointer;
-    border-bottom: 1px dotted #94a3b8;
-    line-height: inherit;
-    text-align: left;
-}
-.max-lad-title-trigger:hover {
-    color: #4a90e2;
-    border-bottom-color: #4a90e2;
-}
-.max-lad-title-trigger:focus-visible {
-    outline: 2px solid #4a90e2;
-    outline-offset: 2px;
 }
 
 /* readme 2.2–2.3 PA/Ao + FAC（右心高阶）：首行仅 PA/Ao（PA、AO2 在气泡内）；次行 FAC 全宽 */
@@ -1632,6 +1572,90 @@ body {
     background: linear-gradient(135deg, transparent 50%, #4a90e2 50%);
     opacity: 1;
 }
+
+/* 右侧栏提示：固定于视口默认右侧区域，不随 #rightSidebar 拖动 */
+.right-sidebar-hints-layer {
+    position: fixed;
+    left: 50%;
+    top: calc(100vh * 0.1);
+    width: 30%;
+    min-width: 280px;
+    padding: 14px;
+    box-sizing: border-box;
+    pointer-events: none;
+    z-index: 12;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.right-sidebar-hints-layer.is-ready {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 与顶栏「清空」按钮垂直对齐：JS 写入 --clear-hint-top（refresh 按钮中线相对提示层内容区顶部的偏移） */
+.right-sidebar-clear-hint {
+    position: absolute;
+    top: -65px;
+    left: 0;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px 8px;
+    width: max-content;
+    max-width: min(70%, 280px);
+    margin: 0 0 8px 0;
+    padding: 0 0 0 0;
+    box-sizing: border-box;
+    background: transparent;
+    pointer-events: none;
+    user-select: none;
+}
+
+.right-sidebar-clear-hint-arrow {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    color: #8b939e;
+    opacity: 0.92;
+}
+
+.right-sidebar-clear-hint-arrow-svg {
+    display: block;
+}
+
+.right-sidebar-clear-hint-text {
+    font-family: 'Long Cang', 'KaiTi', 'STKaiti', cursive;
+    font-size: 1.35rem;
+    line-height: 1.35;
+    color: #8b939e;
+    letter-spacing: 0.04em;
+    transform: rotate(-0.4deg);
+    padding: 0;
+    white-space: nowrap;
+}
+
+.right-sidebar-hints-layer .right-sidebar-snip-hint {
+    position: absolute;
+    top: -80px;
+    left: 60%;
+    display: inline-flex;
+    flex-wrap: nowrap;
+    width: max-content;
+    max-width: none;
+    white-space: nowrap;
+    justify-content: flex-start;
+    pointer-events: none;
+}
+
+.right-sidebar-hints-layer .right-sidebar-snip-hint .right-sidebar-snip-hint-keys {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
 /* 模板生成区域 - 占满右侧栏高度 */
 .template-section {
     position: relative;
@@ -1702,7 +1726,8 @@ body {
     color: #2c3e50;
     margin-bottom: 6px;
     width: 100%;
-    font-family: 'Consolas', 'Monaco', 'Courier New', monospace, 'Microsoft YaHei', sans-serif;
+    /* 所见 M 型两列对齐依赖空格补位，优先使用等宽字体 */
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace, 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB';
     resize: vertical;
     box-sizing: border-box;
     transition: all 0.2s ease;
@@ -1733,6 +1758,14 @@ body {
     background-color: #f0f2f5;
 }
 
+/* 右侧栏：双击进入的编辑态（仅所见/结论 textarea 使用） */
+.template-text.template-text--editing {
+    cursor: text;
+    resize: vertical;
+    background-color: #fff;
+    border: 1px solid #4a90e2;
+}
+
 .template-text::placeholder {
     color: #999;
     font-style: italic;
@@ -1761,6 +1794,29 @@ body {
 }
 
 /* 小复制按钮样式 */
+.regenerate-btn {
+    background: none;
+    color: #aaa;
+    border: 1px solid #555;
+    padding: 0;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.regenerate-btn:hover {
+    color: #e07b3a;
+    border-color: #e07b3a;
+}
+
 .copy-btn-small {
     background-color: #4a90e2;
     color: #fff;
@@ -2102,6 +2158,22 @@ body {
     flex-shrink: 0;
 }
 
+/* HCM 特征标签行（位于 AO 上一行） */
+.hcm-feature-tag-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 5px 0;
+    margin-bottom: 0;
+}
+
+.valve-flow-tag-hcm.active {
+    border-color: #4a90e2;
+    background-color: #4a90e2;
+    color: #fff;
+}
+
 /* MMVD特定输入框行样式 */
 .mmvd-combined-row {
     display: flex;
@@ -2164,7 +2236,7 @@ body {
     white-space: nowrap;
 }
 
-/* LA Volume：显示/不显示按钮（逻辑同 MMVD 的 dP/dt 显示开关） */
+/* LA Volume：所见中显示开关 — 睁眼=显示（蓝色），闭眼=隐藏 */
 #laVolumeInputItem {
     display: inline-flex;
     gap: 4px;
@@ -2172,29 +2244,59 @@ body {
 }
 
 #laVolumeInputItem .la-volume-display-btn {
-    padding: 4px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #666;
-    background-color: #f5f5f5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #d1d5db00;
+    border-radius: 6px;
+    font-size: 0;
+    line-height: 0;
+    color: #6b7280;
+    background-color: #ffffff00;
     cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
+    transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+#laVolumeInputItem .la-volume-display-btn .la-volume-eye {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+#laVolumeInputItem .la-volume-display-btn .la-volume-eye--open {
+    display: none;
+}
+
+#laVolumeInputItem .la-volume-display-btn .la-volume-eye--closed {
+    display: block;
 }
 
 #laVolumeInputItem .la-volume-display-btn.active {
     border-color: #4a90e2;
     background-color: #4a90e2;
     color: #fff;
-    font-weight: 600;
+}
+
+#laVolumeInputItem .la-volume-display-btn.active .la-volume-eye--open {
+    display: block;
+}
+
+#laVolumeInputItem .la-volume-display-btn.active .la-volume-eye--closed {
+    display: none;
 }
 
 #laVolumeInputItem .la-volume-display-btn:hover:not(.active) {
     border-color: #4a90e2;
     background-color: #e8f2ff;
     color: #4a90e2;
+}
+
+#laVolumeInputItem .la-volume-display-btn:focus-visible {
+    outline: 2px solid #4a90e2;
+    outline-offset: 2px;
 }
 
 /* 参考值样式 */
@@ -2349,156 +2451,6 @@ body {
 }
 
 /* 操作指引：右下角三层显示，图2风格垂直卡片 */
-.guide-wrapper {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
-}
-.guide-trigger {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    margin: 0;
-    border-radius: 50%;
-    border: none;
-    background: #fff;
-    color: #818181;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
-    box-sizing: border-box;
-}
-.guide-trigger:hover {
-    background: #e8f2ff;
-    color: #4a90e2;
-    box-shadow: 0 2px 8px rgba(74,144,226,0.2);
-}
-.guide-icon {
-    display: block;
-    width: 22px;
-    height: 22px;
-    flex-shrink: 0;
-    margin: 0;
-    padding: 0;
-    user-select: none;
-    pointer-events: none;
-}
-/* 外层容器：背景透明，卡片之间可见页面背景 */
-.guide-card {
-    display: none;
-    width: 300px;
-    max-height: 360px;
-    background: transparent;
-    flex-direction: column;
-    overflow: visible;
-}
-.guide-card.visible {
-    display: flex !important;
-}
-.guide-card.visible:not(.expanded) {
-    cursor: pointer;
-}
-.guide-card-body {
-    overflow-y: auto;
-    max-height: 88px;
-    transition: max-height 0.25s ease;
-    position: relative;
-    padding: 0;
-    background: transparent;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.guide-card.expanded .guide-card-body {
-    max-height: 300px;
-}
-/* 单张卡片：白底、顶部彩色条、卡片间间隙透明 */
-.guide-item {
-    padding: 14px 16px;
-    font-size: 13px;
-    line-height: 1.55;
-    color: #374151;
-    background: #fff;
-    border: 1px solid #e8eaed;
-    border-top: 3px solid;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    flex-shrink: 0;
-}
-.guide-item:nth-child(1) { border-top-color: #f472b6; }
-.guide-item:nth-child(2) { border-top-color: #a78bfa; }
-.guide-item:nth-child(3) { border-top-color: #6366f1; }
-.guide-item:nth-child(4) { border-top-color: #34d399; }
-.guide-item:nth-child(5) { border-top-color: #22d3ee; }
-.guide-item:nth-child(n+6) { border-top-color: #94a3b8; }
-/* 今日更新：固定置顶，顶条强调色（覆盖 nth-child 配色） */
-.guide-item.guide-item--today {
-    border-top-color: #e11d48;
-}
-.guide-item.guide-item--today .guide-item-date {
-    color: #be123c;
-    font-weight: 600;
-}
-.guide-item-date {
-    font-size: 11px;
-    color: #9ca3af;
-    margin-bottom: 6px;
-}
-.guide-item a {
-    color: #4a90e2;
-    text-decoration: underline;
-}
-.guide-item a:hover {
-    color: #357abd;
-}
-.guide-item-img-wrap {
-    margin-top: 10px;
-}
-.guide-item-img-label {
-    display: block;
-    font-size: 12px;
-    color: #9ca3af;
-    margin-bottom: 6px;
-}
-.guide-item-img {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    border-radius: 4px;
-    border: 1px solid #e8eaed;
-    cursor: pointer;
-}
-.guide-item-img:hover {
-    border-color: #4a90e2;
-}
-
-/* 截图示意图放大层 */
-.image-lightbox {
-    position: fixed;
-    inset: 0;
-    z-index: 10000;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-.image-lightbox-img {
-    max-width: 95vw;
-    max-height: 95vh;
-    object-fit: contain;
-    border-radius: 4px;
-    pointer-events: none;
-}
-
 /* 手机宽度：左侧栏与右侧栏上下分行显示，左侧为主、右侧紧凑 */
 @media (max-width: 768px) {
     body {
@@ -2565,6 +2517,26 @@ body {
     .right-sidebar-resize-triangle {
         display: none;
     }
+    .right-sidebar-hints-layer {
+        display: none;
+    }
+    .right-sidebar-clear-hint {
+        margin-top: 0 !important;
+        margin-bottom: 6px;
+        padding: 0 4px 0 0;
+    }
+    .right-sidebar-clear-hint-text {
+        font-size: 1.1rem;
+    }
+    .right-sidebar-snip-hint {
+        padding: 4px 4px 8px;
+        font-size: 12px;
+        margin-bottom: 6px;
+    }
+    .right-sidebar-kbd {
+        font-size: 11px;
+        padding: 2px 6px;
+    }
 }
 
 /* 左栏「右心高阶」相关参数：输入框淡红底（含气泡内；覆盖只读灰底）。VPA/VAO 非高阶专属，保持默认底 */
@@ -2582,4 +2554,3 @@ body {
 .vpa-vao-wrap.right-heart-advanced #atetRatioInput {
     background-color: #fff0f2;
 }
-
