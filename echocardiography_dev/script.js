@@ -2072,11 +2072,9 @@ function setupInputListeners() {
                 const weight = parameters['体重'];
                 const weightValue = weight ? parseFloat(weight) : NaN;
 
-                // 优化体重自动选择：
-                // 体重 <= 3.0kg 自动选择 M型（犬＜3kg）
-                // 体重 > 3.0kg 自动选择 非M型（犬＞3kg）
-                // 已选参考「金毛」时不因体重改写参考，仅用户手动改下拉框才切换
-                if (selectedReferenceRange !== '金毛') {
+                // 仅在当前参考为 M型/非M型 时，依据体重在两者之间自动切换
+                // 其他参考（猫心超（含体重）、金毛等）输入体重不触发参考范围跳转
+                if (selectedReferenceRange === 'M型' || selectedReferenceRange === '非M型') {
                     if (!Number.isNaN(weightValue) && weightValue <= 3.0) {
                         const referenceRangeSelect = document.getElementById('referenceRangeSelect');
                         if (referenceRangeSelect && referenceRangeSelect.value !== 'M型') {
@@ -5426,7 +5424,7 @@ const templateConfig = {
             // 两列间距：左列补齐宽度（越小两列越靠近）
             // 注意：包含中文全角括号/标点时，padEnd按“字符数”补齐会导致视觉不齐；
             // 这里按“显示宽度”（全角=2，半角=1）补齐，保证两列稳定对齐。
-            const colWidth = 30;
+            const colWidth = 24;
 
             const charDisplayWidth = (ch) => {
                 const cp = ch.codePointAt(0);
@@ -5574,7 +5572,13 @@ const templateConfig = {
                 const rightRefKey = rightKey === 'LVWs' ? 'LVWs' : rightKey;
 
                 const leftText = formatParamWithRef(leftLabel, valueByKey(leftKey), leftRefKey);
-                const rightText = formatParamWithRef(rightLabel, valueByKey(rightKey), rightRefKey);
+                let rightText = formatParamWithRef(rightLabel, valueByKey(rightKey), rightRefKey);
+                if (rightKey === 'LVDd' && !isCatReferenceForLayout) {
+                    const lviddnRaw = (get('LVIDDN', '') || '').toString().trim();
+                    if (lviddnRaw) {
+                        rightText += ` LVIDDN ${formatValue(lviddnRaw)}`;
+                    }
+                }
                 renderLeftRight(leftText, rightText);
             }
 

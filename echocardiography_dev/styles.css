@@ -1671,7 +1671,7 @@ body {
     color: #2c3e50;
     margin-bottom: 6px;
     width: 100%;
-    font-family: 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif, 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace, 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB';
     resize: vertical;
     box-sizing: border-box;
     transition: all 0.2s ease;
