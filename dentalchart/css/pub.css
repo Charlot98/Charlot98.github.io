@@ -35,6 +35,13 @@ body {
     flex-wrap: wrap;
 }
 
+.site-logo {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    display: block;
+}
+
 h1 {
     color: #333;
     font-size: 24px;
@@ -193,17 +200,20 @@ h1 {
 .tooth-input {
     position: absolute;
     width: 60px;
-    height: 30px;
+    height: 26px;
     border: 2px solid transparent;
     border-radius: 0;
     text-align: center;
-    font-size: 12px;
+    font-size: 11px;
     background: transparent;
     cursor: text;
-    padding: 2px 5px;
+    padding: 1px 4px;
     font-weight: bold;
-    transition: all 0.2s;
+    transition: border-color 0.2s, background 0.2s;
     color: #000;
+    transform: translateY(-50%);
+    box-sizing: border-box;
+    line-height: 1;
 }
 
 .tooth-input::placeholder {
@@ -249,9 +259,42 @@ h1 {
     z-index: 1;
 }
 
-.legend h3 {
+.legend-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.legend h3 {
+    margin: 0;
     color: #333;
+    flex-shrink: 0;
+}
+
+.legend-search {
+    flex: 1 1 220px;
+    max-width: 320px;
+    min-width: 180px;
+    height: 32px;
+    padding: 6px 10px;
+    border: 1px solid #d0d0d0;
+    border-radius: 0;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #333;
+}
+
+.legend-search:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+.legend-search::placeholder {
+    color: #999;
 }
 
 .disclaimer {
@@ -268,12 +311,10 @@ h1 {
 
 .legend-grid {
     display: grid;
-    /* 列优先布局：从上向下排序，每列5个术语 */
-    grid-template-rows: repeat(5, 28px);
-    grid-auto-flow: column;
-    /* 默认列宽：根据可用空间自动调整，最小180px */
-    grid-auto-columns: minmax(180px, 1fr);
-    gap: 8px;
+    /* 宽度不足时自动增加列数并换行 */
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+    grid-auto-flow: row;
+    gap: 4px 8px;
     font-size: 12px;
     width: 100%;
     max-width: 100%;
@@ -283,22 +324,67 @@ h1 {
 
 .legend-item {
     padding: 5px 10px;
-    background:transparent;
+    background: transparent;
     padding-left: 10px;
     width: 100%;
-    height: 28px;
-    cursor: help;
+    min-height: 28px;
+    height: auto;
+    cursor: pointer;
+    /* 可以选择的有哪些？
+       可用的cursor属性值有很多，常用的包括：
+       - pointer   // 表示手型，通常用于按钮或可点击元素
+       - text      // 文本输入区的I形
+       - move      // 移动元素时
+       - not-allowed // 不可操作时显示禁用状态
+       - help      // 问号，表示有帮助提示
+       - crosshair // 十字准星
+       - grab, grabbing // 拖拽对象时用
+       - wait      // 等待，通常是表盘或沙漏
+       其他还包括 progress、cell、alias、zoom-in、zoom-out 等。详见 https://developer.mozilla.org/zh-CN/docs/Web/CSS/cursor
+    */
     position: relative;
     z-index: 1;
     transition: background-color 0.2s;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    word-break: break-word;
+    white-space: normal;
     box-sizing: border-box;
+    line-height: 1.5;
 }
 
 .legend-item:hover {
     background-color: #f0f8f0;
-    z-index: 10;
+    z-index: 10001;
+}
+
+.legend-item--no-report {
+    color: #b5b5b5;
+}
+
+.legend-item--no-report:hover {
+    color: #9a9a9a;
+}
+
+.legend-item--no-report.active {
+    color: #333;
+}
+
+.legend-item.active {
+    background-color: #e8f5e9;
+    box-shadow: inset 0 0 0 1px #4CAF50;
+    z-index: 2;
+}
+
+.legend-item--match:not(.active) {
+    background-color: #fff8e1;
+    box-shadow: inset 0 0 0 1px #ffc107;
+}
+
+.legend-item--match.active {
+    background-color: #e8f5e9;
+    box-shadow: inset 0 0 0 1px #4CAF50;
 }
 
 .tooltip {
@@ -330,7 +416,7 @@ h1 {
     left: 50%;
     transform: translateX(-50%);
     border: 6px solid transparent;
-    border-top-color: transparent;
+    border-top-color: rgba(51, 51, 51, 0.95);
 }
 
 .legend-item:hover .tooltip {
@@ -343,6 +429,15 @@ h1 {
     color: #4CAF50;
 }
 
+.tooltip-disclaimer {
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 10px;
+    font-style: italic;
+}
+
 .tooltip-content {
     line-height: 1.5;
 }
@@ -351,129 +446,16 @@ input[type="file"] {
     display: none;
 }
 
-@media (min-width: 1200px) {
-    .legend-grid {
-        grid-auto-columns: minmax(180px, 1fr);
-    }
-}
-
-
-@media (max-width: 1199px) and (min-width: 1000px) {
-    .legend-grid {
-        grid-auto-columns: minmax(200px, 1fr);
-    }
-}
-
-@media (max-width: 999px) and (min-width: 800px) {
-    .legend-grid {
-        grid-auto-columns: minmax(220px, 1fr);
-    }
-}
-
-
-@media (max-width: 799px) and (min-width: 600px) {
-    .legend-grid {
-        grid-auto-columns: minmax(240px, 1fr);
-    }
-}
-
-
 @media (max-width: 599px) {
     .legend-grid {
-        grid-auto-columns: minmax(260px, 1fr);
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+        font-size: 11px;
     }
 }
 
-/* 自定义确认对话框样式 */
-.confirm-dialog {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 10000;
-    justify-content: center;
-    align-items: center;
-    animation: fadeIn 0.2s ease-out;
-}
-
-.confirm-dialog-content {
-    background: white;
-    border-radius: 0;
-    padding: 24px;
-    min-width: 320px;
-    max-width: 90%;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.3s ease-out;
-}
-
-.confirm-dialog-message {
-    font-size: 16px;
-    color: #333;
-    margin-bottom: 24px;
-    text-align: center;
-    line-height: 1.5;
-}
-
-.confirm-dialog-buttons {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-}
-
-.confirm-btn-cancel,
-.confirm-btn-ok {
-    padding: 10px 24px;
-    border: 2px solid transparent;
-    border-radius: 0;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 500;
-}
-
-.confirm-btn-cancel {
-    background: #f5f5f5;
-    color: #666;
-}
-
-.confirm-btn-cancel:hover {
-    background: #e0e0e0;
-}
-
-.confirm-btn-ok {
-    background: #f44336;
-    color: white;
-}
-
-.confirm-btn-ok:hover {
-    background: #da190b;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
 
 @media print {
-    .header, .legend, .confirm-dialog {
+    .header, .legend, .guide-fab, .guide-modal {
         display: none;
     }
     .chart-container {
@@ -485,15 +467,291 @@ input[type="file"] {
     }
 }
 
-.disclaimer {
-    text-align: center;
-    color: #999;
-    font-size: 60px;
+
+.report-panel {
+    margin-top: 24px;
+    padding: 14px;
+    background: transparent;
 }
 
-.disclaimer:hover {
-    text-align: center;
-    color: #ffffff;
-    font-size: 60px;
+.report-panel h3 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.report-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.report-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.report-section h4 {
+    margin: 0;
+    font-size: 15px;
+    color: #333;
+}
+
+.report-copy-btn {
+    padding: 4px 10px;
+    border: 1px solid #d0d0d0;
+    background: #fff;
+    color: #555;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.2s;
+}
+
+.report-copy-btn:hover {
+    border-color: #4CAF50;
+    color: #2f7d32;
+}
+
+.report-copy-btn.copied {
+    border-color: #4CAF50;
     background: #4CAF50;
+    color: #fff;
+}
+
+.report-textarea {
+    width: 100%;
+    min-height: 220px;
+    border: 1px solid #d6d6d6;
+    border-radius: 0;
+    padding: 10px;
+    background: #fff;
+    color: #333;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: vertical;
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+}
+
+.report-textarea--empty {
+    color: #999;
+}
+
+.report-textarea:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+@media (max-width: 900px) {
+    .report-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 操作指引：视频播放样式悬浮按钮 */
+@keyframes guide-fab-color-pulse {
+    0%, 100% {
+        background-color: #4CAF50;
+        box-shadow: 0 4px 14px rgba(76, 175, 80, 0.4);
+    }
+    50% {
+        background-color: #66bb6a;
+        box-shadow: 0 4px 22px rgba(102, 187, 106, 0.65);
+    }
+}
+
+@keyframes guide-fab-label-pulse {
+    0%, 100% {
+        color: #888;
+    }
+    50% {
+        color: #4CAF50;
+    }
+}
+
+.guide-fab {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    cursor: pointer;
+}
+
+.guide-fab-play {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #4CAF50;
+    box-shadow: 0 4px 14px rgba(76, 175, 80, 0.45);
+    animation: guide-fab-color-pulse 2.4s ease-in-out infinite;
+    transition: transform 0.2s;
+}
+
+.guide-fab-play::before {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    pointer-events: none;
+}
+
+.guide-fab-play::after {
+    content: '';
+    position: absolute;
+    left: 54%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 9px 0 9px 15px;
+    border-color: transparent transparent transparent #fff;
+}
+
+.guide-fab-label {
+    font-size: 11px;
+    line-height: 1.2;
+    color: #666;
+    letter-spacing: 0.02em;
+    animation: guide-fab-label-pulse 2.4s ease-in-out infinite;
+}
+
+.guide-fab:hover .guide-fab-play {
+    animation: none;
+    background: #2e7d32;
+    transform: scale(1.06);
+    box-shadow: 0 6px 20px rgba(46, 125, 50, 0.55);
+}
+
+.guide-fab:hover .guide-fab-label {
+    animation: none;
+    color: #2e7d32;
+}
+
+body.guide-modal-open .guide-fab-play,
+body.guide-modal-open .guide-fab-label {
+    animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .guide-fab-play,
+    .guide-fab-label {
+        animation: none;
+    }
+}
+
+.guide-fab:active .guide-fab-play {
+    transform: scale(0.98);
+}
+
+body.guide-modal-open {
+    overflow: hidden;
+}
+
+.guide-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.guide-modal[hidden] {
+    display: none;
+}
+
+.guide-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+}
+
+.guide-modal-panel {
+    position: relative;
+    z-index: 1;
+    width: min(960px, 100%);
+    max-height: 90vh;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.guide-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.guide-modal-header h2 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.guide-modal-close {
+    border: none;
+    background: transparent;
+    font-size: 24px;
+    line-height: 1;
+    color: #666;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.guide-modal-close:hover {
+    color: #333;
+}
+
+.guide-modal-video {
+    width: 100%;
+    max-height: calc(90vh - 56px);
+    display: block;
+    background: #000;
+}
+
+@media (max-width: 600px) {
+    .guide-fab {
+        right: 16px;
+        bottom: 16px;
+    }
+
+    .guide-fab-play {
+        width: 46px;
+        height: 46px;
+    }
+
+    .guide-fab-play::after {
+        border-width: 8px 0 8px 13px;
+    }
+
+    .guide-fab-label {
+        font-size: 10px;
+    }
+
+    .guide-modal {
+        padding: 12px;
+    }
 }

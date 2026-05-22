@@ -15,17 +15,6 @@ function formatValue(value, isInteger = false) {
 }
 
 /**
- * EDV / ESV 专用格式化：0.1–1 之间保留 1 位小数，其余整数。
- */
-function formatEDVESV(value) {
-    if (!value) return '';
-    const num = parseFloat(value);
-    if (isNaN(num)) return String(value);
-    return (num > 0.1 && num < 1) ? num.toFixed(1) : num.toFixed(0);
-}
-
-
-/**
  * 返回单个字符的"显示宽度"（全角中日韩 = 2，其余 = 1）。
  * 用于在等宽字体下对齐两列输出。
  */
@@ -90,29 +79,6 @@ function getRefValue(referenceData, csvKey) {
         }
     }
     return '';
-}
-
-/**
- * 瓣口反流描述：同程度合并（所见彩色多普勒等）
- * 例：二尖瓣轻度 + 三尖瓣轻度 + 主动脉瓣微量 → 二尖瓣、三尖瓣轻度反流，主动脉瓣微量反流
- * @param {Array<{label: string}>} activeFlowItems 已激活瓣口（按展示顺序）
- * @param {(item: object) => string} getSeverity 返回程度，如 轻度、微量
- */
-function formatMergedRegurgitationDescription(activeFlowItems, getSeverity) {
-    if (!activeFlowItems || activeFlowItems.length === 0) return '';
-
-    const groups = [];
-    for (const item of activeFlowItems) {
-        const severity = getSeverity(item);
-        let group = groups.find(g => g.severity === severity);
-        if (!group) {
-            group = { severity, labels: [] };
-            groups.push(group);
-        }
-        group.labels.push(item.label);
-    }
-
-    return groups.map(g => `${g.labels.join('、')}${g.severity}反流`).join('，');
 }
 
 /**

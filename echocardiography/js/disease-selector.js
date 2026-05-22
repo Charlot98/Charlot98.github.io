@@ -67,20 +67,29 @@ function handleDiseaseTypeChange(diseaseType) {
         // 根据疾病类型自动选择参考范围
         const referenceRangeSelect = document.getElementById('referenceRangeSelect');
         if (referenceRangeSelect) {
-            // DCM、PDA、MMVD → 默认选择"犬＞3kg"
+            // 仅当用户尚未选择参考范围（或当前参考范围与目标动物类型不匹配）时才自动切换
+            const currentRange = selectedReferenceRange;
+            const isDogRange = currentRange === '犬≤3kg' || currentRange === '犬＞3kg' || currentRange === '金毛';
+            const isCatRange = currentRange === '猫' || currentRange === '猫（含体重）';
+
+            // DCM、PDA、MMVD、Normal → 犬类疾病，仅在当前为空或为猫/兔参考时才切换为"犬＞3kg"
             if (selectedDiseaseType === 'DCM' || selectedDiseaseType === 'PDA' || selectedDiseaseType === 'MMVD' || selectedDiseaseType === 'Normal') {
-                referenceRangeSelect.value = '犬＞3kg';
-                selectedReferenceRange = '犬＞3kg';
+                if (!currentRange || isCatRange || currentRange === '兔子') {
+                    referenceRangeSelect.value = '犬＞3kg';
+                    selectedReferenceRange = '犬＞3kg';
+                }
                 // 根据动物类型设置心率默认值
                 setHeartRateDefault();
                 updateReferenceValues();
                 updateWeightReferenceDisplay();
                 // 默认不自动激活含辛普森测量（仅用户点击时启用）
             }
-            // HCM、RCM、TOF → 默认选择"猫"
+            // HCM、RCM、TOF → 猫类疾病，仅在当前为空或为犬/兔参考时才切换为"猫"
             else if (selectedDiseaseType === 'HCM' || selectedDiseaseType === 'RCM' || selectedDiseaseType === 'TOF') {
-                referenceRangeSelect.value = '猫';
-                selectedReferenceRange = '猫';
+                if (!currentRange || isDogRange || currentRange === '兔子') {
+                    referenceRangeSelect.value = '猫';
+                    selectedReferenceRange = '猫';
+                }
                 // 根据动物类型设置心率默认值
                 setHeartRateDefault();
                 updateSimpsonButtonVisibility();
@@ -279,7 +288,6 @@ if (moreDiseaseSelect) {
 }
 
 // 参考范围下拉选择框事件
-let selectedReferenceRange = '';
 const referenceRangeSelect = document.getElementById('referenceRangeSelect');
 if (referenceRangeSelect) {
     referenceRangeSelect.addEventListener('change', function() {

@@ -5,10 +5,11 @@ function calculateEDVI() {
     const edv = parseFloat(parameters['EDV']);
     const weight = parseFloat(parameters['体重']);
     const edviDisplay = document.getElementById('edviDisplay');
+    if (!edviDisplay) return;
 
     if (!edv || !weight || isNaN(edv) || isNaN(weight) || weight <= 0) {
         edviDisplay.textContent = '-';
-        edviDisplay.style.color = ''; // 重置颜色
+        edviDisplay.style.color = '';
         delete parameters['EDVI'];
         return;
     }
@@ -43,10 +44,11 @@ function calculateESVI() {
     const esv = parseFloat(parameters['ESV']);
     const weight = parseFloat(parameters['体重']);
     const esviDisplay = document.getElementById('esviDisplay');
+    if (!esviDisplay) return;
 
     if (!esv || !weight || isNaN(esv) || isNaN(weight) || weight <= 0) {
         esviDisplay.textContent = '-';
-        esviDisplay.style.color = ''; // 重置颜色
+        esviDisplay.style.color = '';
         delete parameters['ESVI'];
         return;
     }

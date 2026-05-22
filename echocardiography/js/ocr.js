@@ -170,6 +170,144 @@ await window.Tesseract.recognize(canvas, 'eng', {
         });
     }
 
+    /**
+     * Otsu 二值化：自适应阈值 → 纯黑白图，兜底补充低像素截图识别
+     * 自动判断背景色（深色背景/浅色背景），确保输出始终为黑字白底
+     */
+    async function preprocessImageOtsu(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const minDim = Math.min(img.width, img.height);
+                    const scale = minDim < 400 ? 3 : minDim < 600 ? 2.5 : 1;
+                    const w = Math.round(img.width * scale);
+                    const h = Math.round(img.height * scale);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.filter = 'grayscale(100%)';
+                    ctx.drawImage(img, 0, 0, w, h);
+                    ctx.filter = 'none';
+
+                    const imageData = ctx.getImageData(0, 0, w, h);
+                    const data = imageData.data;
+                    const total = w * h;
+
+                    // 计算灰度均值（判断背景深浅）和直方图（Otsu 用）
+                    const hist = new Int32Array(256);
+                    let meanGray = 0;
+                    for (let i = 0; i < data.length; i += 4) {
+                        hist[data[i]]++;
+                        meanGray += data[i];
+                    }
+                    meanGray /= total;
+
+                    // Otsu：最大化类间方差，找最佳二值阈值
+                    let sum = 0;
+                    for (let t = 0; t < 256; t++) sum += t * hist[t];
+                    let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
+                    for (let t = 0; t < 256; t++) {
+                        wB += hist[t];
+                        if (wB === 0) continue;
+                        const wF = total - wB;
+                        if (wF === 0) break;
+                        sumB += t * hist[t];
+                        const mB = sumB / wB;
+                        const mF = (sum - sumB) / wF;
+                        const varBetween = wB * wF * (mB - mF) * (mB - mF);
+                        if (varBetween > maxVar) { maxVar = varBetween; threshold = t; }
+                    }
+
+                    // 深色背景（心超截图典型）：亮像素=文字→输出黑；浅色背景：暗像素=文字→输出黑
+                    const darkBackground = meanGray < 128;
+                    for (let i = 0; i < data.length; i += 4) {
+                        const v = darkBackground
+                            ? (data[i] > threshold ? 0 : 255)
+                            : (data[i] > threshold ? 255 : 0);
+                        data[i] = data[i + 1] = data[i + 2] = v;
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob((blob) => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('toBlob failed'));
+                    }, 'image/png', 1);
+                } catch (e) {
+                    URL.revokeObjectURL(url);
+                    reject(e);
+                }
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+            img.src = url;
+        });
+    }
+
+    /**
+     * 深色小字截图兜底：自适应对比拉伸 + 轻微锐化
+     * 目标：提升白字深底/细字体的边缘可见性
+     */
+    async function preprocessImageHighContrast(file) {
+        return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const minDim = Math.min(img.width, img.height);
+                    const scale = minDim < 420 ? 4 : minDim < 700 ? 3 : 1.8;
+                    const w = Math.round(img.width * scale);
+                    const h = Math.round(img.height * scale);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#fff';
+                    ctx.fillRect(0, 0, w, h);
+                    ctx.filter = 'grayscale(100%) contrast(1.9) brightness(1.08)';
+                    ctx.drawImage(img, 0, 0, w, h);
+                    ctx.filter = 'none';
+
+                    const imageData = ctx.getImageData(0, 0, w, h);
+                    const data = imageData.data;
+                    let min = 255, max = 0, sum = 0;
+                    for (let i = 0; i < data.length; i += 4) {
+                        const g = data[i];
+                        if (g < min) min = g;
+                        if (g > max) max = g;
+                        sum += g;
+                    }
+                    const avg = sum / (w * h);
+                    const span = Math.max(1, max - min);
+                    const darkBackground = avg < 128;
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        let g = data[i];
+                        g = ((g - min) * 255) / span;
+                        g = darkBackground ? (255 - g) : g;
+                        const bw = g > 135 ? 255 : 0;
+                        data[i] = data[i + 1] = data[i + 2] = bw;
+                    }
+                    ctx.putImageData(imageData, 0, 0);
+
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob((blob) => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('toBlob failed'));
+                    }, 'image/png', 1);
+                } catch (e) {
+                    URL.revokeObjectURL(url);
+                    reject(e);
+                }
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+            img.src = url;
+        });
+    }
+
     function normalizeOcrText(raw) {
         if (!raw) return '';
         return raw
@@ -262,16 +400,21 @@ await window.Tesseract.recognize(canvas, 'eng', {
     }
 
     function parseOcrToParamValues(text) {
-        const normalized = normalizeOcrText(text);
+        // 干扰行过滤必须在 normalizeOcrText 之前执行：normalizeOcrText 会把所有换行符压缩成空格，
+        // 导致 [^\n]* 变成 .* 贪婪匹配到字符串末尾，将 LVs Mass 之后的所有字段全部吃掉。
+        const preFiltered = (text || '')
+            .replace(/%\s*IVS\s*Th[a-zA-Z]*/gi, 'PCTIVS_THCK')
+            .replace(/%\s*LVPW?\s*Th[a-zA-Z]*/gi, 'PCTLVPW_THCK')
+            .replace(/LVs?\s*Mass\b[^\n]*/gi, 'LVMASS_ROW');
+        const normalized = normalizeOcrText(preFiltered);
         if (!normalized) return {};
 
         // 先用同义词把中文/英文描述统一替换成标准缩写，方便后续正则匹配
         // 这些同义词完全写在本文件中，不依赖 readme.md
         let unified = normalized
-            // 先消除干扰行：%IVS Thck / %LVPW Thck 是百分比增厚率行，与 IVSs/LVPWs 无关，会误触发同名字段匹配
+            // 已在 preFiltered 阶段处理，此处保留为保险兜底（无害重复）
             .replace(/%\s*IVS\s*Th[a-zA-Z]*/gi, 'PCTIVS_THCK')
             .replace(/%\s*LVPW?\s*Th[a-zA-Z]*/gi, 'PCTLVPW_THCK')
-            // LVs Mass（左室质量）行携带负号，会干扰相邻数值解析；用无害 token 替换
             .replace(/LVs?\s*Mass\b[^\n]*/gi, 'LVMASS_ROW')
             // IVSd
             .replace(/舒张末期室间隔厚度/gi, 'IVSd')
@@ -341,6 +484,11 @@ await window.Tesseract.recognize(canvas, 'eng', {
 
         // 再修正少量常见 OCR 误识别：LVIDd→LVDd、IVSd大小写、s/5 混淆等
         const fixed = unified
+            // 截图侧边栏的分组序号（1–9）有时被 OCR 紧贴字段名读成"1IVSd"/"2LVIDd"等：
+            // 数字与大写字母之间没有 \b，\bIVSd\b 无法匹配，必须先剥离前缀数字
+            .replace(/\b([1-9])([A-Z][A-Za-z]{2,})\b/g, '$2')
+            // 分组序号与字段名之间有空格时（"1 IVSd"），去除孤立序号，避免被误捕获为值
+            .replace(/\b[1-9] +(?=[A-Z]{2})/g, '')
             .replace(/\bLVlDd\b/gi, 'LVIDd')
             .replace(/\bLVlDs\b/gi, 'LVIDs')
             // IVSd/IVSs 首字母 I 常被误读为小写 l 或数字 1
@@ -353,10 +501,14 @@ await window.Tesseract.recognize(canvas, 'eng', {
             // LVIDs、LVPWs 同理
             .replace(/\bLVID5\b/gi, 'LVIDs')
             .replace(/\bLVPW5\b/gi, 'LVPWs');
-            // EDV(Teich) 常见误读：EOV / E0V（0与D混淆）
+            // EDV(Teich) 常见误读：EOV / E0V（0与D混淆）；EDV后括号丢失时用 "EDV Teich" 形式
         const fixedWithEdvAlias = fixed
             .replace(/\bEOV\b/gi, 'EDV(Teich)')
-            .replace(/\bE0V\b/gi, 'EDV(Teich)');
+            .replace(/\bE0V\b/gi, 'EDV(Teich)')
+            // EDV/ESV 括号丢失或被空格替换（如 "EDV Teich 7"）已由 patterns 的第二条处理，
+            // 此处额外覆盖 OCR 把括号读成方括号或花括号的情形
+            .replace(/\bEDV\s*[\[{]\s*T[a-zA-Z]{3,6}\s*[\]}]/gi, 'EDV(Teich)')
+            .replace(/\bESV\s*[\[{]\s*T[a-zA-Z]{3,6}\s*[\]}]/gi, 'ESV(Teich)');
 
         const results = {};
 
@@ -425,6 +577,21 @@ await window.Tesseract.recognize(canvas, 'eng', {
             // 简化：不根据单位做 cm→mm 换算，直接使用识别到的数值
             results[targetParam] = valueNum;
             resultPriority[targetParam] = priority;
+        }
+
+        // IVSd 稳定性增强：matchAll 扫描全文择优（防止 .match() 首次命中分组序号等干扰值）
+        const isIvsdPlausible = (v) => Number.isFinite(v) && v >= 0.5 && v <= 30;
+        if (!isIvsdPlausible(Number(results['IVSd']))) {
+            const ivsdCandidates = [];
+            for (const m of fixedWithEdvAlias.matchAll(/\bIVSd\b[^\d\-+]*?([0-9SIlOo]+(?:[.,][0-9SIlOo]+)?)/gi)) {
+                const n = parseValue(m[1], 'IVSd');
+                if (n !== null) ivsdCandidates.push(n);
+            }
+            const plausible = ivsdCandidates.filter(isIvsdPlausible);
+            if (plausible.length > 0) {
+                results['IVSd'] = plausible[0];
+                resultPriority['IVSd'] = Math.max(resultPriority['IVSd'] || 0, 1);
+            }
         }
 
         // IVSs 稳定性增强：仅字面 IVSs；合理区间 1–30 mm 内再 matchAll 择优
@@ -507,6 +674,60 @@ await window.Tesseract.recognize(canvas, 'eng', {
         return written;
     }
 
+    function isParamValuePlausible(param, value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return false;
+        const ranges = {
+            IVSd: [0.5, 30],
+            LVDd: [2, 80],
+            LVPWd: [0.5, 30],
+            IVSs: [0.5, 40],
+            LVDs: [1, 70],
+            LVPWs: [0.5, 40],
+            EDV: [1, 500],
+            ESV: [0.2, 500],
+            FS: [1, 90],
+            EF: [1, 95],
+            LA: [1, 80],
+            AO: [1, 80],
+            E: [0.1, 5],
+            A: [0.1, 5],
+            "E'": [0.01, 3],
+            "E/E'": [0.5, 80]
+        };
+        if (!ranges[param]) return true;
+        return n >= ranges[param][0] && n <= ranges[param][1];
+    }
+
+    function mergeParsedValuesByQuality(parsedList) {
+        const merged = {};
+        const priorities = {};
+        const allKeys = new Set();
+        parsedList.forEach((item) => Object.keys(item.values || {}).forEach((k) => allKeys.add(k)));
+
+        allKeys.forEach((key) => {
+            let bestVal = undefined;
+            let bestScore = -Infinity;
+            for (const item of parsedList) {
+                if (!Object.prototype.hasOwnProperty.call(item.values, key)) continue;
+                const val = item.values[key];
+                let score = item.priority || 0;
+                if (isParamValuePlausible(key, val)) score += 10;
+                if (String(val).includes('.')) score += 1; // 小数通常更可信
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestVal = val;
+                }
+            }
+            if (bestVal !== undefined) {
+                merged[key] = bestVal;
+                priorities[key] = bestScore;
+            }
+        });
+
+        return { merged, priorities };
+    }
+
     /** 与 1.M-MODE 相关的 OCR 可填字段；仅当本次识别命中其中任一项时才清空这些输入框 */
     const OCR_MMODE_FIELD_PARAMS = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'FS', 'EF', 'TAPSE', 'EDVI', 'ESVI'];
 
@@ -541,13 +762,13 @@ await window.Tesseract.recognize(canvas, 'eng', {
         setBusy(true);
         setStatus('OCR预处理中…');
         try {
-            const pre0 = performance.now();
-            const preprocessed = await preprocessImageForOcr(file);
-            const pre1 = performance.now();
-            const light0 = performance.now();
-            const lightProcessed = await preprocessImageLight(file);
-            const light1 = performance.now();
-setStatus('OCR识别中…（可稍等几秒）');
+            const [preprocessed, lightProcessed, otsuProcessed, highContrastProcessed] = await Promise.all([
+                preprocessImageForOcr(file),
+                preprocessImageLight(file),
+                preprocessImageOtsu(file),
+                preprocessImageHighContrast(file),
+            ]);
+            setStatus('OCR识别中…（可稍等几秒）');
             const opts = {
                 tessedit_pageseg_mode: 6,
                 logger: (m) => {
@@ -556,16 +777,33 @@ setStatus('OCR识别中…（可稍等几秒）');
                     }
                 }
             };
-            const rec0 = performance.now();
-            const [{ data: d1 }, { data: d2 }] = await Promise.all([
+            const optsSparse = {
+                ...opts,
+                tessedit_pageseg_mode: 11,
+                tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.%()'/:- "
+            };
+            const [{ data: d1 }, { data: d2 }, { data: d3 }, { data: d4 }] = await Promise.all([
                 window.Tesseract.recognize(preprocessed, 'eng', opts),
-                window.Tesseract.recognize(lightProcessed, 'eng', opts)
+                window.Tesseract.recognize(lightProcessed, 'eng', opts),
+                window.Tesseract.recognize(otsuProcessed, 'eng', opts),
+                window.Tesseract.recognize(highContrastProcessed, 'eng', optsSparse),
             ]);
-            const rec1 = performance.now();
-const parse0 = performance.now();
             const p1 = parseOcrToParamValues(d1?.text || '');
             const p2 = parseOcrToParamValues(d2?.text || '');
-            const paramValues = { ...p1, ...p2 };
+            const p3 = parseOcrToParamValues(d3?.text || '');
+            const p4 = parseOcrToParamValues(d4?.text || '');
+            const { merged: paramValues } = mergeParsedValuesByQuality([
+                { values: p1, priority: 4 }, // 强预处理优先
+                { values: p4, priority: 3 }, // 深色小字专用
+                { values: p2, priority: 2 }, // 轻处理
+                { values: p3, priority: 1 }, // Otsu 兜底
+            ]);
+
+            // 四路 OCR 的 IVSd 择优合并
+            const isIvsdPlausible = (v) => Number.isFinite(v) && v >= 0.5 && v <= 30;
+            const ivsdVals = [p1, p2, p3, p4].map(p => Number(p['IVSd']));
+            const ivsdPlausible = ivsdVals.filter(isIvsdPlausible);
+            if (ivsdPlausible.length > 0) paramValues['IVSd'] = ivsdPlausible[0];
 
             // 双路 OCR 的 IVSs 择优合并，避免后写覆盖前写导致退化
             const isIvssPlausible = (v) => Number.isFinite(v) && v >= 1 && v <= 30;
@@ -648,7 +886,6 @@ await runOcrFromFile(img);
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
         disableInputMemory();
-        setupInputListeners();
         setupTooltips();
         setupRefreshButton();
         setupRightSidebarResize();
@@ -657,7 +894,6 @@ if (document.readyState === 'loading') {
     });
 } else {
     disableInputMemory();
-    setupInputListeners();
     setupTooltips();
     setupRefreshButton();
     setupRightSidebarResize();

@@ -228,4 +228,5 @@ document.addEventListener('DOMContentLoaded', function() {
             generateTemplate();
         });
     }
+
 });

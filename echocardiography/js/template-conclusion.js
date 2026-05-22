@@ -56,7 +56,7 @@ function evaluateChamberSizeConclusion(get, referenceRange) {
     if (hasLaEnlargement && hasCatLvOverloadByLvdMm)
         return { text: '左心容量过载，其余腔室大小尚可。', hasAbnormality: true };
     if (hasLvOverload && hasLaEnlargement)
-        return { text: '左心房容量过载，其余腔室大小尚可。', hasAbnormality: true };
+        return { text: '左心容量过载，其余腔室大小尚可。', hasAbnormality: true };
     if (hasLvOverload)
         return { text: '左心室容量过载，其余各腔室大小尚可。', hasAbnormality: true };
     if (hasLaEnlargement)
@@ -96,12 +96,10 @@ function buildSystolicDiastolicFuncConclusionLine(get, referenceRange, diseaseTy
         else if (esvi >= 50) systolicStatus = '下降';
     }
 
-    let dpdtIndicatesSystolicDecline = false;
     if (diseaseType === 'MMVD') {
         const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
         const dpdtNum = dpdtRaw ? parseFloat(dpdtRaw) : NaN;
         if (!Number.isNaN(dpdtNum) && dpdtNum < 1800) {
-            dpdtIndicatesSystolicDecline = true;
             systolicStatus = '下降';
         }
     }
@@ -116,14 +114,10 @@ function buildSystolicDiastolicFuncConclusionLine(get, referenceRange, diseaseTy
         return `  ${n}.${systolicText}，舒张功能失代偿。`;
     }
     if (systolicStatus === '未见明显异常' && diastolicStatus === '未见明显异常') {
-        return dpdtIndicatesSystolicDecline
-            ? `  ${n}.左心室收缩功能下降，舒张功能未见明显异常。`
-            : `  ${n}.左心室收缩、舒张功能未见明显异常。`;
+        return `  ${n}.左心室收缩、舒张功能未见明显异常。`;
     }
     if (systolicStatus === '未见明显异常') {
-        return dpdtIndicatesSystolicDecline
-            ? `  ${n}.左心室收缩功能下降，舒张功能${diastolicStatus}。`
-            : `  ${n}.左心室收缩功能未见明显异常，舒张功能${diastolicStatus}。`;
+        return `  ${n}.左心室收缩功能未见明显异常，舒张功能${diastolicStatus}。`;
     }
     if (diastolicStatus === '未见明显异常') {
         return `  ${n}.左心室收缩功能${systolicStatus}，舒张功能未见明显异常。`;
@@ -373,10 +367,6 @@ function generateConclusionText(diseaseType, referenceRange, params) {
         // 收缩 / 舒张功能（与 HCM 第 3 条共用 buildSystolicDiastolicFuncConclusionLine）
         const nextIndex = conclusion.trimEnd().split('\n').filter(l => /^\s*\d+\./.test(l)).length + 1;
         conclusion += buildSystolicDiastolicFuncConclusionLine(get, referenceRange, diseaseType, nextIndex) + '\n';
-
-        if (rightHeartAdvancedEnabled) {
-            conclusion += `  ${nextIndex + 1}.左心室收缩功能尚可。\n`;
-        }
 
         if (diseaseType === 'MMVD' && mmvdDeferredOtherRegurgEnabled && mmvdDeferredOtherRegurgLinesRaw.length > 0) {
             const numberedLines = conclusion.trimEnd().split('\n').filter(l => /^\s*\d+\./.test(l)).length;

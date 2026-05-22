@@ -92,6 +92,8 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         ];
         const isCatReferenceForLayout =
             referenceRange === '猫' || referenceRange === '猫（含体重）';
+        const isDogReferenceForLayout =
+            referenceRange === '犬≤3kg' || referenceRange === '犬＞3kg' || referenceRange === '金毛';
 
         const weightText =
             referenceRange === '金毛'
@@ -189,7 +191,13 @@ function generateFindingsText(diseaseType, referenceRange, params) {
             const leftRefKey = leftKey === 'LVWd' ? 'LVWd' : leftKey;
             const rightRefKey = rightKey === 'LVWs' ? 'LVWs' : rightKey;
             const leftText = formatParamWithRef(leftKey, valueByKey(leftKey), leftRefKey);
-            const rightText = formatParamWithRef(rightKey, valueByKey(rightKey), rightRefKey);
+            let rightText = formatParamWithRef(rightKey, valueByKey(rightKey), rightRefKey);
+            if (rightKey === 'LVDd' && isDogReferenceForLayout) {
+                const lviddnRaw = (get('LVIDDN', '') || '').toString().trim();
+                if (lviddnRaw) {
+                    rightText += ` LVIDDN ${formatValue(lviddnRaw)}`;
+                }
+            }
             renderLeftRight(leftText, rightText);
         }
 
@@ -421,7 +429,16 @@ function generateFindingsText(diseaseType, referenceRange, params) {
     };
 
     const colWidth = 45;
-    findings += `     ${formatParamAligned('IVSd', get('IVSd'), 'IVSd', colWidth)}${formatParamAligned('LVDd', get('LVDd'), 'LVDd', colWidth)}\n`;
+    const isDogReferenceForCompact =
+        referenceRange === '犬≤3kg' || referenceRange === '犬＞3kg' || referenceRange === '金毛';
+    let lvddCompact = formatParamAligned('LVDd', get('LVDd'), 'LVDd', colWidth);
+    if (isDogReferenceForCompact) {
+        const lviddnCompactRaw = (get('LVIDDN', '') || '').toString().trim();
+        if (lviddnCompactRaw) {
+            lvddCompact += ` LVIDDN ${formatValue(lviddnCompactRaw)}`;
+        }
+    }
+    findings += `     ${formatParamAligned('IVSd', get('IVSd'), 'IVSd', colWidth)}${lvddCompact}\n`;
     findings += `     ${formatParamAligned('LVWd', get('LVPWd'), 'LVWd', colWidth)}${formatParamAligned('IVSs', get('IVSs'), 'IVSs', colWidth)}\n`;
     findings += `     ${formatParamAligned('LVDs', get('LVDs'), 'LVDs', colWidth)}${formatParamAligned('LVWs', get('LVPWs'), 'LVWs', colWidth)}\n`;
 

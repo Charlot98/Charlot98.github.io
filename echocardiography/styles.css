@@ -286,7 +286,7 @@ body {
     color: #b91c1c;
 }
 
-/* 右侧栏：截图快捷键说明（浅灰字 + 圆角描边键帽，不拦截点击） */
+/* 右侧栏：截图快捷键说明（与整体蓝灰风格统一，不拦截点击） */
 .right-sidebar-snip-hint {
     display: flex;
     flex-wrap: wrap;
@@ -295,20 +295,26 @@ body {
     gap: 8px;
     flex-shrink: 0;
     margin: 0 0 10px 0;
-    padding: 6px 8px 12px;
+    padding: 10px 10px 10px;
     box-sizing: border-box;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
     font-size: 13px;
     line-height: 1.5;
-    font-weight: 400;
-    color: #999;
+    font-weight: 500;
+    color: #4f5f75;
+    background: rgba(240, 246, 255, 0.9);
+    border: 1px solid rgba(74, 144, 226, 0.32);
+    border-radius: 10px;
+    box-shadow: 0 3px 12px rgba(74, 144, 226, 0.14);
     pointer-events: none;
     user-select: none;
     -webkit-font-smoothing: antialiased;
+    animation: none;
 }
 
 .right-sidebar-snip-hint-intro {
-    color: #999;
+    color: #3f6ea5;
+    font-weight: 600;
 }
 
 .right-sidebar-snip-hint-keys {
@@ -319,9 +325,9 @@ body {
 }
 
 .right-sidebar-snip-plus {
-    color: #c4c4c4;
+    color: #4a90e2;
     font-size: 11px;
-    font-weight: 500;
+    font-weight: 700;
     padding: 0 1px;
     user-select: none;
 }
@@ -332,11 +338,11 @@ body {
     font-size: 12px;
     font-weight: 500;
     line-height: 1.35;
-    color: #666;
-    background: #fafafa;
-    border: 1px solid #d0d0d0;
+    color: #356ea7;
+    background: #fff;
+    border: 1px solid #bcd8f3;
     border-radius: 5px;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 1px 4px rgba(74, 144, 226, 0.12);
     font-family: inherit;
 }
 
@@ -1601,18 +1607,19 @@ body {
     transform: translateY(-50%);
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     justify-content: flex-start;
     gap: 6px 8px;
     width: max-content;
-    max-width: min(70%, 280px);
+    max-width: none;
     margin: 0 0 8px 0;
     padding: 0 0 0 0;
     box-sizing: border-box;
     background: transparent;
     pointer-events: none;
     user-select: none;
+    white-space: nowrap;
 }
 
 .right-sidebar-clear-hint-arrow {
@@ -1636,6 +1643,7 @@ body {
     transform: rotate(-0.4deg);
     padding: 0;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .right-sidebar-hints-layer .right-sidebar-snip-hint {
