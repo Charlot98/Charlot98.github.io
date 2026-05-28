@@ -8,5 +8,5 @@
 
 ## 合图
 - [imagingAI20260417]()：初始版本
-- [imagingAI20260517](): 第2版 拼音识别（bug待修复）
-- [imagingAI20260527]()：第3版 部分
+- [imagingAI20260517](https://wwbbx.lanzouw.com/ipoK93qg50wd): 第2版 拼音识别（bug待修复）
+- [imagingAI20260527](https://wwbbx.lanzouw.com/iJDr93qgdiob)：第3版 部分
