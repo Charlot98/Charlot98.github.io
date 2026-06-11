@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>兽医超声报告助手</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%2028%2028'%3E%3Cpath%20d%3D'M0%200h28v28H0z'%20fill%3D'none'%2F%3E%3Cpath%20fill%3D'%23f66d2c'%20d%3D'M8.5%206.5a4.5%204.5%200%201%201%209%200v7.124a7.51%207.51%200%200%200-4.35%205.373L13%2019a4.5%204.5%200%200%201-4.5-4.5zM13.016%2021H13a6.5%206.5%200%200%201-6.5-6.5v-.75a.75.75%200%201%200-1.5%200v.75a8%208%200%200%200%207.25%207.965v2.785a.75.75%200%200%200%201.5%200v-1.477A7.5%207.5%200%200%201%2013.016%2021m7.484%204.5a5%205%200%201%201%200-10a5%205%200%200%201%200%2010m0%201.5a6.5%206.5%200%201%200%200-13a6.5%206.5%200%200%200%200%2013m0-3a3.5%203.5%200%201%200%200-7a3.5%203.5%200%200%200%200%207'%2F%3E%3C%2Fsvg%3E">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+<main class="main-split">
+  <!-- 左侧：语音转录 -->
+  <section class="panel panel-left">
+    <div class="panel-title">语音转录</div>
+    <div class="rec-bar">
+      <button class="btn-start" id="btnStart">开始录音</button>
+      <button class="btn-stop" id="btnStop" disabled>停止录音</button>
+      <div class="wave-wrap" id="waveWrap">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+      <span class="rec-status" id="recStatus"></span>
+    </div>
+    <div class="transcript-wrap">
+      <textarea class="transcript-box" id="transcriptEl"
+        placeholder="点击「开始录音」，转录内容将实时显示在这里，可直接编辑校对……"></textarea>
+      <span class="char-count" id="charCount">0 字</span>
+    </div>
+    <div class="transcript-tools">
+      <button class="btn-small btn-clear" id="btnClear">清空</button>
+      <button class="btn-small" id="btnCopyTranscript">全选复制</button>
+    </div>
+    <div class="left-actions">
+      <button class="btn-generate" id="btnGenerateReport">生成报告</button>
+    </div>
+  </section>
+
+  <!-- 右侧：报告 -->
+  <section class="panel panel-right">
+    <div class="panel-title">超声报告</div>
+    <div class="report-body" id="reportBody">
+      <div class="findings-section">
+        <div class="section-label">超声所见</div>
+        <div id="findingsContent">
+          <div class="report-placeholder">转录完成后点击生成报告</div>
+        </div>
+      </div>
+      <div class="conclusion-section">
+        <div class="section-label">结论</div>
+        <div class="conclusion-text" id="conclusionContent"></div>
+        <div class="report-actions" id="reportActions">
+          <button class="btn-copy" id="btnCopyReport">复制报告</button>
+          <button class="btn-pdf" id="btnExportPdf">导出 PDF</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
