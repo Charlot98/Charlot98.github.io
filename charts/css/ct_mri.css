@@ -1,0 +1,81 @@
+.page-workload .filters {
+  padding: 14px 20px 10px;
+  gap: 12px 24px;
+}
+
+.page-workload .filter-group {
+  gap: 8px;
+}
+
+.page-workload .filter-group-doctors {
+  margin-left: 8px;
+}
+
+.page-workload .doctor-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.page-workload .chip {
+  padding: 4px 12px;
+  font-size: 14px;
+}
+
+.page-workload .doctor-actions button {
+  padding: 4px 14px;
+  font-size: 13px;
+}
+
+.page-workload .doctor-select-section {
+  padding: 0 20px 16px;
+}
+
+.page-workload #doctor-checkboxes {
+  margin-top: 0;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px solid #dbe4ee;
+  border-radius: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.page-workload .doctor-checkbox-list-main {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
+  gap: 10px 16px;
+}
+
+.page-workload .doctor-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  color: #1f2937;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.page-workload .doctor-checkbox-label:hover {
+  background: #eef4f9;
+}
+
+.page-workload .doctor-checkbox-label input[type="checkbox"] {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.page-workload .doctor-checkbox-list-other {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #cbd5e1;
+}
