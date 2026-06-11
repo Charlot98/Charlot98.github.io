@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="css/common.css" />
   <link rel="stylesheet" href="css/vets.css" />
   <script src="js/auth.js"></script>
+  <script src="js/nav-items.js"></script>
+  <script src="js/nav-sidebar.js"></script>
   <script src="js/highcharts.js"></script>
   <script src="js/utils.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -16,16 +18,7 @@
     <div class="nav-sidebar-inner">
       <a href="index.html">返回首页</a>
       <a></a>
-      <div class="nav-sidebar-more">
-        <a href="cases_scatter.html">分级（正常日期）</a>
-        <a href="vets.html" class="active">个人（正常日期）</a>
-        <a href="vets2.html">个人（入职时长）</a>
-        <a href="ultra_contrast.html">超声造影</a>
-        <a href="time.html">交单及等待时长</a>
-        <a href="weekend.html">各星期病例数</a>
-        <a href="weekend.html">各星期病例等待时长</a>
-        <a href="guide.html">使用指南</a>
-      </div>
+      <div class="nav-sidebar-more" data-nav-auto></div>
     </div>
   </div>
 
@@ -60,8 +53,7 @@
     </div>
   </div>
 
-  <div id="container" class="chart-container chart-vets-main"></div>
-  <div id="container-total" class="chart-container chart-vets-total"></div>
+  <div id="container-total" class="chart-container chart-vets-main"></div>
   <div id="container-cumulative" class="chart-container chart-vets-cumulative"></div>
   </div>
 

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <title>CT 医生工作量</title>
+  <link rel="stylesheet" href="css/common.css" />
+  <link rel="stylesheet" href="css/vets.css" />
+  <link rel="stylesheet" href="css/ct_mri.css" />
+  <script src="js/auth.js"></script>
+  <script src="js/nav-items.js"></script>
+  <script src="js/nav-sidebar.js"></script>
+  <script src="js/highcharts.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="page-workload">
+  <div class="nav-sidebar">
+    <div class="nav-sidebar-inner">
+      <a href="index.html">返回首页</a>
+      <a></a>
+      <div class="nav-sidebar-more" data-nav-auto></div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="filters">
+      <div class="filter-group">
+        <span class="filter-label">医生等级：</span>
+        <label class="chip"><input type="checkbox" class="level-filter" value="预备" checked /> 预备</label>
+        <label class="chip"><input type="checkbox" class="level-filter" value="初级" checked /> 初级</label>
+        <label class="chip"><input type="checkbox" class="level-filter" value="中级" checked /> 中级</label>
+        <label class="chip"><input type="checkbox" class="level-filter" value="高级" checked /> 高级</label>
+        <label class="chip"><input type="checkbox" class="level-filter" value="其它" /> 其它</label>
+      </div>
+      <div class="filter-group filter-group-doctors">
+        <span class="filter-label">医生：</span>
+        <span class="doctor-actions">
+          <button id="doctor-select-all" type="button">全选</button>
+          <button id="doctor-select-clear" type="button">取消全选</button>
+        </span>
+      </div>
+    </div>
+    <div class="doctor-select-section">
+      <div id="doctor-checkboxes"></div>
+    </div>
+
+    <div class="page-header page-header-vets">
+      <div class="page-controls">
+        <span>开始月份：</span>
+        <select id="start-month"></select>
+        <span>结束月份：</span>
+        <select id="end-month"></select>
+        <button type="button" id="export-excel-btn" class="btn-export">导出 Excel</button>
+      </div>
+    </div>
+
+    <div id="container-scatter" class="chart-container chart-vets-main"></div>
+    <div id="container-bar" class="chart-container chart-vets-total"></div>
+  </div>
+
+  <script>
+    window.WORKLOAD_PAGE = { csvPath: 'ct_doctor_workload.csv', label: 'CT' };
+  </script>
+  <script src="js/ct_mri_workload.js"></script>
+</body>
+</html>

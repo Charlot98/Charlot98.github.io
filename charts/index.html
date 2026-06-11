@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" href="statistics.png" type="image/png" />
-  <title>index.html</title>
+  <title>统计看板</title>
   <link rel="stylesheet" href="css/common.css" />
   <link rel="stylesheet" href="css/dashboard.css" />
   <script src="js/auth.js"></script>
@@ -17,45 +17,85 @@
   <div class="dash-logout">
     <button id="logout-btn">退出</button>
   </div>
+
   <div class="dash-root">
-    <div style="text-align: center; margin-bottom: 40px;">
-      <div class="dash-title">超声统计看板</div>
-      <div class="dash-menu">
-        <div class="nav-row">
-          <span class="nav-label">工作量</span>
-          <a href="cases_scatter.html" class="nav-link nav-text">分级（正常日期）</a>
+    <div class="dash-main">
+      <div class="dash-title">统计看板</div>
+
+      <section class="dash-section">
+        <div class="dash-title">超声</div>
+        <div class="dash-menu">
+          <div class="nav-row">
+            <span class="nav-label">工作量</span>
+            <a href="cases_scatter.html" class="nav-link nav-text">分级（正常日期）</a>
+          </div>
+          <div class="nav-row">
+            <span class="nav-label">工作量</span>
+            <a href="vets.html" class="nav-link nav-text">个人（正常日期）</a>
+          </div>
+          <div class="nav-row">
+            <span class="nav-label">工作量</span>
+            <a href="vets2.html" class="nav-link nav-text">个人（入职时长）</a>
+          </div>
+          <div class="nav-row">
+            <span class="nav-label">技术</span>
+            <a href="ultra_contrast.html" class="nav-link nav-text">超声造影</a>
+          </div>
+          <div class="nav-row">
+            <span class="nav-label">病例</span>
+            <a href="time.html" class="nav-link nav-text">交单及等待时长</a>
+          </div>
+          <div class="nav-row">
+            <span class="nav-label">病例</span>
+            <a href="weekend.html" class="nav-link nav-text">各星期病例数</a>
+          </div>
+          <div class="nav-row">
+            <span class="nav-label">病例</span>
+            <a href="weekend2.html" class="nav-link nav-text">各星期等待时长</a>
+          </div>
         </div>
-        <div class="nav-row">
-          <span class="nav-label">工作量</span>
-          <a href="vets.html" class="nav-link nav-text">个人（正常日期）</a>
+      </section>
+
+      <section class="dash-section">
+        <div class="dash-title">CT</div>
+        <div class="dash-menu">
+          <div class="nav-row">
+            <span class="nav-label">工作量</span>
+            <a href="ct.html" class="nav-link nav-text">个人（正常日期）</a>
+          </div>
+          <div class="nav-row">
+            <span class="nav-label">工作量</span>
+            <a href="ct2.html" class="nav-link nav-text">个人（入职时长）</a>
+          </div>
         </div>
-        <div class="nav-row">
-          <span class="nav-label">工作量</span>
-          <a href="vets2.html" class="nav-link nav-text">个人（入职时长）</a>
+      </section>
+
+      <section class="dash-section">
+        <div class="dash-title">MRI</div>
+        <div class="dash-menu">
+          <div class="nav-row">
+            <span class="nav-label">工作量</span>
+            <a href="mri.html" class="nav-link nav-text">个人（正常日期）</a>
+          </div>
+          <div class="nav-row">
+            <span class="nav-label">工作量</span>
+            <a href="mri2.html" class="nav-link nav-text">个人（入职时长）</a>
+          </div>
         </div>
-        <div class="nav-row">
-          <span class="nav-label">技术</span>
-          <a href="ultra_contrast.html" class="nav-link nav-text">超声造影</a>
+      </section>
+
+      <section class="dash-section">
+        <div class="dash-title">门诊</div>
+        <div class="dash-menu">
+          <div class="nav-row">
+            <span class="nav-label">门诊</span>
+            <a href="outpatient.html" class="nav-link nav-text">接诊（停止更新）</a>
+          </div>
         </div>
-        <div class="nav-row">
-          <span class="nav-label">病例</span>
-          <a href="time.html" class="nav-link nav-text">交单及等待时长</a>
-        </div>
-        <div class="nav-row">
-          <span class="nav-label">病例</span>
-          <a href="weekend.html" class="nav-link nav-text">各星期病理量</a>
-        </div>
-        <div class="nav-row">
-          <span class="nav-label">病例</span>
-          <a href="weekend2.html" class="nav-link nav-text">各星期病例等待时长</a>
-        </div>
-        <div class="nav-row">
-          <span class="nav-label">门诊</span>
-          <a href="outpatient.html" class="nav-link nav-text">门诊挂号接诊量</a>
-        </div>
-      </div>
+      </section>
     </div>
   </div>
+
   <script src="js/dashboard.js"></script>
 </body>
 </html>
