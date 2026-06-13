@@ -1,3 +1,13 @@
+/** 防抖句柄：输入时延迟 250ms 再生成模板，避免每次按键同步阻塞主线程 */
+let _generateTemplateTimer = null;
+function generateTemplateDeferred() {
+    if (_generateTemplateTimer) clearTimeout(_generateTemplateTimer);
+    _generateTemplateTimer = setTimeout(() => {
+        _generateTemplateTimer = null;
+        generateTemplate();
+    }, 250);
+}
+
 function unlockRightSidebarTemplateText() {
     rightSidebarFindingsUserLocked = false;
     rightSidebarConclusionUserLocked = false;
@@ -40,8 +50,8 @@ async function generateTemplate() {
     // 使用模板配置生成结论部分
     let conclusion = templateConfig.generateConclusion(diseaseType, referenceRange, parameters);
 
-    // 节律不齐：在"所见"心率处补充，并在"结论"末尾追加
-    if (parameters['节律不齐']) {
+    // 节律不齐：在"所见"心率处补充，并在"结论"末尾追加（「仅左心高阶」模式不追加）
+    if (parameters['节律不齐'] && !leftHeartAdvancedOnlyEnabled) {
         if (typeof findings === 'string' && findings.includes('4.心率') && !findings.includes('节律不齐')) {
             findings = findings.replace(/(4\.心率[:：]\s*[^\n。]*?)。/g, '$1，节律不齐。');
         }

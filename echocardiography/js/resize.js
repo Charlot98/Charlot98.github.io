@@ -8,7 +8,7 @@ function setupRightSidebarResize() {
     const TOP_BAR = 0;
     const MIN_W = 280;
     const MIN_H = 200;
-    const CENTER = () => window.innerWidth / 2;
+    const CENTER = () => (typeof getRightSidebarMinLeft === 'function' ? getRightSidebarMinLeft() : window.innerWidth / 2);
     const MAX_RIGHT = () => window.innerWidth;
     const MAX_BOTTOM = () => window.innerHeight;
 

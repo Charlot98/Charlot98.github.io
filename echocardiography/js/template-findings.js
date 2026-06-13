@@ -1,5 +1,85 @@
 
 /**
+ * 获取左心室应变异常节段描述子句列表（所见与结论共用）
+ * 返回如：['基底部前壁（ANT）、下壁（INF）纵向应变下降', '近段侧壁（LAT）纵向应变下降']
+ * 若无异常（所有节段 ≤ -15%）返回空数组 []
+ */
+function buildLvStrainAbnormalClauses() {
+    const segValues = (typeof getLvStrainSegmentValues === 'function')
+        ? getLvStrainSegmentValues() : {};
+    const segColors = (typeof getLvStrainSegmentColors === 'function')
+        ? getLvStrainSegmentColors() : {};
+
+    /**
+     * 判断某节段是否异常：
+     *   有数值 → 值 > -15 则异常
+     *   无数值 → 手动标红（color === 'red'）则异常
+     */
+    function isSegAbnormal(seg) {
+        const val = segValues[String(seg)];
+        if (val !== undefined) return parseFloat(val) > -15;
+        return segColors[String(seg)] === 'red';
+    }
+
+    // 节段编号 → 报告方向标签
+    const SEG_DIR = {
+        1:  '前壁（ANT）',         2:  '前壁间隔（ANT SEPT）',
+        3:  '间隔（SEPT）',        4:  '下壁（INF）',
+        5:  '后壁（POST）',        6:  '侧壁（LAT）',
+        7:  '前壁（ANT）',         8:  '前壁间隔（ANT SEPT）',
+        9:  '间隔（SEPT）',        10: '下壁（INF）',
+        11: '后壁（POST）',        12: '侧壁（LAT）',
+        13: '前壁（ANT）',         14: '间隔（SEPT）',
+        15: '下壁（INF）',         16: '侧壁（LAT）'
+    };
+
+    const RINGS = [
+        { name: '基底部', segs: [1, 2, 3, 4, 5, 6] },
+        { name: '近段',   segs: [7, 8, 9, 10, 11, 12] },
+        { name: '远段',   segs: [13, 14, 15, 16] }
+    ];
+
+    const clauses = [];
+
+    for (const ring of RINGS) {
+        const abnormal = ring.segs.filter(function(s) { return isSegAbnormal(s); });
+        if (abnormal.length > 0) {
+            const dirs = abnormal.map(function(s) { return SEG_DIR[s]; }).join('、');
+            clauses.push(ring.name + dirs + '纵向应变下降');
+        }
+    }
+
+    // 心尖（seg 17）单独判断
+    if (isSegAbnormal(17)) {
+        clauses.push('心尖纵向应变下降');
+    }
+
+    return clauses;
+}
+
+/** 左心室应变所见一行（GS + 节段描述） */
+function buildLvStrainFindingsLine(get) {
+    const gsLv = (get('GS（LV）', '') || '').toString().trim();
+    const gsDisplay = gsLv ? formatValue(gsLv) : '';
+    const abnormalClauses = buildLvStrainAbnormalClauses();
+    const strainSuffix = abnormalClauses.length === 0
+        ? '左心室各节段应变尚可'
+        : abnormalClauses.join('，');
+    return `左心室应变GS：${gsDisplay}%，${strainSuffix}。`;
+}
+
+/** 「仅左心高阶」模式：保留扫查首行 + 序号应变行 */
+function generateLeftHeartAdvancedOnlyFindingsText(referenceRange) {
+    const get = (key, defaultValue = '') => parameters[key] || defaultValue;
+    const animalType =
+        (referenceRange === '猫' || referenceRange === '猫（含体重）') ? '猫' :
+        referenceRange === '兔子' ? '兔' : '犬';
+    let findings = `${animalType}侧卧位扫查:\n`;
+    findings += `  1.${buildLvStrainFindingsLine(get)}\n`;
+    return findings + '\n';
+}
+
+/**
  * 所见（Findings）模板生成
  * 依赖全局变量：parameters, selectedReferenceWeight, breedReferenceData,
  *               simpsonEnabled, rightHeartAdvancedEnabled
@@ -10,6 +90,10 @@
  *           isHcmFeatureTagActive
  */
 function generateFindingsText(diseaseType, referenceRange, params) {
+    if (leftHeartAdvancedOnlyEnabled) {
+        return generateLeftHeartAdvancedOnlyFindingsText(referenceRange);
+    }
+
     const get = (key, defaultValue = '') => parameters[key] || defaultValue;
 
     // 所见首行动物类型
@@ -259,9 +343,14 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         findings += `\n`;
 
         // 3. 彩色多普勒
+        // 一次性缓存所有瓣口标签的激活状态，避免每次调用都重新查询 DOM
+        const _tagActiveCache = {};
         const isTagActive = (tagName) => {
-            const button = document.querySelector(`.valve-flow-tag[data-tag="${tagName}"]`);
-            return button && button.classList.contains('active');
+            if (!(tagName in _tagActiveCache)) {
+                const button = document.querySelector(`.valve-flow-tag[data-tag="${tagName}"]`);
+                _tagActiveCache[tagName] = !!(button && button.classList.contains('active'));
+            }
+            return _tagActiveCache[tagName];
         };
         const regurgFlowTags = [
             { tag: '二尖瓣反流', label: '二尖瓣', severityParam: '二尖瓣反流程度' },
@@ -378,6 +467,9 @@ function generateFindingsText(diseaseType, referenceRange, params) {
             const gs = get('GS', '');
             const fws = get('FWS', '');
             findings += `    右心室应变：GS：${gs ? formatValue(gs) : ''}% FWS：${fws ? formatValue(fws) : ''}%\n`;
+        }
+        if (leftHeartAdvancedEnabled) {
+            findings += `    ${buildLvStrainFindingsLine(get)}\n`;
         }
 
         findings += `\n`;

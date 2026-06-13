@@ -1,5 +1,7 @@
 // 参数输入区域始终显示（已移除折叠功能）
 document.addEventListener('DOMContentLoaded', function() {
+    setupAutoHideScrollbars();
+
     // 确保输入框事件监听器已绑定
     setupInputListeners();
     setLeftSidebarInputPlaceholders();
@@ -73,6 +75,15 @@ document.addEventListener('DOMContentLoaded', function() {
     if (rhInitBtn) rhInitBtn.classList.remove('active');
     delete parameters['右心高阶'];
     toggleRightHeartAdvancedInputs();
+
+    leftHeartAdvancedEnabled = false;
+    const lhInitBtn = document.getElementById('leftHeartAdvancedButton');
+    if (lhInitBtn) lhInitBtn.classList.remove('active');
+    delete parameters['左心高阶'];
+    leftHeartAdvancedOnlyEnabled = false;
+    delete parameters['仅左心高阶'];
+    toggleLeftHeartAdvancedInputs();
+
     calculateTapseOverAo();
     generateTemplate();
 
@@ -230,3 +241,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
 });
+
+/** 滚动条默认隐藏，滚动时短暂显示 */
+function setupAutoHideScrollbars() {
+    document.querySelectorAll('.auto-hide-scrollbar').forEach(function(el) {
+        if (el.dataset.autoHideScrollbarBound === '1') return;
+        el.dataset.autoHideScrollbarBound = '1';
+        var timer = null;
+        el.addEventListener('scroll', function() {
+            el.classList.add('is-scrolling');
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                el.classList.remove('is-scrolling');
+            }, 800);
+        }, { passive: true });
+    });
+}

@@ -158,7 +158,6 @@ function setupInputListeners() {
                     if (showBtn) {
                         showBtn.classList.add('active');
                         parameters['dp/dt显示'] = '显示';
-                        generateTemplate();
                     }
                 }
             }
@@ -171,7 +170,6 @@ function setupInputListeners() {
                     if (showBtn) {
                         showBtn.classList.add('active');
                         parameters['LA Volume显示'] = '显示';
-                        generateTemplate();
                     }
                 }
             }
@@ -220,6 +218,7 @@ function setupInputListeners() {
             }
 
             // 如果体重变化，自动选择最接近的体重值（中间的选项），更新参考值显示和引用体重值，并自动更新模板
+            // （generateTemplate 由末尾的 generateTemplateDeferred 统一触发，此处不再单独调用）
             if (paramName === '体重') {
                 // 用户手动输入体重时，自动选择最接近的体重值
                 let referenceRange = selectedReferenceRange;
@@ -291,11 +290,9 @@ if ((referenceRange === '犬≤3kg' || referenceRange === '犬＞3kg' || referen
 
 updateReferenceValues();
                 updateWeightReferenceDisplay();
-                // 体重变化时自动更新"所见"模板
-                generateTemplate();
-            } else {
-                generateTemplate();
             }
+            // 所有输入统一通过防抖延迟更新模板，避免每次按键同步阻塞主线程
+            generateTemplateDeferred();
         });
         input.addEventListener('change', function() {
             const pn = this.getAttribute('data-param');
@@ -356,6 +353,7 @@ function setLeftSidebarInputPlaceholders() {
         'E/A（TV）': '',
         "S'": 'cm/s',
         'GS': '%',
+        'GS（LV）': '%',
         'FWS': '%',
         'E': 'm/s',
         'A': 'm/s',

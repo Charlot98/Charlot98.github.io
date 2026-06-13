@@ -369,6 +369,23 @@ if (rightHeartAdvancedButton) {
     });
 }
 
+// 左心高阶按钮（左心室斑点追踪牛眼图显隐）
+const leftHeartAdvancedButton = document.getElementById('leftHeartAdvancedButton');
+if (leftHeartAdvancedButton) {
+    leftHeartAdvancedButton.addEventListener('click', function() {
+        leftHeartAdvancedEnabled = !leftHeartAdvancedEnabled;
+        if (leftHeartAdvancedEnabled) {
+            this.classList.add('active');
+            parameters['左心高阶'] = '是';
+        } else {
+            this.classList.remove('active');
+            delete parameters['左心高阶'];
+        }
+        toggleLeftHeartAdvancedInputs();
+        generateTemplate();
+    });
+}
+
 // 节律不齐按钮事件
 const rhythmIrregularButton = document.getElementById('rhythmIrregularButton');
 if (rhythmIrregularButton) {

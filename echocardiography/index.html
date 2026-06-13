@@ -7,9 +7,6 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>心超报告生成器</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Long+Cang&display=swap" rel="stylesheet">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e74c3c'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>" type="image/svg+xml">
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -66,7 +63,7 @@
                         </button>
                     </div>
                 </div>
-                <div class="left-sidebar-scroll">
+                <div class="left-sidebar-scroll auto-hide-scrollbar">
                 <div class="parameters-container" id="parametersContainer">
             <!-- 1. 心超测量参数 -->
             <div class="parameters-section">
@@ -80,6 +77,7 @@
                     <div class="simpson-tag-row">
                         <button type="button" id="simpsonButton" class="simpson-tag">含辛普森测量</button>
                         <button type="button" id="rightHeartAdvancedButton" class="simpson-tag">右心高阶</button>
+                        <button type="button" id="leftHeartAdvancedButton" class="simpson-tag">左心高阶</button>
                     </div>
                     <div class="m-type-grid">
                     <div class="m-type-item">
@@ -253,6 +251,8 @@
                         </div>
                     </div>
                 </div>
+                </div>
+            </div>
 
             <!-- 2. 左房大小 -->
             <div class="parameters-section">
@@ -681,9 +681,42 @@
             </div>
                 </div>
                 </div>
+            </div>
+            <!-- 左心高阶：左心室应变卡片（右侧空白背景区） -->
+            <div class="lv-strain-panel lv-strain-panel--inactive" id="lvStrainPanel" aria-hidden="true">
+                <div class="lv-strain-panel-card">
+                    <div class="lv-strain-panel-toolbar">
+                        <label class="lv-strain-only-toggle" title="仅左心高阶：右侧栏只显示应变所见/结论">
+                            <span class="lv-strain-only-toggle-label">仅左心高阶</span>
+                            <input type="checkbox" id="lvStrainOnlyToggle" aria-label="仅左心高阶">
+                            <span class="lv-strain-only-toggle-track" aria-hidden="true"></span>
+                        </label>
+                    </div>
+                    <div class="lv-strain-panel-header">
+                        <span class="lv-strain-panel-title">左心室应变</span>
+                        <div class="input-with-unit-suffix gs-fws-input-wrap">
+                            <span class="gs-fws-mini-label">GS</span>
+                            <input type="text" class="other-param-input" data-param="GS（LV）" placeholder="">
+                            <span class="unit-suffix" aria-hidden="true">%</span>
+                        </div>
+                    </div>
+                    <div class="lv-strain-map-wrap" id="lvStrainMapWrap">
+                        <div class="lv-strain-bullseye-host" id="lvStrainBullseyeHost">
+                            <button type="button" class="lv-strain-eraser-btn" id="lvStrainEraserBtn" aria-label="清空">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                                    <path fill="currentColor" d="M16.24 3.56l4.95 4.94c.78.79.78 2.05 0 2.84L12 20.53a4.008 4.008 0 0 1-5.66 0L2.81 17c-.78-.79-.78-2.05 0-2.84l9.19-9.19a4.008 4.008 0 0 1 2.83 0l1.41 1.59zM4.22 15.58l3.54 3.54 9.19-9.19-3.54-3.54-9.19 9.19z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <!-- lv-strain-bullseye.svg 由 left-heart.js 注入；单击切换异常/正常，按住左键滑动可多选 -->
+                        <div class="lv-strain-map-legend" aria-hidden="false">
+                            <span class="lv-strain-legend-swatch" aria-hidden="true"></span>
+                            <span class="lv-strain-legend-text">应变异常</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="right-sidebar" id="rightSidebar">
+            <div class="right-sidebar auto-hide-scrollbar" id="rightSidebar">
                 <div class="right-sidebar-resize-triangle" id="rightSidebarResizeTriangle" title="拖拽调节大小"></div>
                 <div class="template-section">
                     <div class="section-header">
@@ -713,14 +746,6 @@
                     </div>
             </div>
             <div id="rightSidebarHintsLayer" class="right-sidebar-hints-layer" aria-hidden="true">
-                <div class="right-sidebar-clear-hint" aria-hidden="true">
-                    <span class="right-sidebar-clear-hint-arrow" aria-hidden="true">
-                        <svg class="right-sidebar-clear-hint-arrow-svg" width="40" height="14" viewBox="0 0 40 14" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                            <path d="M38 7H10M10 7L16 2M10 7L16 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </span>
-                    <span class="right-sidebar-clear-hint-text">点击此处清空数值</span>
-                </div>
                 <div class="right-sidebar-snip-hint" role="note" aria-label="系统截图快捷键：Shift+Win+S">
                     <span class="right-sidebar-snip-hint-intro">截图</span>
                     <span class="right-sidebar-snip-hint-keys">
@@ -743,6 +768,7 @@
     <script src="js/ocr.js"></script>
     <script src="js/disease-selector.js"></script>
     <script src="js/right-heart.js"></script>
+    <script src="js/left-heart.js"></script>
     <script src="js/valve-tags.js"></script>
     <script src="js/template-findings.js"></script>
     <script src="js/template-conclusion.js"></script>

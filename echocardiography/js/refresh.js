@@ -1,24 +1,11 @@
-// 右侧提示层（固定于视口默认右侧栏区域）与顶栏「清空」按钮垂直居中对齐
+// 右侧提示层（固定于视口默认右侧栏区域）就绪后显示
 function syncClearHintWithTopBar() {
-    const hint = document.querySelector('.right-sidebar-clear-hint');
     const snipHint = document.querySelector('.right-sidebar-snip-hint');
-    const btn = document.getElementById('refreshButton');
     const layer = document.getElementById('rightSidebarHintsLayer');
-    if (!hint || !snipHint || !btn || !layer) return;
+    if (!snipHint || !layer) return;
     if (window.matchMedia && window.matchMedia('(max-width: 768px)').matches) {
         layer.classList.remove('is-ready');
-        layer.style.removeProperty('--clear-hint-top');
         return;
-    }
-    const layerStyle = window.getComputedStyle(layer);
-    const padTop = parseFloat(layerStyle.paddingTop) || 0;
-    const br = btn.getBoundingClientRect();
-    const lr = layer.getBoundingClientRect();
-    const btnMid = br.top + br.height / 2;
-    const contentTop = lr.top + padTop;
-    if (hint.dataset.manualPosition !== '1') {
-        const offsetTop = Math.round(btnMid - contentTop);
-        layer.style.setProperty('--clear-hint-top', `${offsetTop}px`);
     }
     layer.classList.add('is-ready');
 }
@@ -40,27 +27,12 @@ function clearLegacyHintStorage() {
     } catch (_) {}
 }
 
-// Web 字体（如 Long Cang）与顶栏高度变化后再对齐一次，避免先错位后跳变
-(function setupClearHintRelayoutHooks() {
+(function setupHintsLayerReadyHooks() {
     function scheduleSync() {
         requestAnimationFrame(syncClearHintWithTopBar);
     }
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(scheduleSync);
-    }
     window.addEventListener('load', scheduleSync, { once: true });
-    document.addEventListener('DOMContentLoaded', function () {
-        requestAnimationFrame(function () {
-            var btn = document.getElementById('refreshButton');
-            var topRow = document.querySelector('.top-row');
-            if (typeof ResizeObserver === 'undefined') return;
-            var ro = new ResizeObserver(function () {
-                scheduleSync();
-            });
-            if (btn) ro.observe(btn);
-            if (topRow) ro.observe(topRow);
-        });
-    }, { once: true });
+    document.addEventListener('DOMContentLoaded', scheduleSync, { once: true });
 })();
 
 // 点击「清空」时播放图标快速旋转两圈
@@ -102,6 +74,7 @@ function setupRefreshButton() {
         document.querySelectorAll('textarea').forEach(el => { el.value = ''; });
         clearRatioBubbleManualFlags();
         document.querySelectorAll('select').forEach(el => { el.selectedIndex = 0; });
+        selectedReferenceRange = '';
         document.querySelectorAll('.regurgitation-severity-btn').forEach(btn => { btn.classList.remove('active'); });
         const rhythmBtn = document.getElementById('rhythmIrregularButton');
         if (rhythmBtn) rhythmBtn.classList.remove('active');
@@ -132,6 +105,16 @@ function setupRefreshButton() {
         if (rightHeartBtn) rightHeartBtn.classList.remove('active');
         delete parameters['右心高阶'];
         toggleRightHeartAdvancedInputs();
+
+        leftHeartAdvancedEnabled = false;
+        const leftHeartBtn = document.getElementById('leftHeartAdvancedButton');
+        if (leftHeartBtn) leftHeartBtn.classList.remove('active');
+        delete parameters['左心高阶'];
+        leftHeartAdvancedOnlyEnabled = false;
+        delete parameters['仅左心高阶'];
+        lvStrainSegmentValues = {};
+        clearLvStrainSegmentColors();
+        toggleLeftHeartAdvancedInputs();
 
         unlockRightSidebarTemplateText();
         generateTemplate();

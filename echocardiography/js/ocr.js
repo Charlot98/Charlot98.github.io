@@ -728,8 +728,9 @@ await window.Tesseract.recognize(canvas, 'eng', {
         return { merged, priorities };
     }
 
-    /** 与 1.M-MODE 相关的 OCR 可填字段；仅当本次识别命中其中任一项时才清空这些输入框 */
-    const OCR_MMODE_FIELD_PARAMS = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'FS', 'EF', 'TAPSE', 'EDVI', 'ESVI'];
+    /** 与 1.M-MODE 相关的 OCR 可填字段；仅当本次识别命中其中任一项时才清空这些输入框。
+     * 不含 TAPSE：右心高阶手动录入，OCR 不识别，且不应随 M 型截图回填被清空。 */
+    const OCR_MMODE_FIELD_PARAMS = ['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'EDV', 'ESV', 'FS', 'EF', 'EDVI', 'ESVI'];
 
     function ocrParsedContainsMMode(paramValues) {
         if (!paramValues || typeof paramValues !== 'object') return false;
@@ -860,10 +861,10 @@ await window.Tesseract.recognize(canvas, 'eng', {
 
     // 粘贴：直接从剪贴板取图片
     document.addEventListener('paste', async (e) => {
-const img = extractFirstImageFromClipboardEvent(e);
+        const img = extractFirstImageFromClipboardEvent(e);
         if (!img) return;
         e.preventDefault();
-await runOcrFromFile(img);
+        await runOcrFromFile(img);
     });
 
     // 拖拽：拖拽图片到页面任意位置

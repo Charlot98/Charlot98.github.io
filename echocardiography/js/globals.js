@@ -22,3 +22,6 @@ let selectedReferenceWeight = null;
 let rightSidebarFindingsUserLocked = false;
 let rightSidebarConclusionUserLocked = false;
 
+// 17节段应变数值存储 { "1": -11, "2": -16, ... }
+let lvStrainSegmentValues = {};
+

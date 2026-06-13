@@ -1,19 +1,17 @@
-# 心超报告生成器（`echocardiography_dev`）
+# 心超报告生成器（`echocardiography`）
 
-浏览器内使用的静态单页应用：左侧录入参数与选项，右侧生成「所见 / 结论」文本；数据来自本地 `docs/` 下的 CSV 与 Markdown 模板。
+浏览器内使用的静态单页应用：左侧录入参数与选项，右侧生成「所见 / 结论」文本；参考数据来自 `docs/reference_interval/` 下 CSV，所见/结论由 JS 规则生成。
 
 ---
 
 ## 文件解释（树形）
 
 ```text
-echocardiography_dev/
-├── index.html                 页面入口：顶栏疾病/参考、左侧参数区（含 MMVD/HCM/DCM 专块）、
-│                              瓣口与 HCM 标签、右侧所见/结论、固定背景层提示（清空/截图）、Tesseract CDN
-├── styles.css                 全局样式（双栏布局、表单、右栏文本框、提示层、HCM 标签行等）
+echocardiography/
+├── index.html                 页面入口：左栏顶栏疾病/参考/体重、参数区（MMVD/HCM/DCM 等）、
+│                              OCR 状态提示、瓣口与 HCM 标签、右栏所见/结论、清空按钮、Tesseract CDN
+├── styles.css                 全局样式（双栏、表单、右栏文本框、提示层、标签行等）
 ├── readme.md                  本说明
-├── changelog.md               功能更新记录
-├── sketching.md               部分疾病结论文案草稿（如 HCM），实现以 JS 规则为准
 │
 ├── js/                        业务逻辑（按模块拆分；index.html 固定顺序加载，共享全局变量与函数）
 │   ├── globals.js             全局状态：parameters、csvReferenceData、breedReferenceData 等
@@ -36,19 +34,11 @@ echocardiography_dev/
 │   └── main.js                初始化默认「正常」、复制按钮、右栏编辑态等
 │
 └── docs/
-    ├── reference_interval/    按体重或品种的参考值表（运行时由 data-loader 加载）
-    │   ├── m_type_reference.csv            犬≤3kg 参考（按 kg）
-    │   ├── non_m_type_reference.csv        犬＞3kg 参考（按 kg）
-    │   ├── cat_echo_weight_reference.csv   猫（含体重）参考（按 kg）
-    │   └── breed_reference.csv             猫 / 金毛 / 兔 等品种列
-    │
-    └── md/                    疾病所见/结论规格稿（供对照维护；当前生成逻辑在 JS，改 md 不会自动生效）
-        ├── 04_dog_PDA.md
-        ├── 04_dog_golden_PDA.md
-        ├── 06_dog_PH_RV_enlargement.md
-        ├── 08_cat_HCM.md
-        ├── 09_cat_RCM.md
-        └── 10_cat_TOF.md
+    └── reference_interval/    参考值 CSV（运行时由 data-loader 加载）
+        ├── m_type_reference.csv            犬≤3kg 参考（按 kg）
+        ├── non_m_type_reference.csv        犬＞3kg 参考（按 kg）
+        ├── cat_echo_weight_reference.csv   猫（含体重）参考（按 kg）
+        └── breed_reference.csv             猫 / 金毛 / 兔 等品种列
 
 ```
 
@@ -89,6 +79,6 @@ echocardiography_dev/
 
 在仓库本目录下用任意静态服务器打开（需能访问 `docs/` 相对路径），例如：
 
-`http://127.0.0.1:端口/echocardiography_dev/index.html`
+`http://127.0.0.1:端口/echocardiography/index.html`
 
 局域网访问请使用真实 `192.168.x.x`，勿使用 `198.18.x.x` 等虚拟网卡地址。

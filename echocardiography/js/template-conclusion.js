@@ -96,7 +96,8 @@ function buildSystolicDiastolicFuncConclusionLine(get, referenceRange, diseaseTy
         else if (esvi >= 50) systolicStatus = '下降';
     }
 
-    if (diseaseType === 'MMVD') {
+    // dp/dt 适用于所有犬病型（不限 MMVD），猫不适用
+    if (!isCatReference) {
         const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
         const dpdtNum = dpdtRaw ? parseFloat(dpdtRaw) : NaN;
         if (!Number.isNaN(dpdtNum) && dpdtNum < 1800) {
@@ -125,8 +126,126 @@ function buildSystolicDiastolicFuncConclusionLine(get, referenceRange, diseaseTy
     return `  ${n}.左心室收缩功能${systolicStatus}，舒张功能${diastolicStatus}。`;
 }
 
+/** 仅收缩功能结论（「仅左心高阶」模式回退用） */
+function buildSystolicOnlyFuncConclusionLine(get, referenceRange, lineIndex) {
+    const isCatReference = referenceRange === '猫' || referenceRange === '猫（含体重）';
+    const esvi = get('ESVI', '') ? parseFloat(get('ESVI', '')) : NaN;
+
+    let systolicStatus = '未见明显异常';
+    if (!Number.isNaN(esvi)) {
+        if (esvi >= 35 && esvi < 50) systolicStatus = '轻度下降';
+        else if (esvi >= 50) systolicStatus = '下降';
+    }
+
+    if (!isCatReference) {
+        const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
+        const dpdtNum = dpdtRaw ? parseFloat(dpdtRaw) : NaN;
+        if (!Number.isNaN(dpdtNum) && dpdtNum < 1800) {
+            systolicStatus = '下降';
+        }
+    }
+
+    const n = lineIndex;
+    if (systolicStatus === '未见明显异常') {
+        return `  ${n}.左心室收缩功能未见明显异常。`;
+    }
+    return `  ${n}.左心室收缩功能${systolicStatus}。`;
+}
+
+/** 单独评估舒张功能状态（供 buildLvStrainConclusionLine 使用） */
+function getDiastolicStatus(get, referenceRange) {
+    const isCatRef = referenceRange === '猫' || referenceRange === '猫（含体重）';
+    const eaFusion = get('EA融合', '');
+    if (isCatRef && eaFusion) return '评估受限';
+
+    const eAClean = (get('E/A', '') || '').replace(/[＜<]/g, '<').replace(/[＞>]/g, '>');
+    if (eAClean.indexOf('>2') !== -1) return '失代偿';
+    if (eAClean.indexOf('<1') !== -1) return '下降';
+
+    const eOverENum = parseFloat(get("E/E'", '') || '');
+    if (!isNaN(eOverENum) && eOverENum > 11) return '下降';
+
+    return '未见明显异常';
+}
+
+/**
+ * 左心高阶开启时的收缩/舒张结论行
+ * Priority: GS（最高）→ dp/dt → ESVI；猫不受影响
+ */
+function buildLvStrainConclusionLine(get, referenceRange, diseaseType, lineIndex, options) {
+    const systolicOnly = !!(options && options.systolicOnly);
+    const gsRaw = (get('GS（LV）', '') || '').toString().trim();
+    const gsNum = parseFloat(gsRaw);
+    const hasGs = !isNaN(gsNum);
+
+    const abnormalClauses = (typeof buildLvStrainAbnormalClauses === 'function')
+        ? buildLvStrainAbnormalClauses() : [];
+    const hasAbnormal = abnormalClauses.length > 0;
+
+    let systolicLine;
+
+    if (hasGs) {
+        // 有 GS：GS 完全接管，忽略 dp/dt 和 ESVI
+        if (!hasAbnormal) {
+            systolicLine = gsNum <= -15
+                ? '左心室整体应变尚可，各节段应变尚可。'
+                : '左心室整体收缩功能下降，各节段应变尚可。';
+        } else {
+            systolicLine = gsNum <= -15
+                ? `左心室整体收缩功能尚可，${abnormalClauses.join('，')}。`
+                : `左心室整体收缩功能下降，${abnormalClauses.join('，')}。`;
+        }
+    } else {
+        // 无 GS：整体收缩用 dp/dt → ESVI 兜底
+        const isCatRef = referenceRange === '猫' || referenceRange === '猫（含体重）';
+        let systolicStatus = '未见明显异常';
+        const esvi = parseFloat(get('ESVI', '') || '');
+        if (!isNaN(esvi)) {
+            if (esvi >= 35 && esvi < 50) systolicStatus = '轻度下降';
+            else if (esvi >= 50)          systolicStatus = '下降';
+        }
+        if (!isCatRef) {
+            const dpdtNum = parseFloat((get('dp/dt', '') || '').toString().trim());
+            if (!isNaN(dpdtNum) && dpdtNum < 1800) systolicStatus = '下降';
+        }
+        const overallText = systolicStatus === '未见明显异常'
+            ? '左心室整体收缩功能尚可'
+            : `左心室整体收缩功能${systolicStatus}`;
+        systolicLine = hasAbnormal
+            ? `${overallText}，${abnormalClauses.join('，')}。`
+            : `${overallText}，各节段应变尚可。`;
+    }
+
+    // 舒张功能另起缩进行
+    const diastolicStatus = getDiastolicStatus(get, referenceRange);
+    const diastolicMap = {
+        '未见明显异常': '左心室舒张功能未见明显异常。',
+        '下降':         '左心室舒张功能下降。',
+        '失代偿':       '左心室舒张功能失代偿。',
+        '评估受限':     '左心室舒张功能评估受限。'
+    };
+    const diastolicLine = diastolicMap[diastolicStatus] || '左心室舒张功能未见明显异常。';
+
+    if (systolicOnly) {
+        return `  ${lineIndex}.${systolicLine}`;
+    }
+    return `  ${lineIndex}.${systolicLine}\n    ${diastolicLine}`;
+}
+
+/** 右心高阶开启时追加右心室应变结论行 */
+function appendRvStrainConclusionIfEnabled(conclusion) {
+    if (!rightHeartAdvancedEnabled) return conclusion;
+    const trimmed = (conclusion || '').trimEnd();
+    const nextIndex = trimmed.split('\n').filter(l => /^\s*\d+\./.test(l)).length + 1;
+    return `${trimmed}\n  ${nextIndex}.右心室收缩功能尚可，右心室各节段纵向应变尚可。\n`;
+}
+
 function generateConclusionText(diseaseType, referenceRange, params) {
     const get = (key, defaultValue = '') => parameters[key] || defaultValue;
+
+    if (leftHeartAdvancedOnlyEnabled) {
+        return buildLvStrainConclusionLine(get, referenceRange, diseaseType, 1, { systolicOnly: true }) + '\n';
+    }
 
     // 获取参考数据
     const weight = selectedReferenceWeight !== null ? selectedReferenceWeight.toString() : get('体重', '');
@@ -159,8 +278,10 @@ function generateConclusionText(diseaseType, referenceRange, params) {
         let conclusion = '';
         conclusion += line1;
         conclusion += `  2.${getHcmLeftAtriumConclusionText(get, referenceRange)}\n`;
-        conclusion += buildSystolicDiastolicFuncConclusionLine(get, referenceRange, 'HCM', 3) + '\n';
-        return conclusion;
+        conclusion += (leftHeartAdvancedEnabled
+            ? buildLvStrainConclusionLine(get, referenceRange, 'HCM', 3)
+            : buildSystolicDiastolicFuncConclusionLine(get, referenceRange, 'HCM', 3)) + '\n';
+        return appendRvStrainConclusionIfEnabled(conclusion);
     }
 
     // PDA
@@ -173,7 +294,12 @@ function generateConclusionText(diseaseType, referenceRange, params) {
         let conclusion = '';
         conclusion += `  1.PDA（持续性左→右分流），动脉导管直径约${ductMm}mm，开口直径约${openingMm}mm。\n`;
         conclusion += `  2.${getPdaChamberConclusionText(get, referenceRange)}\n`;
-        conclusion += '  3.左心室收缩功能下降，舒张功能尚可。\n';
+        if (leftHeartAdvancedEnabled) {
+            conclusion += buildLvStrainConclusionLine(get, referenceRange, 'PDA', 3) + '\n';
+        } else {
+            conclusion += '  3.左心室收缩功能下降，舒张功能尚可。\n';
+        }
+        conclusion = appendRvStrainConclusionIfEnabled(conclusion);
         conclusion += '\n备注: 若进行手术/封堵治疗，建议术后当日、术后1个月、3个月、6个月、12个月各复查一次心超。\n';
         return conclusion;
     }
@@ -203,8 +329,10 @@ function generateConclusionText(diseaseType, referenceRange, params) {
         let conclusion = '';
         conclusion += '  1.DCM（左心室、左心房容量过载，左心室球形指数下降，EF、FS下降，PEP/ET＞0.4，EPSS＞6.5mm），建议复查监测。\n';
         conclusion += regurgLine;
-        conclusion += buildSystolicDiastolicFuncConclusionLine(get, referenceRange, 'DCM', 3) + '\n';
-        return conclusion;
+        conclusion += (leftHeartAdvancedEnabled
+            ? buildLvStrainConclusionLine(get, referenceRange, 'DCM', 3)
+            : buildSystolicDiastolicFuncConclusionLine(get, referenceRange, 'DCM', 3)) + '\n';
+        return appendRvStrainConclusionIfEnabled(conclusion);
     }
 
     // =========================
@@ -277,7 +405,7 @@ function generateConclusionText(diseaseType, referenceRange, params) {
             if (otherActiveRegurg.length > 0) {
                 const tvVelRaw = (get('三尖瓣反流速', '') || '').toString().trim();
                 const tvVel = Number.parseFloat(tvVelRaw);
-                const tvExtra = tvActive && !Number.isNaN(tvVel) && tvVel > 3.0;
+                const tvExtra = tvActive && !Number.isNaN(tvVel) && tvVel >= 3.0;
                 const hasExtraConclusionAny = mvExtra || tvExtra;
 
                 if (!hasExtraConclusionAny) {
@@ -292,7 +420,7 @@ function generateConclusionText(diseaseType, referenceRange, params) {
                         const sev = (get(v.severityParam, '') || '').trim() || getDefaultRegurgitationSeverityForParam(v.severityParam);
                         let rawLine = `${v.label}${sev}反流。`;
                         if (v.tag === '三尖瓣反流' && tvExtra) {
-                            const doubt = tvVel < 3.4 ? `疑${sev}肺动脉高压。` : '肺动脉高压。';
+                            const doubt = tvVel >= 3.4 ? '肺动脉高压。' : '疑肺动脉高压。';
                             rawLine = `${v.label}${sev}反流，${doubt}`;
                         }
                         mmvdDeferredOtherRegurgLinesRaw.push(rawLine);
@@ -309,7 +437,7 @@ function generateConclusionText(diseaseType, referenceRange, params) {
             if (isTagActive('二尖瓣反流') && !Number.isNaN(mvVel0) && mvVel0 > 6.5) hasExtraConclusion = true;
             const tvVelRaw0 = (get('三尖瓣反流速', '') || '').toString().trim();
             const tvVel0 = Number.parseFloat(tvVelRaw0);
-            if (isTagActive('三尖瓣反流') && !Number.isNaN(tvVel0) && tvVel0 > 3.0) hasExtraConclusion = true;
+            if (isTagActive('三尖瓣反流') && !Number.isNaN(tvVel0) && tvVel0 >= 3.0) hasExtraConclusion = true;
 
             if (!hasExtraConclusion) {
                 const regurgDesc = formatMergedRegurgitationDescription(activeRegurg, (v) =>
@@ -335,9 +463,9 @@ function generateConclusionText(diseaseType, referenceRange, params) {
                     if (v.tag === '三尖瓣反流') {
                         const tvVelRaw = (get('三尖瓣反流速', '') || '').toString().trim();
                         const tvVel = Number.parseFloat(tvVelRaw);
-                        if (!Number.isNaN(tvVel) && tvVel > 3.0) {
+                        if (!Number.isNaN(tvVel) && tvVel >= 3.0) {
                             line = line.replace(/。$/, '；');
-                            line += tvVel < 3.4 ? '疑肺动脉高压。' : '肺动脉高压。';
+                            line += tvVel >= 3.4 ? '肺动脉高压。' : '疑肺动脉高压。';
                         }
                     }
                     conclusion += `${line}\n`;
@@ -364,9 +492,11 @@ function generateConclusionText(diseaseType, referenceRange, params) {
             conclusion += `  ${idx}.${chamber.text}\n`;
         }
 
-        // 收缩 / 舒张功能（与 HCM 第 3 条共用 buildSystolicDiastolicFuncConclusionLine）
+        // 收缩 / 舒张功能
         const nextIndex = conclusion.trimEnd().split('\n').filter(l => /^\s*\d+\./.test(l)).length + 1;
-        conclusion += buildSystolicDiastolicFuncConclusionLine(get, referenceRange, diseaseType, nextIndex) + '\n';
+        conclusion += (leftHeartAdvancedEnabled
+            ? buildLvStrainConclusionLine(get, referenceRange, diseaseType, nextIndex)
+            : buildSystolicDiastolicFuncConclusionLine(get, referenceRange, diseaseType, nextIndex)) + '\n';
 
         if (diseaseType === 'MMVD' && mmvdDeferredOtherRegurgEnabled && mmvdDeferredOtherRegurgLinesRaw.length > 0) {
             const numberedLines = conclusion.trimEnd().split('\n').filter(l => /^\s*\d+\./.test(l)).length;
@@ -377,12 +507,12 @@ function generateConclusionText(diseaseType, referenceRange, params) {
             }
         }
 
-        return conclusion;
+        return appendRvStrainConclusionIfEnabled(conclusion);
     }
 
     // 兜底（正常/未选中用健康模板）
     if (diseaseType === 'Normal' || !diseaseType) {
-        return generateHealthConclusionFromTemplate(params);
+        return appendRvStrainConclusionIfEnabled(generateHealthConclusionFromTemplate(params));
     }
 
     // 其余疾病类型兜底

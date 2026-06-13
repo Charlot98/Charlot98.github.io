@@ -3,6 +3,10 @@
 let simpsonEnabled = false;
 // 右心高阶测量（后续 TAPSE / PA/Ao 等字段依赖此开关）
 let rightHeartAdvancedEnabled = false;
+// 左心高阶（左心室斑点追踪牛眼图等）
+let leftHeartAdvancedEnabled = false;
+// 仅左心高阶：左侧栏同左心高阶，右侧栏仅显示应变相关所见/结论
+let leftHeartAdvancedOnlyEnabled = false;
 // 首次加载时：抑制脚本自动激活"含辛普森测量"（让按钮默认不激活）
 let suppressInitialSimpsonAutoActivation = true;
 
@@ -55,6 +59,10 @@ function updateSimpsonButtonVisibility() {
     const rightHeartBtn = document.getElementById('rightHeartAdvancedButton');
     if (rightHeartBtn) {
         rightHeartBtn.style.display = 'block';
+    }
+    const leftHeartBtn = document.getElementById('leftHeartAdvancedButton');
+    if (leftHeartBtn) {
+        leftHeartBtn.style.display = 'block';
     }
 }
 
