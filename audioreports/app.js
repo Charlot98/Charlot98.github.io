@@ -9,38 +9,376 @@ const CONFIG = {
   // 通义千问
   qwen: {
     apiKey: 'sk-bfd1e89a6aef49db8066be4def8422bb',
-    model: 'qwen-max',
+    model: 'qwen3.7-max',
   },
 };
 // =========================================================
 
 const $ = id => document.getElementById(id);
+
+// ---- 自定义 Modal（替代 alert） ----
+const modalOverlay = document.getElementById('modalOverlay');
+const modalMsg     = document.getElementById('modalMsg');
+const modalOkBtn   = document.getElementById('modalOk');
+function showAlert(msg) {
+  modalMsg.textContent = msg;
+  modalOverlay.classList.add('visible');
+  modalOkBtn.focus();
+}
+modalOkBtn.onclick = () => modalOverlay.classList.remove('visible');
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay) modalOverlay.classList.remove('visible');
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (historyOverlay.classList.contains('visible')) { closeHistoryPanel(); return; }
+    modalOverlay.classList.remove('visible');
+  }
+});
+
 const btnStart = $('btnStart'), btnStop = $('btnStop'), btnClear = $('btnClear');
-const btnCopyTranscript = $('btnCopyTranscript');
 const btnGenerateReport = $('btnGenerateReport');
-const btnCopyReport = $('btnCopyReport'), btnExportPdf = $('btnExportPdf');
+const btnCopyReport = $('btnCopyReport');
 const transcriptEl = $('transcriptEl'), charCountEl = $('charCount');
 const findingsContent = $('findingsContent'), conclusionContent = $('conclusionContent');
 const reportActions = $('reportActions'), reportBody = $('reportBody');
 const waveWrap = $('waveWrap'), recStatus = $('recStatus');
+const btnDog = $('btnDog'), btnCat = $('btnCat');
+const sexToggle = $('sexToggle');
+const examTypeChips = $('examTypeChips'), subOrganSelect = $('subOrganSelect');
+const btnHistory = $('btnHistory'), btnHistoryClose = $('btnHistoryClose');
+const historyOverlay = $('historyOverlay'), historyPanel = $('historyPanel');
+const historyList = $('historyList'), historyCountEl = $('historyCount');
+const btnExportHistory = $('btnExportHistory'), btnClearHistory = $('btnClearHistory');
+
+const DB_NAME = 'ultrasound-assistant';
+const DB_VERSION = 1;
+const STORE_NAME = 'reports';
+const MAX_HISTORY = 500;
 
 let ws = null, audioContext = null, mediaStream = null;
 let workletNode = null, processor = null, sendTimer = null;
 let sessionId = null, canSendAudio = false, inputSampleRate = 16000, peakLevel = 0;
 let sampleBuffer = new Int16Array(0);
 let finalSegments = [], interim = null, currentReport = null;
-// streamAnchor：ASR 自动追加起始位置，[0, streamAnchor) 为用户可编辑的已确认内容
 let streamAnchor = 0;
+let selectedSpecies = '犬';
+let selectedSex = '雄性';
+let activeHistoryId = null;
+const activeExamTypes = new Set();
+let autoDetected = new Set();
 
 const QWEN_API_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
-const REPORT_SYSTEM_PROMPT = `你是一名专业兽医影像科医生。根据以下超声扫查转录内容，生成报告。
-严格只输出如下 JSON，不要任何多余文字：
-{
-  "organs": [
-    {"name": "器官名称", "findings": "所见描述", "is_normal": true或false}
-  ],
-  "conclusion": "综合结论，正常器官注明未见明显异常，异常器官列出发现"
-}`;
+
+function setSelectedSex(sex) {
+  selectedSex = sex;
+  sexToggle.querySelectorAll('.sex-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.sex === sex);
+  });
+}
+
+function applyExamState(species, sex, examTypes, subOrgans) {
+  selectedSpecies = species;
+  btnDog.classList.toggle('active', species === '犬');
+  btnCat.classList.toggle('active', species === '猫');
+  setSelectedSex(sex);
+  activeExamTypes.clear();
+  autoDetected.clear();
+  (examTypes || []).forEach(t => activeExamTypes.add(t));
+  Array.from(subOrganSelect.options).forEach(o => {
+    o.selected = (subOrgans || []).includes(o.value);
+  });
+  refreshChipUI();
+}
+
+function resetTranscriptState(text) {
+  transcriptEl.value = text || '';
+  streamAnchor = transcriptEl.value.length;
+  finalSegments = [];
+  interim = null;
+  updateCharCount();
+}
+
+// ---------- IndexedDB 历史记录 ----------
+function openHistoryDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function saveHistoryRecord(record) {
+  const db = await openHistoryDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).put(record);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+  await trimHistoryRecords();
+}
+
+async function listHistoryRecords(limit = MAX_HISTORY) {
+  const db = await openHistoryDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const index = tx.objectStore(STORE_NAME).index('createdAt');
+    const req = index.openCursor(null, 'prev');
+    const results = [];
+    req.onsuccess = e => {
+      const cursor = e.target.result;
+      if (cursor && results.length < limit) {
+        results.push(cursor.value);
+        cursor.continue();
+      } else resolve(results);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteHistoryRecord(id) {
+  const db = await openHistoryDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function clearAllHistoryRecords() {
+  const db = await openHistoryDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function trimHistoryRecords() {
+  const all = await listHistoryRecords(MAX_HISTORY + 50);
+  if (all.length <= MAX_HISTORY) return;
+  for (const item of all.slice(MAX_HISTORY)) await deleteHistoryRecord(item.id);
+}
+
+function formatHistoryTime(iso) {
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatHistorySummary(item) {
+  const types = (item.examTypes || []).filter(t => t !== '单腔')
+    .map(t => EXAM_TYPE_DEFS[t]?.label || t).join('·');
+  let label = `${item.species} · ${item.sex}`;
+  if (types) label += ` · ${types}`;
+  if (item.subOrgans?.length) label += ` · 单腔(${item.subOrgans.join('/')})`;
+  return label;
+}
+
+function buildHistoryRecord(transcript, report) {
+  return {
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString(),
+    species: selectedSpecies,
+    sex: selectedSex,
+    examTypes: Array.from(activeExamTypes),
+    subOrgans: Array.from(subOrganSelect.selectedOptions).map(o => o.value),
+    transcript,
+    report,
+    model: CONFIG.qwen.model,
+  };
+}
+
+async function persistCurrentReport(transcript, report) {
+  try {
+    const record = buildHistoryRecord(transcript, report);
+    await saveHistoryRecord(record);
+    activeHistoryId = record.id;
+    await refreshHistoryUI();
+  } catch (e) {
+    console.warn('历史记录保存失败', e);
+  }
+}
+
+function restoreHistoryRecord(record) {
+  applyExamState(record.species, record.sex, record.examTypes, record.subOrgans);
+  resetTranscriptState(record.transcript);
+  renderReport(record.report);
+  activeHistoryId = record.id;
+  refreshHistoryList();
+  closeHistoryPanel();
+}
+
+async function refreshHistoryUI() {
+  const records = await listHistoryRecords();
+  historyCountEl.textContent = records.length;
+  historyCountEl.classList.toggle('visible', records.length > 0);
+  if (historyOverlay.classList.contains('visible')) refreshHistoryList(records);
+}
+
+function refreshHistoryList(cachedRecords) {
+  const render = records => {
+    if (!records.length) {
+      historyList.innerHTML = '<li class="history-empty">暂无历史记录<br>生成报告后将自动保存</li>';
+      return;
+    }
+    historyList.innerHTML = records.map(item => {
+      const preview = (item.transcript || '').replace(/\s+/g, ' ').slice(0, 80);
+      const active = item.id === activeHistoryId ? ' active' : '';
+      return `<li class="history-item${active}" data-id="${escapeHtml(item.id)}">
+        <div class="history-item-time">${escapeHtml(formatHistoryTime(item.createdAt))}</div>
+        <div class="history-item-summary">${escapeHtml(formatHistorySummary(item))}</div>
+        <div class="history-item-preview">${escapeHtml(preview || '（无转录）')}</div>
+        <div class="history-item-actions">
+          <button type="button" class="history-restore">恢复</button>
+          <button type="button" class="history-delete">删除</button>
+        </div>
+      </li>`;
+    }).join('');
+  };
+  if (cachedRecords) { render(cachedRecords); return; }
+  listHistoryRecords().then(render).catch(() => {
+    historyList.innerHTML = '<li class="history-empty">读取历史记录失败</li>';
+  });
+}
+
+function openHistoryPanel() {
+  historyOverlay.classList.add('visible');
+  refreshHistoryList();
+}
+
+function closeHistoryPanel() {
+  historyOverlay.classList.remove('visible');
+}
+
+async function exportAllHistory() {
+  const records = await listHistoryRecords();
+  if (!records.length) { showAlert('暂无历史记录可导出'); return; }
+  const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `超声报告历史_${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function onHistoryListClick(e) {
+  const itemEl = e.target.closest('.history-item');
+  if (!itemEl) return;
+  const id = itemEl.dataset.id;
+  if (e.target.classList.contains('history-delete')) {
+    e.stopPropagation();
+    if (!confirm('确定删除这条历史记录？')) return;
+    await deleteHistoryRecord(id);
+    if (activeHistoryId === id) activeHistoryId = null;
+    await refreshHistoryUI();
+    return;
+  }
+  if (!e.target.classList.contains('history-restore') && e.target.closest('.history-item-actions')) return;
+  const records = await listHistoryRecords();
+  const record = records.find(r => r.id === id);
+  if (record) restoreHistoryRecord(record);
+}
+
+// ---- 初始化芯片 & 单腔下拉 ----
+(function initExamSelectors() {
+  EXAM_TYPES.forEach(t => {
+    const chip = document.createElement('button');
+    chip.className = 'exam-chip';
+    chip.dataset.value = t.value;
+    chip.textContent = t.label;
+    chip.onclick = () => toggleChip(t.value, true);
+    examTypeChips.appendChild(chip);
+  });
+  SINGLE_ORGANS.forEach(o => {
+    const opt = document.createElement('option');
+    opt.value = o; opt.textContent = o;
+    subOrganSelect.appendChild(opt);
+  });
+})();
+
+function toggleChip(value, byUser) {
+  if (activeExamTypes.has(value)) {
+    activeExamTypes.delete(value);
+    if (byUser) autoDetected.delete(value);
+  } else {
+    activeExamTypes.add(value);
+  }
+  refreshChipUI();
+}
+
+function refreshChipUI() {
+  examTypeChips.querySelectorAll('.exam-chip').forEach(chip => {
+    const v = chip.dataset.value;
+    const isActive = activeExamTypes.has(v);
+    const isAuto = autoDetected.has(v);
+    chip.classList.toggle('active', isActive);
+    chip.classList.toggle('auto-detected', isAuto && !isActive);
+  });
+  // 单腔下拉显隐
+  const hasSingle = activeExamTypes.has('单腔');
+  subOrganSelect.style.display = hasSingle ? 'inline-block' : 'none';
+  if (!hasSingle) Array.from(subOrganSelect.options).forEach(o => { o.selected = false; });
+}
+
+// 从转录内容自动检测并更新物种、性别、检查类型
+function autoDetectFromTranscript(text) {
+  // 物种
+  const species = detectSpecies(text);
+  if (species && species !== selectedSpecies) {
+    selectedSpecies = species;
+    btnDog.classList.toggle('active', species === '犬');
+    btnCat.classList.toggle('active', species === '猫');
+  }
+
+  // 性别
+  const gender = detectGender(text);
+  if (gender && gender !== selectedSex) setSelectedSex(gender);
+
+  // 检查类型芯片：与当前文本完整同步（增/减）
+  const nowDetected = new Set(detectExamTypes(text));
+  let changed = false;
+
+  // 之前自动激活、但文本里已不存在 → 移除
+  for (const t of autoDetected) {
+    if (!nowDetected.has(t)) {
+      autoDetected.delete(t);
+      activeExamTypes.delete(t);
+      changed = true;
+    }
+  }
+
+  // 文本里新出现的 → 激活
+  for (const t of nowDetected) {
+    if (!autoDetected.has(t)) { autoDetected.add(t); changed = true; }
+    if (!activeExamTypes.has(t)) { activeExamTypes.add(t); changed = true; }
+  }
+
+  if (changed) refreshChipUI();
+}
+
+btnDog.onclick = () => {
+  selectedSpecies = '犬';
+  btnDog.classList.add('active'); btnCat.classList.remove('active');
+};
+btnCat.onclick = () => {
+  selectedSpecies = '猫';
+  btnCat.classList.add('active'); btnDog.classList.remove('active');
+};
+sexToggle.querySelectorAll('.sex-btn').forEach(btn => {
+  btn.onclick = () => setSelectedSex(btn.dataset.sex);
+});
 
 function setRecording(active) {
   waveWrap.classList.toggle('active', active);
@@ -70,6 +408,7 @@ function syncTranscriptFromASR() {
     transcriptEl.selectionStart = transcriptEl.selectionEnd = transcriptEl.value.length;
     transcriptEl.scrollTop = transcriptEl.scrollHeight;
   }
+  autoDetectFromTranscript(transcriptEl.value);
 }
 
 function onTranscriptInput() {
@@ -83,6 +422,7 @@ function onTranscriptInput() {
     interim = null;
   }
   updateCharCount();
+  autoDetectFromTranscript(val);
 }
 
 function clearTranscript() {
@@ -91,21 +431,6 @@ function clearTranscript() {
   finalSegments = [];
   interim = null;
   updateCharCount();
-}
-
-async function copyAllTranscript() {
-  const text = transcriptEl.value;
-  if (!text) { alert('暂无内容可复制'); return; }
-  try {
-    await navigator.clipboard.writeText(text);
-    const orig = btnCopyTranscript.textContent;
-    btnCopyTranscript.textContent = '已复制';
-    setTimeout(() => { btnCopyTranscript.textContent = orig; }, 1500);
-  } catch (e) {
-    transcriptEl.focus();
-    transcriptEl.select();
-    document.execCommand('copy');
-  }
 }
 
 function getFullTranscript() {
@@ -155,27 +480,83 @@ function escapeHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
+const LYMPH_ORGAN_NAMES = new Set(['腹腔淋巴结', '肠道淋巴结', '髂内淋巴结', '下颌淋巴结', '内侧咽后淋巴结']);
+
+// AI 有时返回非标准名（如"双肾"），映射回标准名
+const ORGAN_NAME_ALIASES = {
+  '双肾': '肾脏', '左肾': '肾脏', '右肾': '肾脏',
+  '双侧肾脏': '肾脏', '肾': '肾脏',
+  '双侧睾丸': '睾丸', '双侧卵巢': '卵巢', '双侧子宫': '子宫',
+  '双侧肾上腺': '肾上腺',
+};
+
+function normalizeOrganName(name) {
+  return ORGAN_NAME_ALIASES[name] || name;
+}
+
+function ensurePeriod(s) {
+  if (!s) return s;
+  const trimmed = s.trimEnd();
+  const last = trimmed.slice(-1);
+  if (!'。！？'.includes(last)) return trimmed + '。';
+  return trimmed;
+}
+
+function buildConclusionItems(report, sortedOrgans) {
+  const abnormal = Array.isArray(report.conclusion)
+    ? report.conclusion.filter(Boolean).map(ensurePeriod)
+    : (report.conclusion ? [ensurePeriod(report.conclusion)] : []);
+  const normalOrgans = sortedOrgans.filter(o => isOrganNormal(o.is_normal));
+  const normalRegular = normalOrgans.filter(o => !LYMPH_ORGAN_NAMES.has(normalizeOrganName(o.name))).map(o => normalizeOrganName(o.name));
+  const normalLymph = normalOrgans.filter(o => LYMPH_ORGAN_NAMES.has(normalizeOrganName(o.name))).map(o => normalizeOrganName(o.name));
+  const items = [...abnormal];
+  if (normalRegular.length > 0) items.push(normalRegular.join('、') + '形态未见明显异常。');
+  if (normalLymph.length > 0) items.push(normalLymph.join('、') + '未见明显增大。');
+  return items;
+}
+
 function reportToPlainText(report) {
-  const lines = ['超声所见', ''];
-  (report.organs || []).forEach(o => {
-    lines.push((o.name || '') + '：' + (o.findings || ''));
+  const lines = ['超声所见', '', selectedSpecies + '仰卧位扫查：'];
+  const sortedOrgans = sortOrgans(report.organs || []);
+  sortedOrgans.forEach((o, i) => {
+    lines.push(`${i + 1}. ${ensurePeriod(o.findings || '')}`);
   });
-  lines.push('', '结论', report.conclusion || '');
+  lines.push('', '结论', '');
+  buildConclusionItems(report, sortedOrgans).forEach((item, i) => {
+    lines.push(`${i + 1}. ${item}`);
+  });
   return lines.join('\n');
+}
+
+function sortOrgans(organs) {
+  return [...organs].sort((a, b) => {
+    const ai = ORGAN_ORDER.indexOf(normalizeOrganName(a.name));
+    const bi = ORGAN_ORDER.indexOf(normalizeOrganName(b.name));
+    const av = ai === -1 ? 999 : ai;
+    const bv = bi === -1 ? 999 : bi;
+    return av - bv;
+  });
 }
 
 function renderReport(report) {
   currentReport = report;
   findingsContent.innerHTML = '';
-  (report.organs || []).forEach(organ => {
+  const header = document.createElement('div');
+  header.className = 'scan-header';
+  header.textContent = selectedSpecies + '仰卧位扫查：';
+  findingsContent.appendChild(header);
+  const organs = sortOrgans(report.organs || []);
+  organs.forEach((organ, idx) => {
     const normal = isOrganNormal(organ.is_normal);
     const line = document.createElement('div');
     line.className = 'organ-line ' + (normal ? 'normal' : 'abnormal');
-    line.innerHTML = '<span class="organ-name">' + escapeHtml(organ.name || '') + '：</span>' +
-      escapeHtml(organ.findings || '');
+    line.innerHTML = `<span class="organ-num">${idx + 1}. </span>` + escapeHtml(ensurePeriod(organ.findings || ''));
     findingsContent.appendChild(line);
   });
-  conclusionContent.textContent = report.conclusion || '';
+  const conclusionItems = buildConclusionItems(report, organs);
+  conclusionContent.innerHTML = conclusionItems.length
+    ? conclusionItems.map((item, i) => `${i + 1}. ${escapeHtml(item)}`).join('<br>')
+    : '';
   reportActions.classList.add('visible');
 }
 
@@ -186,27 +567,43 @@ function showReportError(msg) {
   reportActions.classList.remove('visible');
 }
 
-async function generateReport() {
-  const apiKey = CONFIG.qwen.apiKey.trim();
-  if (!apiKey) { alert('请在代码 CONFIG.qwen.apiKey 中填写通义 API Key'); return; }
-  const transcript = getFullTranscript();
-  if (!transcript) { alert('暂无转录内容，请先完成录音'); return; }
+let isGeneratingReport = false;
 
+async function generateReport() {
+  if (isGeneratingReport) return;
+  const apiKey = CONFIG.qwen.apiKey.trim();
+  if (!apiKey) { showAlert('请在代码 CONFIG.qwen.apiKey 中填写通义 API Key'); return; }
+  const transcript = getFullTranscript();
+  if (!transcript) { showAlert('暂无转录内容，请先完成录音'); return; }
+
+  const types = Array.from(activeExamTypes);
+  const subOrgans = Array.from(subOrganSelect.selectedOptions).map(o => o.value);
+  if (types.length === 0) { showAlert('请先选择检查类型（或在转录中口述检查类型名称）'); return; }
+  if (types.includes('单腔') && subOrgans.length === 0) { showAlert('单腔检查请选择器官'); return; }
+
+  const basePrompt = buildSystemPrompt(types, selectedSpecies, selectedSex, subOrgans);
+  if (!basePrompt) { showAlert('该检查类型暂无提示词，请联系开发'); return; }
+  const matchedRules = detectDiseaseRules(transcript, selectedSpecies, selectedSex);
+  const systemPrompt = appendDiseaseRules(basePrompt, matchedRules);
+
+  isGeneratingReport = true;
   btnGenerateReport.disabled = true;
   btnGenerateReport.textContent = '生成中…';
   showReportLoading();
 
   try {
+    const payload = {
+        model: CONFIG.qwen.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: '以下是超声扫查口述转录内容：\n\n' + transcript },
+        ],
+      };
+    if (CONFIG.qwen.model.startsWith('qwen3.7')) payload.enable_thinking = false;
     const res = await fetch(QWEN_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
-      body: JSON.stringify({
-        model: CONFIG.qwen.model,
-        messages: [
-          { role: 'system', content: REPORT_SYSTEM_PROMPT },
-          { role: 'user', content: '以下是超声扫查转录内容：\n\n' + transcript },
-        ],
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || data.message || JSON.stringify(data));
@@ -215,9 +612,11 @@ async function generateReport() {
     const report = parseReportJson(content);
     if (!report.organs || !Array.isArray(report.organs)) throw new Error('JSON 格式不完整');
     renderReport(report);
+    await persistCurrentReport(transcript, report);
   } catch (e) {
     showReportError('生成失败：' + e.message);
   } finally {
+    isGeneratingReport = false;
     btnGenerateReport.disabled = false;
     btnGenerateReport.textContent = '生成报告';
   }
@@ -230,36 +629,7 @@ async function copyReportText() {
     const orig = btnCopyReport.textContent;
     btnCopyReport.textContent = '已复制';
     setTimeout(() => { btnCopyReport.textContent = orig; }, 1500);
-  } catch (e) { alert('复制失败：' + e.message); }
-}
-
-function exportReportPdf() {
-  if (!currentReport) return;
-  const wrap = document.createElement('div');
-  wrap.id = 'reportPdfTarget';
-  wrap.innerHTML =
-    '<div style="font-size:18px;font-weight:700;margin-bottom:16px">兽医超声报告</div>' +
-    '<div style="font-size:14px;font-weight:700;color:#374151;margin-bottom:8px">超声所见</div>' +
-    findingsContent.innerHTML +
-    '<div style="font-size:14px;font-weight:700;color:#374151;margin:16px 0 8px">结论</div>' +
-    '<div style="font-size:16px;line-height:1.8">' + escapeHtml(currentReport.conclusion || '') + '</div>';
-  document.body.appendChild(wrap);
-
-  btnExportPdf.disabled = true;
-  const orig = btnExportPdf.textContent;
-  btnExportPdf.textContent = '导出中…';
-  const filename = '超声报告_' + new Date().toISOString().slice(0, 10) + '.pdf';
-
-  html2pdf().set({
-    margin: [12, 12, 12, 12], filename,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  }).from(wrap).save().catch(e => alert('PDF 导出失败：' + e.message))
-    .finally(() => {
-      wrap.remove();
-      btnExportPdf.disabled = false;
-      btnExportPdf.textContent = orig;
-    });
+  } catch (e) { showAlert('复制失败：' + e.message); }
 }
 
 // ---------- 讯飞鉴权 ----------
@@ -414,7 +784,7 @@ async function startRecording() {
   const accessKeyId = CONFIG.xunfei.accessKeyId.trim();
   const apiSecret = CONFIG.xunfei.apiSecret.trim();
   if (!appId || !accessKeyId || !apiSecret) {
-    alert('请在代码 CONFIG.xunfei 中填写讯飞鉴权信息'); return;
+    showAlert('请在代码 CONFIG.xunfei 中填写讯飞鉴权信息'); return;
   }
   btnStart.disabled = true; interim = null; canSendAudio = false;
   sessionId = crypto.randomUUID(); sampleBuffer = new Int16Array(0); peakLevel = 0;
@@ -424,10 +794,10 @@ async function startRecording() {
     mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: true }
     });
-  } catch(e) { alert('获取麦克风失败：' + e.message); btnStart.disabled = false; return; }
+  } catch(e) { showAlert('获取麦克风失败：' + e.message); btnStart.disabled = false; return; }
 
   try { await setupAudioCapture(); }
-  catch(e) { alert('音频初始化失败：' + e.message); btnStart.disabled = false; return; }
+  catch(e) { showAlert('音频初始化失败：' + e.message); btnStart.disabled = false; return; }
 
   ws = new WebSocket(buildUrl(appId, accessKeyId, apiSecret));
   ws.onmessage = e => { if (typeof e.data === 'string') handleMessage(e.data); };
@@ -439,7 +809,7 @@ async function startRecording() {
       }
     }, 2000);
   };
-  ws.onerror = () => alert('WebSocket 连接失败，请检查鉴权配置');
+  ws.onerror = () => showAlert('WebSocket 连接失败，请检查鉴权配置');
   ws.onclose = () => {
     setRecording(false); cleanupAudio();
     btnStart.disabled = false; btnStop.disabled = true;
@@ -466,12 +836,41 @@ function cleanupAudio() {
   sampleBuffer = new Int16Array(0);
 }
 
+function onGenerateReportShortcut(e) {
+  if (!e.ctrlKey || e.key !== 'Enter' || e.shiftKey || e.altKey) return;
+  if (modalOverlay.classList.contains('visible')) return;
+  if (historyOverlay.classList.contains('visible')) return;
+  if (isGeneratingReport) return;
+  e.preventDefault();
+  generateReport();
+}
+
+btnHistory.onclick = openHistoryPanel;
+btnHistoryClose.onclick = closeHistoryPanel;
+historyOverlay.addEventListener('click', e => {
+  if (e.target === historyOverlay) closeHistoryPanel();
+});
+historyPanel.addEventListener('click', e => e.stopPropagation());
+historyList.addEventListener('click', onHistoryListClick);
+btnExportHistory.onclick = exportAllHistory;
+btnClearHistory.onclick = async () => {
+  const records = await listHistoryRecords();
+  if (!records.length) { showAlert('暂无历史记录'); return; }
+  if (!confirm(`确定清空全部 ${records.length} 条历史记录？此操作不可恢复。`)) return;
+  await clearAllHistoryRecords();
+  activeHistoryId = null;
+  await refreshHistoryUI();
+};
+refreshHistoryUI();
+
 btnStart.onclick = startRecording;
 btnStop.onclick = stopRecording;
 btnGenerateReport.onclick = generateReport;
+document.addEventListener('keydown', onGenerateReportShortcut);
 btnCopyReport.onclick = copyReportText;
-btnExportPdf.onclick = exportReportPdf;
+transcriptEl.oninput = onTranscriptInput;
 btnClear.onclick = () => {
-  finalSegments = []; interim = null;
-  renderResult(); resetReportPanel();
+  clearTranscript(); resetReportPanel();
+  activeExamTypes.clear(); autoDetected.clear(); refreshChipUI();
+  activeHistoryId = null;
 };
