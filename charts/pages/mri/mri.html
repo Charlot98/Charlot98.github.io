@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <base href="../../">
   <meta charset="UTF-8" />
   <link rel="icon" href="statistics.png" type="image/png" />
-  <title>CT 医生工作量（入职时长）</title>
+  <title>MRI 医生工作量</title>
   <link rel="stylesheet" href="css/common.css" />
   <link rel="stylesheet" href="css/vets.css" />
   <link rel="stylesheet" href="css/ct_mri.css" />
@@ -47,12 +48,15 @@
 
     <div class="page-header page-header-vets">
       <div class="page-controls">
-        <span>入职</span>
-        <input type="number" id="min-days" min="0" step="1" value="0" style="width:80px;" />
-        <span>天（开始）</span>
-        <span style="margin-left:16px;">入职</span>
-        <input type="number" id="max-days" min="0" step="1" value="5000" style="width:80px;" />
-        <span>天（结束）</span>
+        <span class="range-quick">
+          <button type="button" class="range-quick-btn" data-months="1">近1月</button>
+          <button type="button" class="range-quick-btn" data-months="6">近半年</button>
+          <button type="button" class="range-quick-btn" data-months="12">近1年</button>
+        </span>
+        <span>开始月份：</span>
+        <select id="start-month"></select>
+        <span>结束月份：</span>
+        <select id="end-month"></select>
         <button type="button" id="export-excel-btn" class="btn-export">导出 Excel</button>
       </div>
     </div>
@@ -62,7 +66,7 @@
   </div>
 
   <script>
-    window.WORKLOAD_PAGE = { csvPath: 'ct_doctor_workload.csv', label: 'CT', useTenure: true };
+    window.WORKLOAD_PAGE = { csvPath: 'csv/mri_doctor_workload.csv', label: 'MRI' };
   </script>
   <script src="js/ct_mri_workload.js"></script>
 </body>

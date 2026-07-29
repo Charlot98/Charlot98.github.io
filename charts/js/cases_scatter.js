@@ -1,7 +1,7 @@
-loadCSV('doctor_workload_by_level.csv', function (csv) {
+loadCSV('csv/doctor_workload_by_level.csv', function (csv) {
   var rows = parseCSV(csv);
   if (rows.length <= 1) {
-    alert('doctor_workload_by_level.csv 内容为空或只有表头');
+    alert('csv/doctor_workload_by_level.csv 内容为空或只有表头');
     return;
   }
 
@@ -111,6 +111,12 @@ loadCSV('doctor_workload_by_level.csv', function (csv) {
     startSel.value = months.indexOf(minStartMonth) >= 0 ? minStartMonth : months[0];
     endSel.value = months[months.length - 1];
   }
+  initMonthQuickRange({
+    months: months,
+    startSel: startSel,
+    endSel: endSel,
+    onApply: renderCharts
+  });
 
   var order = ['预备', '初级', '中级', '高级'];
   var levelColors = { '预备': '#7cb5ec', '初级': '#434348', '中级': '#90ed7d', '高级': '#f7a35c', '全部': '#95a5a6' };

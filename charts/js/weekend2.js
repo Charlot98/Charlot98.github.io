@@ -21,10 +21,10 @@ Highcharts.setOptions({
   }
 });
 
-loadCSV('waiting_duration.csv', function (submitCsv) {
+loadCSV('csv/waiting_duration.csv', function (submitCsv) {
   var submitRows = parseCSV(submitCsv);
   if (submitRows.length <= 1) {
-    alert('waiting_duration.csv 内容为空或只有表头');
+    alert('csv/waiting_duration.csv 内容为空或只有表头');
     return;
   }
 
@@ -35,7 +35,7 @@ loadCSV('waiting_duration.csv', function (submitCsv) {
   var idxCnt = header.indexOf('该时长对应病例数');
 
   if (idxDate === -1 || idxNature === -1 || idxSlot === -1 || idxCnt === -1) {
-    alert('waiting_duration.csv 表头缺少 必要列：日期 / 日期性质 / 等待时长区间 / 该时长对应病例数');
+    alert('csv/waiting_duration.csv 表头缺少 必要列：日期 / 日期性质 / 等待时长区间 / 该时长对应病例数');
     return;
   }
 
@@ -78,6 +78,12 @@ loadCSV('waiting_duration.csv', function (submitCsv) {
     startSel.value = monthsAll.indexOf(minStartMonth) >= 0 ? minStartMonth : monthsAll[0];
     endSel.value = monthsAll[monthsAll.length - 1];
   }
+  initMonthQuickRange({
+    months: monthsAll,
+    startSel: startSel,
+    endSel: endSel,
+    onApply: renderAll
+  });
 
   function inRange(monthKey, startMonth, endMonth) {
     return monthKey && monthKey >= startMonth && monthKey <= endMonth;

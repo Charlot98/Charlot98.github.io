@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <base href="../../">
   <meta charset="UTF-8" />
   <link rel="icon" href="statistics.png" type="image/png" />
   <title>超声造影统计</title>
@@ -25,6 +26,11 @@
       <div class="chart-inner-header">
         <div class="chart-inner-title">超声造影月度病例统计</div>
         <div class="chart-inner-controls">
+          <span class="range-quick">
+            <button type="button" class="range-quick-btn" data-months="1">近1月</button>
+            <button type="button" class="range-quick-btn" data-months="6">近半年</button>
+            <button type="button" class="range-quick-btn" data-months="12">近1年</button>
+          </span>
           <span>开始月份：</span>
           <select id="start-month"></select>
           <span>结束月份：</span>
@@ -36,7 +42,7 @@
         <div class="chart-inner-title">超声造影年度病例统计</div>
       </div>
       <div id="container-yearly" class="chart-container"></div>
-      <div class="chart-data-source">数据来源：ultrasound_contrast_20260210.csv</div>
+      <div class="chart-data-source">数据来源：csv/ultrasound_contrast_20260210.csv</div>
     </div>
   </div>
 

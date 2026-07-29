@@ -1,6 +1,6 @@
 (function () {
   var cfg = window.WORKLOAD_PAGE || {};
-  var csvPath = cfg.csvPath || 'ct_doctor_workload.csv';
+  var csvPath = cfg.csvPath || 'csv/ct_doctor_workload.csv';
   var label = cfg.label || 'CT';
   var useTenure = !!cfg.useTenure;
 
@@ -98,7 +98,7 @@
     return labelEl;
   }
 
-  loadCSV('doctor_list.csv', function (listCsv) {
+  loadCSV('csv/doctor_list.csv', function (listCsv) {
     var doctorOrder = [];
     var doctorLevelMap = {};
     var doctorHireDate = {};
@@ -237,6 +237,12 @@
           startMonthSel.value = months[0];
           endMonthSel.value = months[months.length - 1];
         }
+        initMonthQuickRange({
+          months: months,
+          startSel: startMonthSel,
+          endSel: endMonthSel,
+          onApply: renderCharts
+        });
       }
 
       if (useTenure && minDaysInput && maxDaysInput) {
@@ -475,7 +481,9 @@
         cb.addEventListener('change', syncDoctorCheckboxesByLevel);
       });
       document.getElementById('doctor-select-all').onclick = function () {
-        document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = true; });
+        document.querySelectorAll('.level-filter').forEach(function (cb) {
+          if (cb.value !== '其它') cb.checked = true;
+        });
         syncDoctorCheckboxesByLevel();
       };
       document.getElementById('doctor-select-clear').onclick = function () {

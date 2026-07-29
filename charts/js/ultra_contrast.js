@@ -28,7 +28,7 @@ function parseReportDate(str) {
   return null;
 }
 
-loadCSV('ultrasound_contrast_20260210.csv', function (csv) {
+loadCSV('csv/ultrasound_contrast_20260210.csv', function (csv) {
   var lines = csv.trim().split(/\r?\n/);
   if (lines.length <= 1) {
     alert('CSV 内容为空或只有表头');
@@ -87,6 +87,12 @@ loadCSV('ultrasound_contrast_20260210.csv', function (csv) {
   });
   startSel.value = months.indexOf(minStartMonth) >= 0 ? minStartMonth : months[0];
   endSel.value = months[months.length - 1];
+  initMonthQuickRange({
+    months: months,
+    startSel: startSel,
+    endSel: endSel,
+    onApply: render
+  });
 
   function render() {
     var start = startSel.value;

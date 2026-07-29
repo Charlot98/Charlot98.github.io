@@ -1,7 +1,7 @@
-loadCSV('doctor_workload_by_level.csv', function (csv) {
+loadCSV('csv/doctor_workload_by_level.csv', function (csv) {
   var rows = parseCSV(csv);
   if (rows.length <= 1) {
-    alert('doctor_workload_by_level.csv 内容为空或只有表头');
+    alert('csv/doctor_workload_by_level.csv 内容为空或只有表头');
     return;
   }
 

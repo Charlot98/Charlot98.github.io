@@ -1,7 +1,7 @@
-loadCSV('submission_period.csv', function (submitCsv) {
+loadCSV('csv/submission_period.csv', function (submitCsv) {
   var submitRows = parseCSV(submitCsv);
   if (submitRows.length <= 1) {
-    alert('submission_period.csv 内容为空或只有表头');
+    alert('csv/submission_period.csv 内容为空或只有表头');
     return;
   }
 
@@ -17,10 +17,10 @@ loadCSV('submission_period.csv', function (submitCsv) {
   }
 
   // 等待时长
-  loadCSV('waiting_duration.csv', function (waitCsv) {
+  loadCSV('csv/waiting_duration.csv', function (waitCsv) {
     var waitRows = parseCSV(waitCsv);
     if (waitRows.length <= 1) {
-      alert('waiting_duration.csv 内容为空或只有表头');
+      alert('csv/waiting_duration.csv 内容为空或只有表头');
       return;
     }
 
@@ -138,6 +138,12 @@ loadCSV('submission_period.csv', function (submitCsv) {
       startSel.value = monthsAll.indexOf(minStartMonth) >= 0 ? minStartMonth : monthsAll[0];
       endSel.value = monthsAll[monthsAll.length - 1];
     }
+    initMonthQuickRange({
+      months: monthsAll,
+      startSel: startSel,
+      endSel: endSel,
+      onApply: renderAll
+    });
 
     function inRange(monthKey, startMonth, endMonth) {
       return monthKey && monthKey >= startMonth && monthKey <= endMonth;
@@ -1239,7 +1245,7 @@ loadCSV('submission_period.csv', function (submitCsv) {
         callback(true);
         return;
       }
-      loadCSV('report_period.csv', function (reportCsv) {
+      loadCSV('csv/report_period.csv', function (reportCsv) {
         var rows = parseCSV(reportCsv);
         if (rows.length <= 1) {
           callback(false);
@@ -1278,7 +1284,7 @@ loadCSV('submission_period.csv', function (submitCsv) {
         if (!ok) {
           Highcharts.chart('container-report-slot-monthly', {
             chart: { type: 'column' },
-            title: { text: 'report_period.csv 暂无可用数据', style: { fontSize: '13px' } },
+            title: { text: 'csv/report_period.csv 暂无可用数据', style: { fontSize: '13px' } },
             series: []
           });
           return;
@@ -1373,7 +1379,7 @@ loadCSV('submission_period.csv', function (submitCsv) {
         if (!ok) {
           Highcharts.chart('container-report-slot-monthly-avg', {
             chart: { type: 'column' },
-            title: { text: 'report_period.csv 暂无可用数据', style: { fontSize: '13px' } },
+            title: { text: 'csv/report_period.csv 暂无可用数据', style: { fontSize: '13px' } },
             series: []
           });
           return;
@@ -1465,7 +1471,7 @@ loadCSV('submission_period.csv', function (submitCsv) {
         callback(true);
         return;
       }
-      loadCSV('echo_report_period.csv', function (reportCsv) {
+      loadCSV('csv/echo_report_period.csv', function (reportCsv) {
         var rows = parseCSV(reportCsv);
         if (rows.length <= 1) {
           callback(false);
@@ -1504,7 +1510,7 @@ loadCSV('submission_period.csv', function (submitCsv) {
         if (!ok) {
           Highcharts.chart('container-heart-report-slot-monthly', {
             chart: { type: 'column' },
-            title: { text: 'echo_report_period.csv 暂无可用数据', style: { fontSize: '13px' } },
+            title: { text: 'csv/echo_report_period.csv 暂无可用数据', style: { fontSize: '13px' } },
             series: []
           });
           return;

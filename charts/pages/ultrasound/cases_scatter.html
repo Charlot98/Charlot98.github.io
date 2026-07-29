@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <base href="../../">
   <meta charset="UTF-8" />
   <link rel="icon" href="statistics.png" type="image/png" />
   <title>不同等级医生每日病例量</title>
@@ -24,6 +25,11 @@
   <div class="main-content">
     <div class="page-header page-header-cases">
       <div class="page-controls">
+        <span class="range-quick">
+          <button type="button" class="range-quick-btn" data-months="1">近1月</button>
+          <button type="button" class="range-quick-btn" data-months="6">近半年</button>
+          <button type="button" class="range-quick-btn" data-months="12">近1年</button>
+        </span>
         <span>开始月份：</span>
         <select id="start-month"></select>
         <span>结束月份：</span>

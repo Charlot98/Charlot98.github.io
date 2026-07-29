@@ -1,13 +1,21 @@
 (function () {
   var KEY = 'dash_auth_token';
   var MIN_LOADING_MS = 700;
+  var rootUrl = document.querySelector('base')
+    ? document.baseURI
+    : new URL('./', window.location.href).href;
+
+  function rootPath(path) {
+    return new URL(path, rootUrl).href;
+  }
+
   try {
     if (localStorage.getItem(KEY) !== 'logged_in') {
-      window.location.replace('login.html');
+      window.location.replace(rootPath('login.html'));
       return;
     }
   } catch (e) {
-    window.location.replace('login.html');
+    window.location.replace(rootPath('login.html'));
     return;
   }
 

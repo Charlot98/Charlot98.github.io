@@ -21,10 +21,10 @@ Highcharts.setOptions({
   }
 });
 
-loadCSV('submission_period.csv', function (submitCsv) {
+loadCSV('csv/submission_period.csv', function (submitCsv) {
   var submitRows = parseCSV(submitCsv);
   if (submitRows.length <= 1) {
-    alert('submission_period.csv 内容为空或只有表头');
+    alert('csv/submission_period.csv 内容为空或只有表头');
     return;
   }
 
@@ -35,7 +35,7 @@ loadCSV('submission_period.csv', function (submitCsv) {
   var idxCnt = header.indexOf('该交单时段对应病例数');
 
   if (idxDate === -1 || idxNature === -1 || idxSlot === -1 || idxCnt === -1) {
-    alert('submission_period.csv 表头缺少 必要列：日期 / 日期性质 / 交单时段 / 该交单时段对应病例数');
+    alert('csv/submission_period.csv 表头缺少 必要列：日期 / 日期性质 / 交单时段 / 该交单时段对应病例数');
     return;
   }
 
@@ -78,6 +78,12 @@ loadCSV('submission_period.csv', function (submitCsv) {
     startSel.value = monthsAll.indexOf(minStartMonth) >= 0 ? minStartMonth : monthsAll[0];
     endSel.value = monthsAll[monthsAll.length - 1];
   }
+  initMonthQuickRange({
+    months: monthsAll,
+    startSel: startSel,
+    endSel: endSel,
+    onApply: renderAll
+  });
 
   function inRange(monthKey, startMonth, endMonth) {
     return monthKey && monthKey >= startMonth && monthKey <= endMonth;
@@ -306,7 +312,7 @@ loadCSV('submission_period.csv', function (submitCsv) {
       callback(true);
       return;
     }
-    loadCSV('report_period.csv', function (reportCsv) {
+    loadCSV('csv/report_period.csv', function (reportCsv) {
       var rows = parseCSV(reportCsv);
       if (rows.length <= 1) {
         callback(false);
@@ -345,7 +351,7 @@ loadCSV('submission_period.csv', function (submitCsv) {
       if (!ok) {
         Highcharts.chart('container-report-slot-monthly', {
           chart: { type: 'column' },
-          title: { text: 'report_period.csv 暂无可用数据', style: { fontSize: '13px' } },
+          title: { text: 'csv/report_period.csv 暂无可用数据', style: { fontSize: '13px' } },
           series: []
         });
         return;

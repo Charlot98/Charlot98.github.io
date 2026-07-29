@@ -24,7 +24,7 @@
 
 function loadCSV(path, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', path, true);
+  xhr.open('GET', new URL(path, document.baseURI).href, true);
   xhr.onload = function () {
     if (xhr.status === 200 || xhr.status === 0) {
       callback(xhr.responseText);
@@ -66,6 +66,59 @@ function parseCSV(text) {
   row.push(field);
   if (row.length > 1 || (row.length === 1 && row[0] !== '')) rows.push(row);
   return rows;
+}
+
+/**
+ * 为月份范围下拉框绑定「近 N 月」快捷按钮。
+ * 结束月份以数据中的最新月份为准，月份数量按首尾月份均包含计算。
+ */
+function initMonthQuickRange(options) {
+  var months = options.months || [];
+  var startSel = options.startSel;
+  var endSel = options.endSel;
+  var onApply = options.onApply;
+  var root = options.root || document;
+  var buttons = root.querySelectorAll('.range-quick-btn');
+
+  function setActive(monthsBack) {
+    buttons.forEach(function (button) {
+      var value = parseInt(button.getAttribute('data-months'), 10);
+      button.classList.toggle('active', monthsBack != null && value === monthsBack);
+    });
+  }
+
+  function apply(monthsBack) {
+    if (!months.length || !startSel || !endSel || !monthsBack) return;
+    var endMonth = months[months.length - 1];
+    var parts = endMonth.split('-');
+    var endIndex = parseInt(parts[0], 10) * 12 + parseInt(parts[1], 10) - 1;
+    var startIndex = endIndex - (monthsBack - 1);
+    var startYear = Math.floor(startIndex / 12);
+    var startMonth = (startIndex % 12) + 1;
+    var wantedStart = startYear + '-' + (startMonth < 10 ? '0' : '') + startMonth;
+    var startValue = months[0];
+
+    for (var i = 0; i < months.length; i++) {
+      if (months[i] >= wantedStart) {
+        startValue = months[i];
+        break;
+      }
+    }
+    startSel.value = startValue;
+    endSel.value = endMonth;
+    setActive(monthsBack);
+    if (typeof onApply === 'function') onApply();
+  }
+
+  buttons.forEach(function (button) {
+    button.addEventListener('click', function () {
+      apply(parseInt(button.getAttribute('data-months'), 10));
+    });
+  });
+  if (startSel) startSel.addEventListener('change', function () { setActive(null); });
+  if (endSel) endSel.addEventListener('change', function () { setActive(null); });
+
+  return { apply: apply, clearActive: function () { setActive(null); } };
 }
 
 /** 导出为 Excel：header 为表头数组，rows 为二维数组（每行一列数组），filename 不含扩展名会补 .xlsx */

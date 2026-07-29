@@ -1,4 +1,4 @@
-loadCSV('doctor_list.csv', function (listCsv) {
+loadCSV('csv/doctor_list.csv', function (listCsv) {
   var listRows = parseCSV(listCsv);
   var doctorOrder = [];
   var doctorLevelMap = {};
@@ -19,10 +19,10 @@ loadCSV('doctor_list.csv', function (listCsv) {
     }
   }
 
-  loadCSV('doctor_workload.csv', function (csv) {
+  loadCSV('csv/doctor_workload.csv', function (csv) {
   var rows = parseCSV(csv);
   if (rows.length <= 1) {
-    alert('doctor_workload.csv 内容为空或只有表头');
+    alert('csv/doctor_workload.csv 内容为空或只有表头');
     return;
   }
 
@@ -51,7 +51,7 @@ loadCSV('doctor_list.csv', function (listCsv) {
     var morn = parseFloat(cols[idxMorn] || '0');
     var after = parseFloat(cols[idxAfter] || '0');
     var even = parseFloat(cols[idxEven] || '0');
-    var level = idxLevel >= 0 ? cols[idxLevel] : '';
+    var level = doctorLevelMap[doctor] || (idxLevel >= 0 ? String(cols[idxLevel] || '').trim() : '');
 
     if (!doctor || !dateStr) continue;
     var parts = dateStr.split('-');
@@ -121,7 +121,9 @@ loadCSV('doctor_list.csv', function (listCsv) {
   });
 
   document.getElementById('doctor-select-all').onclick = function () {
-    document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = true; });
+    document.querySelectorAll('.level-filter').forEach(function (cb) {
+      if (cb.value !== '其它') cb.checked = true;
+    });
     syncDoctorCheckboxesByLevel();
   };
   document.getElementById('doctor-select-clear').onclick = function () {
@@ -141,6 +143,12 @@ loadCSV('doctor_list.csv', function (listCsv) {
     startSel.value = months[0];
     endSel.value = months[months.length - 1];
   }
+  initMonthQuickRange({
+    months: months,
+    startSel: startSel,
+    endSel: endSel,
+    onApply: renderCharts
+  });
 
   function getSelectedLevels() {
     var levels = [];
@@ -356,7 +364,7 @@ loadCSV('doctor_list.csv', function (listCsv) {
     });
   }
 
-  renderCharts();
+  syncDoctorCheckboxesByLevel();
 
   document.querySelectorAll('.level-filter').forEach(function (cb) {
     cb.addEventListener('change', syncDoctorCheckboxesByLevel);
@@ -378,7 +386,7 @@ loadCSV('doctor_list.csv', function (listCsv) {
       var doc = r.cols[idxDoctor];
       if (!doc || selectedDoctors.indexOf(doc) === -1) return false;
       if (selectedLevels.length > 0) {
-        var lvl = idxLevel >= 0 ? (r.cols[idxLevel] || '').trim() : '';
+        var lvl = doctorLevelMap[doc] || (idxLevel >= 0 ? (r.cols[idxLevel] || '').trim() : '');
         if (lvl && selectedLevels.indexOf(lvl) === -1) return false;
       }
       return true;
