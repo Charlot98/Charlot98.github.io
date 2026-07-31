@@ -5,15 +5,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="statistics.png" type="image/png" />
-  <title>CT / XA 项目与审核统计</title>
-  <link rel="stylesheet" href="css/common.css" />
-  <link rel="stylesheet" href="css/vets.css" />
-  <link rel="stylesheet" href="css/project-stats.css" />
+  <title>CT 报告及审核数</title>
+  <link rel="stylesheet" href="css/common.css?v=20260801b" />
+  <link rel="stylesheet" href="css/vets.css?v=20260801a" />
+  <link rel="stylesheet" href="css/project-stats.css?v=20260731" />
   <script src="js/auth.js"></script>
   <script src="js/nav-items.js"></script>
   <script src="js/nav-sidebar.js"></script>
   <script src="js/highcharts.js"></script>
-  <script src="js/utils.js"></script>
+  <script src="js/utils.js?v=20260801b"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -36,10 +36,8 @@
         <label class="chip"><input type="checkbox" class="level-filter" value="其它" /> 其它</label>
       </div>
       <div class="filter-group" style="margin-left: 24px;">
-        <span class="filter-label">医生：</span>
         <span class="doctor-actions">
           <button id="doctor-select-all" type="button">全选</button>
-          <button id="doctor-select-clear" type="button" style="margin-left: 4px;">取消全选</button>
         </span>
       </div>
     </div>
@@ -65,6 +63,6 @@
     <div id="project-charts" class="project-charts" aria-live="polite"></div>
   </div>
 
-  <script src="js/ct-project-stats.js"></script>
+  <script src="js/ct-project-stats.js?v=20260731d"></script>
 </body>
 </html>

@@ -5,10 +5,18 @@
     if (!sections || !container) return;
 
     var activePath = new URL(location.href).pathname.replace(/\/+$/, '').toLowerCase();
-    var allSections = [];
 
     function isActiveItem(href) {
-      return new URL(href, document.baseURI).pathname.replace(/\/+$/, '').toLowerCase() === activePath;
+      var itemPath = new URL(href, document.baseURI).pathname.replace(/\/+$/, '').toLowerCase();
+      if (itemPath === activePath) return true;
+      // 个人查询结果页归入实验入口
+      if (
+        /\/personal\.html$/.test(itemPath) &&
+        /\/personal-result\.html$/.test(activePath)
+      ) {
+        return true;
+      }
+      return false;
     }
 
     function buildLink(item) {
@@ -17,15 +25,12 @@
       link.href = item.href;
       link.className = 'nav-sidebar-link' + (active ? ' active' : '');
       link.title = item.cat + ' · ' + item.text;
+      link.setAttribute('aria-label', item.cat + ' ' + item.text);
       if (active) link.setAttribute('aria-current', 'page');
 
-      var category = document.createElement('span');
-      category.className = 'nav-sidebar-cat';
-      category.textContent = item.cat;
       var text = document.createElement('span');
       text.className = 'nav-sidebar-text';
       text.textContent = item.text;
-      link.appendChild(category);
       link.appendChild(text);
       return link;
     }
@@ -51,13 +56,9 @@
 
       var summary = document.createElement('summary');
       summary.className = 'nav-sidebar-label';
-      var icon = document.createElement('span');
-      icon.className = 'nav-sidebar-icon';
-      icon.textContent = section.icon || section.title.slice(0, 1);
       var title = document.createElement('span');
       title.className = 'nav-sidebar-title';
       title.textContent = section.title;
-      summary.appendChild(icon);
       summary.appendChild(title);
 
       var group = document.createElement('div');
@@ -68,13 +69,21 @@
 
       details.appendChild(summary);
       details.appendChild(group);
-      details.addEventListener('toggle', function () {
-        if (!details.open) return;
-        allSections.forEach(function (other) {
-          if (other !== details) other.open = false;
-        });
+
+      details.addEventListener('mouseenter', function () {
+        details.open = true;
       });
-      allSections.push(details);
+      details.addEventListener('mouseleave', function () {
+        if (!hasActive) details.open = false;
+      });
+      summary.addEventListener('click', function (event) {
+        // 含当前页的分组始终展开，禁止点收起
+        if (hasActive) {
+          event.preventDefault();
+          details.open = true;
+        }
+      });
+
       container.appendChild(details);
     });
 

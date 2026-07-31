@@ -35,9 +35,15 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
   var idxAfter = header.indexOf('下午');
   var idxEven = header.indexOf('晚上');
   var idxLevel = header.indexOf('医生等级');
+  var idxReport = header.indexOf('报告数量');
+  var idxAudit = header.indexOf('审核数量');
 
   if (idxDoctor === -1 || idxDate === -1 || idxMorn === -1 || idxAfter === -1 || idxEven === -1) {
     alert('CSV 表头中缺少 必要列：医生 / 日期 / 上午 / 下午 / 晚上');
+    return;
+  }
+  if (idxReport === -1 || idxAudit === -1) {
+    alert('CSV 表头中缺少必要列：报告数量 / 审核数量');
     return;
   }
 
@@ -47,7 +53,6 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
   var allTotalData = [];
   var rawRows = [];
   var doctorSet = {};
-  var tenureMin = Infinity, tenureMax = -Infinity;
 
   for (var i = 1; i < rows.length; i++) {
     var cols = rows[i];
@@ -59,6 +64,10 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     var morn = parseFloat(cols[idxMorn] || '0');
     var after = parseFloat(cols[idxAfter] || '0');
     var even = parseFloat(cols[idxEven] || '0');
+    var reportCount = parseFloat(cols[idxReport] || '0');
+    var auditCount = parseFloat(cols[idxAudit] || '0');
+    if (isNaN(reportCount)) reportCount = 0;
+    if (isNaN(auditCount)) auditCount = 0;
     var level = doctorLevelMap[doctor] || (idxLevel >= 0 ? String(cols[idxLevel] || '').trim() : '');
 
     if (!doctor || !dateStr) continue;
@@ -72,9 +81,6 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     var day = parseInt(parts[2], 10);
     if (isNaN(year) || isNaN(month) || isNaN(day)) continue;
     var checkDateTs = Date.UTC(year, month, day);
-
-    if (tenure < tenureMin) tenureMin = tenure;
-    if (tenure > tenureMax) tenureMax = tenure;
 
     var total = 0;
     if (!isNaN(morn)) total += morn;
@@ -101,31 +107,38 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
         period: '晚上', _checkDate: checkDateTs, _tenure: tenure
       });
     }
-    if (total > 0) {
+    if (total > 0 || reportCount > 0 || auditCount > 0) {
       allTotalData.push({
-        x: tenure, y: total, name: doctor, level: level,
+        x: tenure, y: total, report: reportCount, audit: auditCount,
+        name: doctor, level: level,
         _checkDate: checkDateTs, _tenure: tenure
       });
     }
     rawRows.push({ cols: cols, _tenure: tenure });
   }
-  var doctorNames = doctorOrder.filter(function (d) { return doctorSet[d]; });
-  var extra = Object.keys(doctorSet).filter(function (d) { return doctorOrder.indexOf(d) === -1; });
-  doctorNames = doctorNames.concat(extra.sort());
+  var MAIN_LEVELS = { '预备': true, '初级': true, '中级': true, '高级': true };
+  function getDoctorLevel(name) {
+    return doctorLevelMap[name] || '其它';
+  }
+  function isMainLevelDoctor(name) {
+    return !!MAIN_LEVELS[getDoctorLevel(name)];
+  }
+
+  // 超声：不展示「其它」等级医生（如康博）；未勾选即不计入图表
+  var listedDoctors = doctorOrder.filter(function (d) {
+    return doctorSet[d] && isMainLevelDoctor(d);
+  });
+  var doctorNames = listedDoctors;
 
   var doctorContainer = document.getElementById('doctor-checkboxes');
-  var minDaysInput = document.getElementById('min-days');
-  var maxDaysInput = document.getElementById('max-days');
-  minDaysInput.min = 0;
-  minDaysInput.value = (tenureMin === Infinity) ? 0 : Math.max(0, Math.floor(tenureMin));
-  maxDaysInput.min = 0;
-  maxDaysInput.value = (tenureMax === -Infinity) ? 5000 : Math.ceil(tenureMax);
+  var tenureRangeSelect = initTenureRangeSelect({
+    root: document,
+    onApply: renderCharts
+  });
 
-  doctorNames.forEach(function (name) {
+  function createDoctorCheckbox(name) {
     var label = document.createElement('label');
-    label.style.display = 'inline-block';
-    label.style.marginRight = '8px';
-    label.style.whiteSpace = 'nowrap';
+    label.className = 'doctor-checkbox-label';
     var cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.className = 'doctor-filter';
@@ -133,32 +146,45 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     cb.checked = true;
     label.appendChild(cb);
     label.appendChild(document.createTextNode(' ' + name));
-    doctorContainer.appendChild(label);
+    return label;
+  }
+
+  var mainList = document.createElement('div');
+  mainList.className = 'doctor-checkbox-list-main';
+  listedDoctors.forEach(function (name) {
+    mainList.appendChild(createDoctorCheckbox(name));
   });
+  if (mainList.childNodes.length) doctorContainer.appendChild(mainList);
 
   function syncDoctorCheckboxesByLevel() {
     var selectedLevels = getSelectedLevels();
     doctorContainer.querySelectorAll('.doctor-filter').forEach(function (cb) {
-      var lvl = doctorLevelMap[cb.value];
-      cb.checked = selectedLevels.length > 0 && (!lvl || selectedLevels.indexOf(lvl) !== -1);
+      var lvl = getDoctorLevel(cb.value);
+      cb.checked = selectedLevels.length > 0 && selectedLevels.indexOf(lvl) !== -1;
     });
     renderCharts();
+    if (doctorSelectionToggle) doctorSelectionToggle.update();
   }
 
   document.querySelectorAll('.doctor-filter').forEach(function (cb) {
     cb.addEventListener('change', renderCharts);
   });
 
-  document.getElementById('doctor-select-all').onclick = function () {
-    document.querySelectorAll('.level-filter').forEach(function (cb) {
-      if (cb.value !== '其它') cb.checked = true;
-    });
-    syncDoctorCheckboxesByLevel();
-  };
-  document.getElementById('doctor-select-clear').onclick = function () {
-    document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = false; });
-    syncDoctorCheckboxesByLevel();
-  };
+  var doctorSelectionToggle = initDoctorSelectionToggle({
+    button: document.getElementById('doctor-select-all'),
+    root: document,
+    getCheckboxes: function () { return doctorContainer.querySelectorAll('.doctor-filter'); },
+    selectAll: function () {
+      document.querySelectorAll('.level-filter').forEach(function (cb) {
+        if (cb.value !== '其它') cb.checked = true;
+      });
+      syncDoctorCheckboxesByLevel();
+    },
+    clear: function () {
+      document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = false; });
+      syncDoctorCheckboxesByLevel();
+    }
+  });
 
   function getSelectedLevels() {
     var levels = [];
@@ -173,15 +199,13 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     doctorContainer.querySelectorAll('.doctor-filter').forEach(function (cb) {
       if (cb.checked) docs.push(cb.value);
     });
-    return docs.length ? docs : doctorNames;
+    return docs;
   }
 
-  function filterData(data, selectedLevels, selectedDoctors) {
+  function filterData(data, selectedDoctors) {
     return data.filter(function (point) {
       if (point.name && selectedDoctors.indexOf(point.name) === -1) return false;
-      if (!point.level) return true;
-      if (selectedLevels.length === 0) return true;
-      return selectedLevels.indexOf(point.level) !== -1;
+      return true;
     });
   }
 
@@ -263,13 +287,11 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
   }
 
   function renderCharts() {
-    var selectedLevels = getSelectedLevels();
     var selectedDoctors = getSelectedDoctors();
-    var minDays = minDaysInput.value;
-    var maxDays = maxDaysInput.value;
+    var tenureRange = tenureRangeSelect.getRange();
 
     var totalData = filterDataByTenure(
-      filterData(allTotalData, selectedLevels, selectedDoctors), minDays, maxDays);
+      filterData(allTotalData, selectedDoctors), tenureRange.minDays, tenureRange.maxDays);
 
     var totalSeries = [];
     if (selectedDoctors.length < 18) {
@@ -334,25 +356,31 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
       series: totalSeries
     });
 
-    var minDaysNum = parseInt(minDays, 10);
-    var maxDaysNum = parseInt(maxDays, 10);
-    if (isNaN(minDaysNum)) minDaysNum = 0;
-    if (isNaN(maxDaysNum)) maxDaysNum = Infinity;
-    var filteredForSum = filterData(allTotalData, selectedLevels, selectedDoctors);
-    var doctorTotals = {};
-    selectedDoctors.forEach(function (doc) { doctorTotals[doc] = 0; });
+    var filteredForSum = filterData(allTotalData, selectedDoctors);
+    var doctorReport = {};
+    var doctorAudit = {};
+    selectedDoctors.forEach(function (doc) {
+      doctorReport[doc] = 0;
+      doctorAudit[doc] = 0;
+    });
     filteredForSum.forEach(function (p) {
       var t = p._tenure != null ? p._tenure : p.x;
-      if (t >= minDaysNum && t <= maxDaysNum && doctorTotals[p.name] !== undefined) {
-        doctorTotals[p.name] += p.y;
+      if (t >= tenureRange.minDays && t <= tenureRange.maxDays && doctorReport[p.name] !== undefined) {
+        doctorReport[p.name] += p.report || 0;
+        doctorAudit[p.name] += p.audit || 0;
       }
     });
     var barCategories = selectedDoctors;
-    var barData = selectedDoctors.map(function (d) { return doctorTotals[d] || 0; });
+    var reportData = selectedDoctors.map(function (d) { return doctorReport[d] || 0; });
+    var auditData = selectedDoctors.map(function (d) { return doctorAudit[d] || 0; });
 
     Highcharts.chart('container-cumulative', {
       chart: { type: 'column' },
-      title: { text: ' 入职 '+ minDays + ' 天~ ' + maxDays + ' 天的检查量' },
+      title: {
+        text: tenureRange.label === '全部'
+          ? '全部入职时长的报告 / 审核数量'
+          : '入职 ' + tenureRange.label + '内的报告 / 审核数量'
+      },
       xAxis: {
         type: 'category',
         categories: barCategories
@@ -360,18 +388,59 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
       yAxis: {
         title: { text: '检查量（次数）' },
         min: 0,
-        allowDecimals: false
+        allowDecimals: false,
+        stackLabels: {
+          enabled: true,
+          formatter: function () { return this.total; },
+          style: {
+            color: '#374151',
+            fontSize: '10px',
+            fontWeight: '600',
+            textOutline: 'none'
+          }
+        }
       },
       credits: { enabled: false },
+      legend: {
+        align: 'right',
+        verticalAlign: 'top',
+        y: 0
+      },
       tooltip: {
-        pointFormat: '<b>{point.y}</b> 例'
+        shared: true,
+        formatter: function () {
+          var points = this.points || [];
+          var total = 0;
+          var lines = ['<b>' + this.x + '</b>'];
+          points.forEach(function (point) {
+            total += point.y;
+            lines.push(
+              '<span style="color:' + point.color + '">●</span> ' +
+              point.series.name + '：<b>' + point.y + '</b>'
+            );
+          });
+          lines.push('合计：<b>' + total + '</b>');
+          return lines.join('<br/>');
+        }
       },
       plotOptions: {
         column: {
-          dataLabels: { enabled: true }
+          stacking: 'normal',
+          borderWidth: 0,
+          maxPointWidth: 28,
+          groupPadding: 0.08,
+          pointPadding: 0.02,
+          dataLabels: { enabled: false }
+        },
+        series: {
+          animation: false,
+          states: { inactive: { opacity: 1 } }
         }
       },
-      series: [{ name: '病例总数', data: barData, showInLegend: false }]
+      series: [
+        { name: '审核数量', data: auditData, color: '#f59e0b' },
+        { name: '报告数量', data: reportData, color: '#4a90d9' }
+      ]
     });
   }
 
@@ -380,28 +449,15 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
   document.querySelectorAll('.level-filter').forEach(function (cb) {
     cb.addEventListener('change', syncDoctorCheckboxesByLevel);
   });
-  minDaysInput.addEventListener('input', renderCharts);
-  minDaysInput.addEventListener('change', renderCharts);
-  maxDaysInput.addEventListener('input', renderCharts);
-  maxDaysInput.addEventListener('change', renderCharts);
 
   document.getElementById('export-excel-btn').onclick = function () {
-    var minDays = parseInt(minDaysInput.value, 10);
-    var maxDays = parseInt(maxDaysInput.value, 10);
-    if (isNaN(minDays)) minDays = 0;
-    if (isNaN(maxDays)) maxDays = 99999;
-    if (minDays > maxDays) { var t = minDays; minDays = maxDays; maxDays = t; }
-    var selectedLevels = getSelectedLevels();
+    var tenureRange = tenureRangeSelect.getRange();
     var selectedDoctors = getSelectedDoctors();
     var filtered = rawRows.filter(function (r) {
       var t = r._tenure;
-      if (t == null || t < minDays || t > maxDays) return false;
+      if (t == null || t < tenureRange.minDays || t > tenureRange.maxDays) return false;
       var doc = r.cols[idxDoctor];
       if (!doc || selectedDoctors.indexOf(doc) === -1) return false;
-      if (selectedLevels.length > 0) {
-        var lvl = doctorLevelMap[doc] || (idxLevel >= 0 ? (r.cols[idxLevel] || '').trim() : '');
-        if (lvl && selectedLevels.indexOf(lvl) === -1) return false;
-      }
       return true;
     });
     var rows = filtered.map(function (r) { return r.cols; });
@@ -409,7 +465,8 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
       alert('当前筛选条件下没有数据可导出');
       return;
     }
-    downloadExcel(header, rows, '医生检查量_入职' + minDays + '-' + maxDays + '天.xlsx');
+    var rangeLabel = tenureRange.label === '全部' ? '全部入职时长' : '入职' + tenureRange.label + '内';
+    downloadExcel(header, rows, '医生检查量_' + rangeLabel + '.xlsx');
   };
   });
 });

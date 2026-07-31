@@ -5,18 +5,7 @@
     '腹部撰写数',
     '异宠撰写数',
     'CT报告、审核总数',
-    'CT异宠审核数',
-    'XA透视审核数'
-  ];
-  var DATA_PROJECTS = [
-    '头部撰写数',
-    '胸部撰写数',
-    '腹部撰写数',
-    '异宠撰写数',
-    'CT报告总数',
-    'CT审核总数',
-    'CT异宠审核数',
-    'XA透视审核数'
+    'XA透视撰写、审核数'
   ];
   var EXCLUDED_DOCTORS = {
     '1号屋': true,
@@ -46,6 +35,16 @@
     return raw ? numberValue(raw) : 999999;
   }
 
+  function seriesNames(project) {
+    if (project === 'CT报告、审核总数') {
+      return { audit: 'CT审核总数', report: 'CT报告总数' };
+    }
+    if (project === 'XA透视撰写、审核数') {
+      return { audit: 'XA审核数量', report: 'XA撰写数量' };
+    }
+    return { audit: '审核医生数量', report: '报告医生数量' };
+  }
+
   function renderError(message) {
     var root = document.getElementById('project-charts');
     root.innerHTML = '';
@@ -55,7 +54,7 @@
     root.appendChild(error);
   }
 
-  function createChartCard(project, rows, index, rangeLabel, customSeries) {
+  function createChartCard(project, rows, index, rangeLabel) {
     var root = document.getElementById('project-charts');
     var card = document.createElement('section');
     card.className = 'project-chart-card';
@@ -78,7 +77,9 @@
     chart.style.minWidth = '0';
 
     var doctors = rows.map(function (row) { return row.doctor; });
-    var quantityData = rows.map(function (row) { return row.quantity; });
+    var reportData = rows.map(function (row) { return row.report; });
+    var auditData = rows.map(function (row) { return row.audit; });
+    var names = seriesNames(project);
 
     Highcharts.chart(chart.id, {
       chart: {
@@ -90,7 +91,7 @@
       credits: { enabled: false },
       title: {
         text: project + '（' + rangeLabel + '）',
-        align: 'left',
+        align: 'center',
         margin: 24,
         style: { fontSize: '18px', fontWeight: '600' }
       },
@@ -157,11 +158,18 @@
           states: { inactive: { opacity: 1 } }
         }
       },
-      series: customSeries || [{
-        name: '数量',
-        data: quantityData,
-        color: '#4a90d9'
-      }]
+      series: [
+        {
+          name: names.audit,
+          data: auditData,
+          color: '#f59e0b'
+        },
+        {
+          name: names.report,
+          data: reportData,
+          color: '#4a90d9'
+        }
+      ]
     });
   }
 
@@ -206,12 +214,14 @@
       var doctorNumberIndex = header.indexOf('医生编号');
       var doctorIndex = header.indexOf('医生');
       var levelIndex = header.indexOf('医生等级');
-      var quantityIndex = header.indexOf('数量');
+      var reportIndex = header.indexOf('报告数量');
+      var auditIndex = header.indexOf('审核数量');
       if (
         monthIndex < 0 ||
         projectIndex < 0 ||
         doctorIndex < 0 ||
-        quantityIndex < 0
+        reportIndex < 0 ||
+        auditIndex < 0
       ) {
         renderError('CT / XA 统计 CSV 表头不完整，请重新生成数据。');
         return;
@@ -226,7 +236,7 @@
         var project = String(row[projectIndex] || '').trim();
         var doctor = String(row[doctorIndex] || '').trim();
         var month = String(row[monthIndex] || '').trim();
-        if (!doctor || !month || DATA_PROJECTS.indexOf(project) === -1) continue;
+        if (!doctor || !month || PROJECTS.indexOf(project) === -1) continue;
         if (EXCLUDED_DOCTORS[doctor]) continue;
 
         var level = levelIndex >= 0
@@ -243,25 +253,30 @@
           doctor: doctor,
           doctorNumber: doctorNumberValue(row[doctorNumberIndex]),
           level: level,
-          quantity: numberValue(row[quantityIndex])
+          report: numberValue(row[reportIndex]),
+          audit: numberValue(row[auditIndex])
         });
       }
 
       var months = Object.keys(monthSet).sort();
-      // 默认顺序固定为医生列表顺序；列表中没有数据的人也保留，保证选中后可显示 0
-      var doctorNames = doctorOrder.slice();
+      // 主列表：预备/初级/中级/高级；「其它」等级（如康博）单独分区
+      var listedDoctors = doctorOrder.filter(function (d) {
+        return VALID_LEVELS[getDoctorLevel(d)];
+      });
+      var otherDoctors = doctorOrder.filter(function (d) {
+        return !VALID_LEVELS[getDoctorLevel(d)];
+      });
       Object.keys(doctorSet).forEach(function (d) {
         if (doctorOrder.indexOf(d) === -1 && !EXCLUDED_DOCTORS[d]) {
-          doctorNames.push(d);
+          otherDoctors.push(d);
         }
       });
+      var doctorNames = listedDoctors.concat(otherDoctors);
 
       var doctorContainer = document.getElementById('doctor-checkboxes');
-      doctorNames.forEach(function (name) {
+      function createDoctorCheckbox(name) {
         var label = document.createElement('label');
-        label.style.display = 'inline-block';
-        label.style.marginRight = '8px';
-        label.style.whiteSpace = 'nowrap';
+        label.className = 'doctor-checkbox-label';
         var cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.className = 'doctor-filter';
@@ -269,8 +284,26 @@
         cb.checked = true;
         label.appendChild(cb);
         label.appendChild(document.createTextNode(' ' + name));
-        doctorContainer.appendChild(label);
+        return label;
+      }
+      var mainList = document.createElement('div');
+      mainList.className = 'doctor-checkbox-list-main';
+      listedDoctors.forEach(function (name) {
+        mainList.appendChild(createDoctorCheckbox(name));
       });
+      if (mainList.childNodes.length) doctorContainer.appendChild(mainList);
+      if (otherDoctors.length) {
+        var otherRow = document.createElement('div');
+        otherRow.className = 'doctor-checkbox-list-other';
+        var otherTitle = document.createElement('div');
+        otherTitle.className = 'doctor-checkbox-other-title';
+        otherTitle.textContent = '其它';
+        otherRow.appendChild(otherTitle);
+        otherDoctors.forEach(function (name) {
+          otherRow.appendChild(createDoctorCheckbox(name));
+        });
+        doctorContainer.appendChild(otherRow);
+      }
 
       var startSel = document.getElementById('start-month');
       var endSel = document.getElementById('end-month');
@@ -329,6 +362,11 @@
           applyQuickRange(parseInt(btn.getAttribute('data-months'), 10));
         });
       });
+      initMonthRangeReset({
+        startSel: startSel,
+        endSel: endSel,
+        onReset: renderCharts
+      });
 
       function getSelectedLevels() {
         var levels = [];
@@ -356,6 +394,7 @@
           cb.checked = selectedLevels.length > 0 && selectedLevels.indexOf(lvl) !== -1;
         });
         renderCharts();
+        if (doctorSelectionToggle) doctorSelectionToggle.update();
       }
 
       function getMonthRange() {
@@ -372,14 +411,15 @@
       function aggregateRows(selectedDoctors, startMonth, endMonth) {
         var bucket = {};
         selectedDoctors.forEach(function (doctor) {
-          DATA_PROJECTS.forEach(function (project) {
+          PROJECTS.forEach(function (project) {
             var key = project + '\t' + doctor;
             bucket[key] = {
               project: project,
               doctor: doctor,
               doctorNumber: doctorNumberMap[doctor] || 999999,
               level: getDoctorLevel(doctor),
-              quantity: 0
+              report: 0,
+              audit: 0
             };
           });
         });
@@ -389,13 +429,14 @@
           if (selectedDoctors.indexOf(row.doctor) === -1) return;
           var key = row.project + '\t' + row.doctor;
           if (!bucket[key]) return;
-          bucket[key].quantity += row.quantity;
+          bucket[key].report += row.report;
+          bucket[key].audit += row.audit;
           bucket[key].level = getDoctorLevel(row.doctor);
           if (row.doctorNumber) bucket[key].doctorNumber = row.doctorNumber;
         });
 
         var byProject = {};
-        DATA_PROJECTS.forEach(function (project) {
+        PROJECTS.forEach(function (project) {
           byProject[project] = selectedDoctors.map(function (doctor) {
             return bucket[project + '\t' + doctor];
           });
@@ -405,10 +446,7 @@
 
       function renderCharts() {
         var range = getMonthRange();
-        var selectedLevels = getSelectedLevels();
-        var selectedDoctors = getSelectedDoctors().filter(function (doctor) {
-          return selectedLevels.length === 0 || selectedLevels.indexOf(getDoctorLevel(doctor)) !== -1;
-        });
+        var selectedDoctors = getSelectedDoctors();
         var root = document.getElementById('project-charts');
         root.innerHTML = '';
 
@@ -426,42 +464,31 @@
           : range.startMonth + ' 至 ' + range.endMonth;
         var byProject = aggregateRows(selectedDoctors, range.startMonth, range.endMonth);
         PROJECTS.forEach(function (project, index) {
-          if (project === 'CT报告、审核总数') {
-            createChartCard(
-              project,
-              byProject['CT报告总数'],
-              index,
-              rangeLabel,
-              [
-                {
-                  name: 'CT审核总数',
-                  data: byProject['CT审核总数'].map(function (row) { return row.quantity; }),
-                  color: '#f59e0b'
-                },
-                {
-                  name: 'CT报告总数',
-                  data: byProject['CT报告总数'].map(function (row) { return row.quantity; }),
-                  color: '#4a90d9'
-                }
-              ]
-            );
-          } else {
-            createChartCard(project, byProject[project], index, rangeLabel);
-          }
+          createChartCard(project, byProject[project], index, rangeLabel);
         });
       }
 
-      document.getElementById('doctor-select-all').onclick = function () {
-        document.querySelectorAll('.level-filter').forEach(function (cb) {
-          // 「其它」默认保持不勾选；用户手动勾选后，全选也不强制改回
-          if (cb.value !== '其它') cb.checked = true;
-        });
-        syncDoctorCheckboxesByLevel();
-      };
-      document.getElementById('doctor-select-clear').onclick = function () {
-        document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = false; });
-        syncDoctorCheckboxesByLevel();
-      };
+      var doctorSelectionToggle = initDoctorSelectionToggle({
+        button: document.getElementById('doctor-select-all'),
+        root: document,
+        getCheckboxes: function () {
+          return Array.prototype.filter.call(
+            doctorContainer.querySelectorAll('.doctor-filter'),
+            function (cb) { return !!VALID_LEVELS[getDoctorLevel(cb.value)]; }
+          );
+        },
+        selectAll: function () {
+          document.querySelectorAll('.level-filter').forEach(function (cb) {
+            // 「其它」继续保持既有规则：全选不主动勾选。
+            if (cb.value !== '其它') cb.checked = true;
+          });
+          syncDoctorCheckboxesByLevel();
+        },
+        clear: function () {
+          document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = false; });
+          syncDoctorCheckboxesByLevel();
+        }
+      });
       document.querySelectorAll('.level-filter').forEach(function (cb) {
         cb.addEventListener('change', syncDoctorCheckboxesByLevel);
       });
@@ -479,22 +506,19 @@
 
       document.getElementById('export-excel-btn').onclick = function () {
         var range = getMonthRange();
-        var selectedLevels = getSelectedLevels();
-        var selectedDoctors = getSelectedDoctors().filter(function (doctor) {
-          return selectedLevels.length === 0 || selectedLevels.indexOf(getDoctorLevel(doctor)) !== -1;
-        });
+        var selectedDoctors = getSelectedDoctors();
         if (!selectedDoctors.length) {
           alert('请至少选择一名医生');
           return;
         }
         var byProject = aggregateRows(selectedDoctors, range.startMonth, range.endMonth);
-        var exportHeader = ['年月范围', '统计项目', '医生编号', '医生', '医生等级', '数量'];
+        var exportHeader = ['年月范围', '统计项目', '医生编号', '医生', '医生等级', '报告数量', '审核数量', '总数量'];
         var exportRows = [];
         var rangeLabel = range.startMonth === range.endMonth
           ? range.startMonth
           : range.startMonth + ' 至 ' + range.endMonth;
 
-        DATA_PROJECTS.forEach(function (project) {
+        PROJECTS.forEach(function (project) {
           byProject[project].forEach(function (item) {
             exportRows.push([
               rangeLabel,
@@ -502,7 +526,9 @@
               item.doctorNumber === 999999 ? '' : item.doctorNumber,
               item.doctor,
               item.level,
-              item.quantity
+              item.report,
+              item.audit,
+              item.report + item.audit
             ]);
           });
         });

@@ -1,58 +1,45 @@
 (function () {
-  var VALID_USER = 'cauvet';
-  var VALID_PASS = 'cauvet';
-  var STORAGE_KEY = 'dash_auth_token';
-  var MIN_LOADING_MS = 700;
-  var loadingShown = false;
-  var navigating = false;
-
   function $(id) { return document.getElementById(id); }
   function setError(msg) { $('error').textContent = msg || ''; }
-  function showLoading() {
-    if (loadingShown) return;
-    loadingShown = true;
-    var overlay = document.createElement('div');
-    overlay.className = 'page-loading-overlay show';
-    overlay.innerHTML = '<div class="page-loading-spinner" aria-hidden="true"></div>';
-    document.body.appendChild(overlay);
+
+  function go(url) {
+    window.location.replace(url);
   }
 
-  function redirectWithLoading(url, useReplace) {
-    if (navigating) return;
-    navigating = true;
-    showLoading();
-    window.setTimeout(function () {
-      if (useReplace) {
-        window.location.replace(url);
-      } else {
-        window.location.href = url;
+  async function boot() {
+    try {
+      var result = await DashAuth0.handleRedirectIfPresent();
+      if (result) {
+        var target = (result.appState && result.appState.returnTo) || DashAuth0.rootPath('index.html');
+        go(target);
+        return;
       }
-    }, MIN_LOADING_MS);
+
+      if (await DashAuth0.isAuthenticated()) {
+        go(DashAuth0.rootPath('index.html'));
+        return;
+      }
+
+      await DashAuth0.login({ returnTo: DashAuth0.rootPath('index.html') });
+      return;
+    } catch (err) {
+      setError(err && err.message ? err.message : 'Auth0 初始化失败');
+    }
+
+    document.querySelector('.login-card').hidden = false;
+    $('login-btn').disabled = false;
   }
 
-  function handleLogin() {
-    var u = $('username').value.trim();
-    var p = $('password').value;
-    if (!u || !p) {
-      setError('请输入账号和密码');
-      return;
+  $('login-btn').addEventListener('click', async function () {
+    setError('');
+    $('login-btn').disabled = true;
+    try {
+      await DashAuth0.login({ returnTo: DashAuth0.rootPath('index.html') });
+    } catch (err) {
+      $('login-btn').disabled = false;
+      setError(err && err.message ? err.message : '无法跳转到 Auth0 登录');
     }
-    if (u !== VALID_USER || p !== VALID_PASS) {
-      setError('账号或密码错误');
-      return;
-    }
-    try { localStorage.setItem(STORAGE_KEY, 'logged_in'); } catch (e) {}
-    redirectWithLoading('index.html', false);
-  }
-
-  $('login-btn').addEventListener('click', handleLogin);
-  $('password').addEventListener('keydown', function (e) {
-    if (e.key === 'Enter') handleLogin();
   });
 
-  try {
-    if (localStorage.getItem(STORAGE_KEY) === 'logged_in') {
-      redirectWithLoading('index.html', true);
-    }
-  } catch (e) {}
+  boot();
 })();

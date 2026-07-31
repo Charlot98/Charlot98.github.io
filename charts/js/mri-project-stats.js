@@ -77,7 +77,7 @@
       credits: { enabled: false },
       title: {
         text: project + '（' + rangeLabel + '）',
-        align: 'left',
+        align: 'center',
         margin: 24,
         style: { fontSize: '18px', fontWeight: '600' }
       },
@@ -245,20 +245,24 @@
       }
 
       var months = Object.keys(monthSet).sort();
-      // 默认顺序固定为医生列表顺序；列表中没有数据的人也保留，保证选中后可显示 0
-      var doctorNames = doctorOrder.slice();
+      // 主列表：预备/初级/中级/高级；「其它」等级（如康博）单独分区
+      var listedDoctors = doctorOrder.filter(function (d) {
+        return VALID_LEVELS[getDoctorLevel(d)];
+      });
+      var otherDoctors = doctorOrder.filter(function (d) {
+        return !VALID_LEVELS[getDoctorLevel(d)];
+      });
       Object.keys(doctorSet).forEach(function (d) {
         if (doctorOrder.indexOf(d) === -1 && !EXCLUDED_DOCTORS[d]) {
-          doctorNames.push(d);
+          otherDoctors.push(d);
         }
       });
+      var doctorNames = listedDoctors.concat(otherDoctors);
 
       var doctorContainer = document.getElementById('doctor-checkboxes');
-      doctorNames.forEach(function (name) {
+      function createDoctorCheckbox(name) {
         var label = document.createElement('label');
-        label.style.display = 'inline-block';
-        label.style.marginRight = '8px';
-        label.style.whiteSpace = 'nowrap';
+        label.className = 'doctor-checkbox-label';
         var cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.className = 'doctor-filter';
@@ -266,8 +270,26 @@
         cb.checked = true;
         label.appendChild(cb);
         label.appendChild(document.createTextNode(' ' + name));
-        doctorContainer.appendChild(label);
+        return label;
+      }
+      var mainList = document.createElement('div');
+      mainList.className = 'doctor-checkbox-list-main';
+      listedDoctors.forEach(function (name) {
+        mainList.appendChild(createDoctorCheckbox(name));
       });
+      if (mainList.childNodes.length) doctorContainer.appendChild(mainList);
+      if (otherDoctors.length) {
+        var otherRow = document.createElement('div');
+        otherRow.className = 'doctor-checkbox-list-other';
+        var otherTitle = document.createElement('div');
+        otherTitle.className = 'doctor-checkbox-other-title';
+        otherTitle.textContent = '其它';
+        otherRow.appendChild(otherTitle);
+        otherDoctors.forEach(function (name) {
+          otherRow.appendChild(createDoctorCheckbox(name));
+        });
+        doctorContainer.appendChild(otherRow);
+      }
 
       var startSel = document.getElementById('start-month');
       var endSel = document.getElementById('end-month');
@@ -326,6 +348,11 @@
           applyQuickRange(parseInt(btn.getAttribute('data-months'), 10));
         });
       });
+      initMonthRangeReset({
+        startSel: startSel,
+        endSel: endSel,
+        onReset: renderCharts
+      });
 
       function getSelectedLevels() {
         var levels = [];
@@ -353,6 +380,7 @@
           cb.checked = selectedLevels.length > 0 && selectedLevels.indexOf(lvl) !== -1;
         });
         renderCharts();
+        if (doctorSelectionToggle) doctorSelectionToggle.update();
       }
 
       function getMonthRange() {
@@ -404,10 +432,7 @@
 
       function renderCharts() {
         var range = getMonthRange();
-        var selectedLevels = getSelectedLevels();
-        var selectedDoctors = getSelectedDoctors().filter(function (doctor) {
-          return selectedLevels.length === 0 || selectedLevels.indexOf(getDoctorLevel(doctor)) !== -1;
-        });
+        var selectedDoctors = getSelectedDoctors();
         var root = document.getElementById('project-charts');
         root.innerHTML = '';
 
@@ -429,17 +454,27 @@
         });
       }
 
-      document.getElementById('doctor-select-all').onclick = function () {
-        document.querySelectorAll('.level-filter').forEach(function (cb) {
-          // 「其它」默认保持不勾选；用户手动勾选后，全选也不强制改回
-          if (cb.value !== '其它') cb.checked = true;
-        });
-        syncDoctorCheckboxesByLevel();
-      };
-      document.getElementById('doctor-select-clear').onclick = function () {
-        document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = false; });
-        syncDoctorCheckboxesByLevel();
-      };
+      var doctorSelectionToggle = initDoctorSelectionToggle({
+        button: document.getElementById('doctor-select-all'),
+        root: document,
+        getCheckboxes: function () {
+          return Array.prototype.filter.call(
+            doctorContainer.querySelectorAll('.doctor-filter'),
+            function (cb) { return !!VALID_LEVELS[getDoctorLevel(cb.value)]; }
+          );
+        },
+        selectAll: function () {
+          document.querySelectorAll('.level-filter').forEach(function (cb) {
+            // 「其它」继续保持既有规则：全选不主动勾选。
+            if (cb.value !== '其它') cb.checked = true;
+          });
+          syncDoctorCheckboxesByLevel();
+        },
+        clear: function () {
+          document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = false; });
+          syncDoctorCheckboxesByLevel();
+        }
+      });
       document.querySelectorAll('.level-filter').forEach(function (cb) {
         cb.addEventListener('change', syncDoctorCheckboxesByLevel);
       });
@@ -457,10 +492,7 @@
 
       document.getElementById('export-excel-btn').onclick = function () {
         var range = getMonthRange();
-        var selectedLevels = getSelectedLevels();
-        var selectedDoctors = getSelectedDoctors().filter(function (doctor) {
-          return selectedLevels.length === 0 || selectedLevels.indexOf(getDoctorLevel(doctor)) !== -1;
-        });
+        var selectedDoctors = getSelectedDoctors();
         if (!selectedDoctors.length) {
           alert('请至少选择一名医生');
           return;

@@ -5,14 +5,14 @@
   <meta charset="UTF-8" />
   <link rel="icon" href="statistics.png" type="image/png" />
   <title>MRI 医生工作量（入职时长）</title>
-  <link rel="stylesheet" href="css/common.css" />
-  <link rel="stylesheet" href="css/vets.css" />
-  <link rel="stylesheet" href="css/ct_mri.css" />
+  <link rel="stylesheet" href="css/common.css?v=20260801b" />
+  <link rel="stylesheet" href="css/vets.css?v=20260801a" />
+  <link rel="stylesheet" href="css/ct_mri.css?v=20260731" />
   <script src="js/auth.js"></script>
   <script src="js/nav-items.js"></script>
   <script src="js/nav-sidebar.js"></script>
   <script src="js/highcharts.js"></script>
-  <script src="js/utils.js"></script>
+  <script src="js/utils.js?v=20260801b"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="page-workload">
@@ -35,10 +35,8 @@
         <label class="chip"><input type="checkbox" class="level-filter" value="其它" /> 其它</label>
       </div>
       <div class="filter-group filter-group-doctors">
-        <span class="filter-label">医生：</span>
         <span class="doctor-actions">
           <button id="doctor-select-all" type="button">全选</button>
-          <button id="doctor-select-clear" type="button">取消全选</button>
         </span>
       </div>
     </div>
@@ -48,12 +46,16 @@
 
     <div class="page-header page-header-vets">
       <div class="page-controls">
-        <span>入职</span>
-        <input type="number" id="min-days" min="0" step="1" value="0" style="width:80px;" />
-        <span>天（开始）</span>
-        <span style="margin-left:16px;">入职</span>
-        <input type="number" id="max-days" min="0" step="1" value="5000" style="width:80px;" />
-        <span>天（结束）</span>
+        <span>入职时长：</span>
+        <select id="tenure-range" class="tenure-range-select" aria-label="入职时长筛选">
+          <option value="30">1月</option>
+          <option value="90">3月</option>
+          <option value="180">6月</option>
+          <option value="365">1年</option>
+          <option value="730">2年</option>
+          <option value="1095">3年</option>
+          <option value="all" selected>全部</option>
+        </select>
         <button type="button" id="export-excel-btn" class="btn-export">导出 Excel</button>
       </div>
     </div>
@@ -65,6 +67,6 @@
   <script>
     window.WORKLOAD_PAGE = { csvPath: 'csv/mri_doctor_workload.csv', label: 'MRI', useTenure: true };
   </script>
-  <script src="js/ct_mri_workload.js"></script>
+  <script src="js/ct_mri_workload.js?v=20260731d"></script>
 </body>
 </html>

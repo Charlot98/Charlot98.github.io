@@ -5,10 +5,12 @@
   <meta charset="UTF-8" />
   <link rel="icon" href="statistics.png" type="image/png" />
   <title>门诊挂号医生接诊量散点图</title>
-  <link rel="stylesheet" href="css/common.css" />
+  <link rel="stylesheet" href="css/common.css?v=20260801b" />
   <script src="js/auth.js"></script>
+  <script src="js/nav-items.js"></script>
+  <script src="js/nav-sidebar.js"></script>
   <script src="js/highcharts.js"></script>
-  <script src="js/utils.js"></script>
+  <script src="js/utils.js?v=20260801b"></script>
   <style>
     .doctor-filter-panel {
       display: flex;
@@ -16,9 +18,9 @@
       align-items: flex-start;
       gap: 12px 18px;
       width: 100%;
-      background: #f8fafc;
-      border: 1px solid #dbe4ee;
-      border-radius: 10px;
+      background: transparent;
+      border: none;
+      border-radius: 0;
       padding: 12px 14px;
       box-sizing: border-box;
     }
@@ -60,7 +62,6 @@
     }
     .doctor-search:focus {
       border-color: #0074a6;
-      box-shadow: 0 0 0 2px rgba(0, 116, 166, 0.12);
     }
     .doctor-checkbox-list {
       min-width: 240px;
@@ -68,9 +69,9 @@
       max-width: 100%;
       max-height: 240px;
       overflow-y: auto;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      background: #fff;
+      border: none;
+      border-radius: 0;
+      background: transparent;
       padding: 8px 10px;
       box-sizing: border-box;
       display: grid;
@@ -90,7 +91,9 @@
       border-radius: 4px;
     }
     .doctor-checkbox-item:hover {
-      background: #f3f8fc;
+      background: transparent;
+      text-decoration: underline;
+      text-underline-offset: 4px;
     }
     .doctor-checkbox-item input[type="checkbox"] {
       margin: 0;
@@ -137,10 +140,14 @@
   </style>
 </head>
 <body>
-  <div class="nav-top">
-    <a href="index.html">返回首页</a>
+  <div class="nav-sidebar">
+    <div class="nav-sidebar-inner">
+      <a href="index.html">返回首页</a>
+      <a></a>
+      <div class="nav-sidebar-more" data-nav-auto></div>
+    </div>
   </div>
-  <div class="main-content" style="margin-left: 16px;">
+  <div class="main-content">
     <div class="page-header page-header-cases">
       <div class="page-controls doctor-filter-panel">
         <div class="doctor-filter-left">医生筛选</div>
@@ -149,7 +156,6 @@
             <input id="doctor-search" class="doctor-search" type="text" placeholder="输入医生姓名查找（实时过滤）" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
             <div class="doctor-filter-actions">
               <button type="button" id="select-all-btn" class="btn-export">全选</button>
-              <button type="button" id="clear-btn" class="btn-export">清空</button>
             </div>
           </div>
           <div class="doctor-select-wrap">
@@ -182,7 +188,6 @@
       var endMonthSel = document.getElementById('end-month');
       var countEl = document.getElementById('doctor-count');
       var selectAllBtn = document.getElementById('select-all-btn');
-      var clearBtn = document.getElementById('clear-btn');
       var GAP_FROM = Date.UTC(2026, 1, 16);
       var GAP_TO = Date.UTC(2026, 1, 23, 23, 59, 59);
       var GAP_SIZE = GAP_TO - GAP_FROM;
@@ -398,6 +403,11 @@
           startMonthSel.value = months[0];
           endMonthSel.value = months[months.length - 1];
         }
+        initMonthRangeReset({
+          startSel: startMonthSel,
+          endSel: endMonthSel,
+          onReset: render
+        });
 
         function selectedDoctors() {
           var out = [];
@@ -418,6 +428,7 @@
             if (hit) visible++;
           }
           doctorSearch.title = '匹配医生：' + visible + ' 位';
+          if (doctorSelectionToggle) doctorSelectionToggle.update();
         }
 
         function render() {
@@ -564,27 +575,42 @@
           });
         }
 
+        var doctorSelectionToggle = initDoctorSelectionToggle({
+          button: selectAllBtn,
+          root: doctorList,
+          watchSelector: 'input[type="checkbox"]',
+          getCheckboxes: function () {
+            var visibleBoxes = [];
+            var items = doctorList.querySelectorAll('.doctor-checkbox-item');
+            for (var i = 0; i < items.length; i++) {
+              if (items[i].style.display === 'none') continue;
+              var checkbox = items[i].querySelector('input[type="checkbox"]');
+              if (checkbox) visibleBoxes.push(checkbox);
+            }
+            return visibleBoxes;
+          },
+          selectAll: function () {
+            var items = doctorList.querySelectorAll('.doctor-checkbox-item');
+            for (var i = 0; i < items.length; i++) {
+              if (items[i].style.display === 'none') continue;
+              var checkbox = items[i].querySelector('input[type="checkbox"]');
+              if (checkbox) checkbox.checked = true;
+            }
+            render();
+          },
+          clear: function () {
+            var boxes = doctorList.querySelectorAll('input[type="checkbox"]');
+            for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
+            render();
+          }
+        });
+
         doctorList.addEventListener('change', function (e) {
           if (e.target && e.target.type === 'checkbox') render();
         });
         doctorSearch.addEventListener('input', applyDoctorFilter);
         startMonthSel.addEventListener('change', render);
         endMonthSel.addEventListener('change', render);
-        selectAllBtn.addEventListener('click', function () {
-          var items = doctorList.querySelectorAll('.doctor-checkbox-item');
-          for (var i = 0; i < items.length; i++) {
-            if (items[i].style.display === 'none') continue;
-            var cb = items[i].querySelector('input[type="checkbox"]');
-            if (cb) cb.checked = true;
-          }
-          render();
-        });
-        clearBtn.addEventListener('click', function () {
-          var boxes = doctorList.querySelectorAll('input[type="checkbox"]');
-          for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
-          render();
-        });
-
         applyDoctorFilter();
         render();
       });

@@ -3,11 +3,12 @@
 <head>
   <base href="../../">
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="statistics.png" type="image/png" />
-  <title>MRI 医生工作量</title>
+  <title>X 线项目数量统计</title>
   <link rel="stylesheet" href="css/common.css?v=20260801b" />
   <link rel="stylesheet" href="css/vets.css?v=20260801a" />
-  <link rel="stylesheet" href="css/ct_mri.css?v=20260731" />
+  <link rel="stylesheet" href="css/project-stats.css?v=20260731" />
   <script src="js/auth.js"></script>
   <script src="js/nav-items.js"></script>
   <script src="js/nav-sidebar.js"></script>
@@ -15,7 +16,7 @@
   <script src="js/utils.js?v=20260801b"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </head>
-<body class="page-workload">
+<body>
   <div class="nav-sidebar">
     <div class="nav-sidebar-inner">
       <a href="index.html">返回首页</a>
@@ -24,7 +25,7 @@
     </div>
   </div>
 
-  <div class="main-content">
+  <div class="main-content project-stats-main">
     <div class="filters">
       <div class="filter-group">
         <span class="filter-label">医生等级：</span>
@@ -34,17 +35,17 @@
         <label class="chip"><input type="checkbox" class="level-filter" value="高级" checked /> 高级</label>
         <label class="chip"><input type="checkbox" class="level-filter" value="其它" /> 其它</label>
       </div>
-      <div class="filter-group filter-group-doctors">
+      <div class="filter-group" style="margin-left: 24px;">
         <span class="doctor-actions">
           <button id="doctor-select-all" type="button">全选</button>
         </span>
       </div>
     </div>
-    <div class="doctor-select-section">
+    <div style="padding: 0 16px 12px;">
       <div id="doctor-checkboxes"></div>
     </div>
 
-    <div class="page-header page-header-vets">
+    <div class="page-header page-header-cases project-stats-toolbar">
       <div class="page-controls">
         <span class="range-quick">
           <button type="button" class="range-quick-btn" data-months="1">近1月</button>
@@ -59,19 +60,9 @@
       </div>
     </div>
 
-    <div id="container-scatter" class="chart-container chart-vets-main"></div>
-    <div id="container-bar" class="chart-container chart-vets-total"></div>
+    <div id="project-charts" class="project-charts" aria-live="polite"></div>
   </div>
 
-  <script>
-    window.WORKLOAD_PAGE = {
-      csvPath: 'csv/mri_project_by_doctor.csv',
-      label: 'MRI',
-      dataFormat: 'mriProject',
-      projectName: 'MRI报告、审核总数',
-      stackReportAudit: true
-    };
-  </script>
-  <script src="js/ct_mri_workload.js?v=20260731c"></script>
+  <script src="js/xray-project-stats.js?v=20260731d"></script>
 </body>
 </html>

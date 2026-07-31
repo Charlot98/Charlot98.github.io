@@ -33,9 +33,15 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
   var idxAfter = header.indexOf('下午');
   var idxEven = header.indexOf('晚上');
   var idxLevel = header.indexOf('医生等级');
+  var idxReport = header.indexOf('报告数量');
+  var idxAudit = header.indexOf('审核数量');
 
   if (idxDoctor === -1 || idxDate === -1 || idxMorn === -1 || idxAfter === -1 || idxEven === -1) {
     alert('CSV 表头中缺少 必要列：医生 / 日期 / 上午 / 下午 / 晚上');
+    return;
+  }
+  if (idxReport === -1 || idxAudit === -1) {
+    alert('CSV 表头中缺少必要列：报告数量 / 审核数量');
     return;
   }
 
@@ -51,6 +57,10 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     var morn = parseFloat(cols[idxMorn] || '0');
     var after = parseFloat(cols[idxAfter] || '0');
     var even = parseFloat(cols[idxEven] || '0');
+    var reportCount = parseFloat(cols[idxReport] || '0');
+    var auditCount = parseFloat(cols[idxAudit] || '0');
+    if (isNaN(reportCount)) reportCount = 0;
+    if (isNaN(auditCount)) auditCount = 0;
     var level = doctorLevelMap[doctor] || (idxLevel >= 0 ? String(cols[idxLevel] || '').trim() : '');
 
     if (!doctor || !dateStr) continue;
@@ -73,9 +83,15 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     var monthKey = dateStr.substring(0, 7);
     rawRows.push({ cols: cols, _monthKey: monthKey });
 
-    if (total > 0) {
+    if (total > 0 || reportCount > 0 || auditCount > 0) {
       allTotalData.push({
-        x: xVal, y: total, name: doctor, level: level, _monthKey: monthKey
+        x: xVal,
+        y: total,
+        report: reportCount,
+        audit: auditCount,
+        name: doctor,
+        level: level,
+        _monthKey: monthKey
       });
     }
   }
@@ -87,16 +103,25 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     });
   });
   var months = Object.keys(monthSet).sort();
-  var doctorNames = doctorOrder.filter(function (d) { return doctorSet[d]; });
-  var extra = Object.keys(doctorSet).filter(function (d) { return doctorOrder.indexOf(d) === -1; });
-  doctorNames = doctorNames.concat(extra.sort());
+  var MAIN_LEVELS = { '预备': true, '初级': true, '中级': true, '高级': true };
+  function getDoctorLevel(name) {
+    return doctorLevelMap[name] || '其它';
+  }
+  function isMainLevelDoctor(name) {
+    return !!MAIN_LEVELS[getDoctorLevel(name)];
+  }
+
+  // 超声：不展示「其它」等级医生（如康博）；未勾选即不计入图表
+  var listedDoctors = doctorOrder.filter(function (d) {
+    return doctorSet[d] && isMainLevelDoctor(d);
+  });
+  var doctorNames = listedDoctors;
 
   var doctorContainer = document.getElementById('doctor-checkboxes');
-  doctorNames.forEach(function (name) {
+
+  function createDoctorCheckbox(name) {
     var label = document.createElement('label');
-    label.style.display = 'inline-block';
-    label.style.marginRight = '8px';
-    label.style.whiteSpace = 'nowrap';
+    label.className = 'doctor-checkbox-label';
     var cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.className = 'doctor-filter';
@@ -104,32 +129,45 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     cb.checked = true;
     label.appendChild(cb);
     label.appendChild(document.createTextNode(' ' + name));
-    doctorContainer.appendChild(label);
+    return label;
+  }
+
+  var mainList = document.createElement('div');
+  mainList.className = 'doctor-checkbox-list-main';
+  listedDoctors.forEach(function (name) {
+    mainList.appendChild(createDoctorCheckbox(name));
   });
+  if (mainList.childNodes.length) doctorContainer.appendChild(mainList);
 
   function syncDoctorCheckboxesByLevel() {
     var selectedLevels = getSelectedLevels();
     doctorContainer.querySelectorAll('.doctor-filter').forEach(function (cb) {
-      var lvl = doctorLevelMap[cb.value];
-      cb.checked = selectedLevels.length > 0 && (!lvl || selectedLevels.indexOf(lvl) !== -1);
+      var lvl = getDoctorLevel(cb.value);
+      cb.checked = selectedLevels.length > 0 && selectedLevels.indexOf(lvl) !== -1;
     });
     renderCharts();
+    if (doctorSelectionToggle) doctorSelectionToggle.update();
   }
 
   document.querySelectorAll('.doctor-filter').forEach(function (cb) {
     cb.addEventListener('change', renderCharts);
   });
 
-  document.getElementById('doctor-select-all').onclick = function () {
-    document.querySelectorAll('.level-filter').forEach(function (cb) {
-      if (cb.value !== '其它') cb.checked = true;
-    });
-    syncDoctorCheckboxesByLevel();
-  };
-  document.getElementById('doctor-select-clear').onclick = function () {
-    document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = false; });
-    syncDoctorCheckboxesByLevel();
-  };
+  var doctorSelectionToggle = initDoctorSelectionToggle({
+    button: document.getElementById('doctor-select-all'),
+    root: document,
+    getCheckboxes: function () { return doctorContainer.querySelectorAll('.doctor-filter'); },
+    selectAll: function () {
+      document.querySelectorAll('.level-filter').forEach(function (cb) {
+        if (cb.value !== '其它') cb.checked = true;
+      });
+      syncDoctorCheckboxesByLevel();
+    },
+    clear: function () {
+      document.querySelectorAll('.level-filter').forEach(function (cb) { cb.checked = false; });
+      syncDoctorCheckboxesByLevel();
+    }
+  });
 
   var startSel = document.getElementById('start-month');
   var endSel = document.getElementById('end-month');
@@ -163,15 +201,13 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     document.querySelectorAll('.doctor-filter').forEach(function (cb) {
       if (cb.checked) docs.push(cb.value);
     });
-    return docs.length ? docs : doctorNames;
+    return docs;
   }
 
-  function filterData(data, selectedLevels, selectedDoctors) {
+  function filterData(data, selectedDoctors) {
     return data.filter(function (point) {
       if (point.name && selectedDoctors.indexOf(point.name) === -1) return false;
-      if (!point.level) return true;
-      if (selectedLevels.length === 0) return true;
-      return selectedLevels.indexOf(point.level) !== -1;
+      return true;
     });
   }
 
@@ -249,7 +285,6 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
   }
 
   function renderCharts() {
-    var selectedLevels = getSelectedLevels();
     var selectedDoctors = getSelectedDoctors();
     var startMonth = startSel.value;
     var endMonth = endSel.value;
@@ -259,7 +294,7 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     var sameMonthRange = (startMonth === endMonth);
 
     var totalData = filterDataByMonth(
-      filterData(allTotalData, selectedLevels, selectedDoctors), startMonth, endMonth);
+      filterData(allTotalData, selectedDoctors), startMonth, endMonth);
 
     var tickInt = sameMonthRange ? 24 * 3600 * 1000 * 10 : 30 * 24 * 3600 * 1000;
     var labelFmt = function () {
@@ -330,18 +365,28 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     });
 
     var filteredForSum = filterDataByMonth(
-      filterData(allTotalData, selectedLevels, selectedDoctors), startMonth, endMonth);
-    var doctorTotals = {};
-    selectedDoctors.forEach(function (doc) { doctorTotals[doc] = 0; });
+      filterData(allTotalData, selectedDoctors), startMonth, endMonth);
+    var doctorReport = {};
+    var doctorAudit = {};
+    selectedDoctors.forEach(function (doc) {
+      doctorReport[doc] = 0;
+      doctorAudit[doc] = 0;
+    });
     filteredForSum.forEach(function (p) {
-      if (doctorTotals[p.name] !== undefined) doctorTotals[p.name] += p.y;
+      if (doctorReport[p.name] === undefined) return;
+      doctorReport[p.name] += p.report || 0;
+      doctorAudit[p.name] += p.audit || 0;
     });
     var barCategories = selectedDoctors;
-    var barData = selectedDoctors.map(function (d) { return doctorTotals[d] || 0; });
+    var reportData = selectedDoctors.map(function (d) { return doctorReport[d] || 0; });
+    var auditData = selectedDoctors.map(function (d) { return doctorAudit[d] || 0; });
 
     Highcharts.chart('container-cumulative', {
       chart: { type: 'column' },
-      title: { text: (startMonth === endMonth ? startMonth : startMonth + ' 至 ' + endMonth) + ' 病例总数（按医生）' },
+      title: {
+        text: (startMonth === endMonth ? startMonth : startMonth + ' 至 ' + endMonth) +
+          ' 报告 / 审核数量（按医生）'
+      },
       xAxis: {
         type: 'category',
         categories: barCategories
@@ -349,18 +394,59 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
       yAxis: {
         title: { text: '检查量（次数）' },
         min: 0,
-        allowDecimals: false
+        allowDecimals: false,
+        stackLabels: {
+          enabled: true,
+          formatter: function () { return this.total; },
+          style: {
+            color: '#374151',
+            fontSize: '10px',
+            fontWeight: '600',
+            textOutline: 'none'
+          }
+        }
       },
       credits: { enabled: false },
+      legend: {
+        align: 'right',
+        verticalAlign: 'top',
+        y: 0
+      },
       tooltip: {
-        pointFormat: '<b>{point.y}</b> 例'
+        shared: true,
+        formatter: function () {
+          var points = this.points || [];
+          var total = 0;
+          var lines = ['<b>' + this.x + '</b>'];
+          points.forEach(function (point) {
+            total += point.y;
+            lines.push(
+              '<span style="color:' + point.color + '">●</span> ' +
+              point.series.name + '：<b>' + point.y + '</b>'
+            );
+          });
+          lines.push('合计：<b>' + total + '</b>');
+          return lines.join('<br/>');
+        }
       },
       plotOptions: {
         column: {
-          dataLabels: { enabled: true }
+          stacking: 'normal',
+          borderWidth: 0,
+          maxPointWidth: 28,
+          groupPadding: 0.08,
+          pointPadding: 0.02,
+          dataLabels: { enabled: false }
+        },
+        series: {
+          animation: false,
+          states: { inactive: { opacity: 1 } }
         }
       },
-      series: [{ name: '病例总数', data: barData, showInLegend: false }]
+      series: [
+        { name: '审核数量', data: auditData, color: '#f59e0b' },
+        { name: '报告数量', data: reportData, color: '#4a90d9' }
+      ]
     });
   }
 
@@ -379,16 +465,11 @@ loadCSV('csv/doctor_list.csv', function (listCsv) {
     var startMonth = startSel.value;
     var endMonth = endSel.value;
     if (startMonth > endMonth) { var t = startMonth; startMonth = endMonth; endMonth = t; }
-    var selectedLevels = getSelectedLevels();
     var selectedDoctors = getSelectedDoctors();
     var filtered = rawRows.filter(function (r) {
       if (r._monthKey < startMonth || r._monthKey > endMonth) return false;
       var doc = r.cols[idxDoctor];
       if (!doc || selectedDoctors.indexOf(doc) === -1) return false;
-      if (selectedLevels.length > 0) {
-        var lvl = doctorLevelMap[doc] || (idxLevel >= 0 ? (r.cols[idxLevel] || '').trim() : '');
-        if (lvl && selectedLevels.indexOf(lvl) === -1) return false;
-      }
       return true;
     });
     var rows = filtered.map(function (r) { return r.cols; });

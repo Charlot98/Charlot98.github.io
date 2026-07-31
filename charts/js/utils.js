@@ -2,8 +2,15 @@
   var font = '"宋体", "SimSun", STSong, serif';
   if (typeof Highcharts !== 'undefined') {
     Highcharts.setOptions({
-      chart: { style: { fontFamily: font } },
-      title: { style: { fontFamily: font } },
+      chart: {
+        backgroundColor: 'transparent',
+        plotBackgroundColor: 'transparent',
+        borderWidth: 0,
+        plotBorderWidth: 0,
+        shadow: false,
+        style: { fontFamily: font }
+      },
+      title: { align: 'center', style: { fontFamily: font } },
       subtitle: { style: { fontFamily: font } },
       xAxis: {
         title: { style: { fontFamily: font } },
@@ -21,6 +28,93 @@
     });
   }
 })();
+
+/**
+ * 将日期或入职时长控件行移到内容区顶部，并交由共享样式保持置顶。
+ */
+function initStickyRangeToolbar() {
+  var candidates = Array.prototype.slice.call(
+    document.querySelectorAll('.page-controls, .month-range-controls, .chart-inner-controls')
+  );
+  var toolbar = candidates.find(function (candidate) {
+    if (candidate.classList.contains('month-range-controls')) return true;
+    return Boolean(candidate.querySelector('#start-month, #tenure-range'));
+  });
+  if (!toolbar || toolbar.classList.contains('page-range-toolbar')) return toolbar || null;
+
+  var content = toolbar.closest('.main-content, .project-stats-main');
+  if (!content) return null;
+
+  var formerParent = toolbar.parentElement;
+  toolbar.classList.add('page-range-toolbar');
+  content.insertBefore(toolbar, content.firstElementChild);
+
+  if (
+    formerParent &&
+    formerParent.classList.contains('page-header') &&
+    !formerParent.children.length &&
+    !formerParent.textContent.trim()
+  ) {
+    formerParent.remove();
+  }
+  return toolbar;
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initStickyRangeToolbar);
+} else {
+  initStickyRangeToolbar();
+}
+
+/**
+ * 将医生“全选/取消全选”合并为一个状态同步的切换按钮。
+ * getCheckboxes 应只返回当前实际可选的医生复选框。
+ */
+function initDoctorSelectionToggle(options) {
+  var button = options.button;
+  var root = options.root || document;
+  var watchSelector = options.watchSelector || '.doctor-filter, .level-filter';
+  if (!button || typeof options.getCheckboxes !== 'function') return null;
+
+  function getCheckboxes() {
+    return Array.prototype.slice.call(options.getCheckboxes() || []).filter(function (checkbox) {
+      return !checkbox.disabled;
+    });
+  }
+
+  function isAllSelected() {
+    var checkboxes = getCheckboxes();
+    return checkboxes.length > 0 && checkboxes.every(function (checkbox) {
+      return checkbox.checked;
+    });
+  }
+
+  function update() {
+    var allSelected = isAllSelected();
+    button.textContent = allSelected ? '取消全选' : '全选';
+    button.classList.toggle('active', allSelected);
+    button.setAttribute('aria-pressed', allSelected ? 'true' : 'false');
+    return allSelected;
+  }
+
+  button.addEventListener('click', function () {
+    if (isAllSelected()) {
+      if (typeof options.clear === 'function') options.clear();
+    } else if (typeof options.selectAll === 'function') {
+      options.selectAll();
+    }
+    update();
+  });
+
+  root.addEventListener('change', function (event) {
+    if (event.target && event.target.matches && event.target.matches(watchSelector)) {
+      window.setTimeout(update, 0);
+    }
+  });
+
+  update();
+  return { update: update, isAllSelected: isAllSelected };
+}
 
 function loadCSV(path, callback) {
   var xhr = new XMLHttpRequest();
@@ -66,6 +160,41 @@ function parseCSV(text) {
   row.push(field);
   if (row.length > 1 || (row.length === 1 && row[0] !== '')) rows.push(row);
   return rows;
+}
+
+/**
+ * 在月份范围旁添加「重置」按钮，恢复初始化时的默认范围。
+ */
+function initMonthRangeReset(options) {
+  var startSel = options.startSel;
+  var endSel = options.endSel;
+  var onReset = options.onReset;
+  var root = options.root || document;
+  if (!startSel || !endSel) return null;
+
+  var defaultStart = options.defaultStart != null ? options.defaultStart : startSel.value;
+  var defaultEnd = options.defaultEnd != null ? options.defaultEnd : endSel.value;
+  var resetButton = root.querySelector('.range-reset-btn');
+
+  function reset() {
+    startSel.value = defaultStart;
+    endSel.value = defaultEnd;
+    root.querySelectorAll('.range-quick-btn').forEach(function (button) {
+      button.classList.remove('active');
+    });
+    if (typeof onReset === 'function') onReset();
+  }
+
+  if (!resetButton) {
+    resetButton = document.createElement('button');
+    resetButton.type = 'button';
+    resetButton.className = 'range-reset-btn';
+    resetButton.textContent = '重置';
+    resetButton.title = '恢复默认日期范围';
+    endSel.insertAdjacentElement('afterend', resetButton);
+  }
+  resetButton.addEventListener('click', reset);
+  return { reset: reset, button: resetButton };
 }
 
 /**
@@ -118,7 +247,52 @@ function initMonthQuickRange(options) {
   if (startSel) startSel.addEventListener('change', function () { setActive(null); });
   if (endSel) endSel.addEventListener('change', function () { setActive(null); });
 
-  return { apply: apply, clearActive: function () { setActive(null); } };
+  var resetControl = initMonthRangeReset({
+    startSel: startSel,
+    endSel: endSel,
+    onReset: onApply,
+    root: root
+  });
+
+  return {
+    apply: apply,
+    reset: resetControl ? resetControl.reset : function () {},
+    clearActive: function () { setActive(null); }
+  };
+}
+
+/**
+ * 绑定入职时长下拉框，并提供统一的当前筛选范围。
+ */
+function initTenureRangeSelect(options) {
+  options = options || {};
+  var root = options.root || document;
+  var onApply = options.onApply;
+  var select = root.querySelector('#tenure-range');
+
+  function getRange() {
+    if (!select) return { minDays: 0, maxDays: Infinity, label: '全部' };
+    var maxDays = select.value === 'all' || select.value === ''
+      ? Infinity
+      : parseInt(select.value, 10);
+    if (isNaN(maxDays)) maxDays = Infinity;
+    var selectedOption = select.options[select.selectedIndex];
+    return {
+      minDays: 0,
+      maxDays: maxDays,
+      label: selectedOption ? selectedOption.textContent.trim() : '全部'
+    };
+  }
+
+  if (select) {
+    select.addEventListener('change', function () {
+      if (typeof onApply === 'function') onApply(getRange());
+    });
+  }
+
+  return {
+    getRange: getRange
+  };
 }
 
 /** 导出为 Excel：header 为表头数组，rows 为二维数组（每行一列数组），filename 不含扩展名会补 .xlsx */
