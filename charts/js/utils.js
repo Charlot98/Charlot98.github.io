@@ -117,16 +117,33 @@ function initDoctorSelectionToggle(options) {
 }
 
 function loadCSV(path, callback) {
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', new URL(path, document.baseURI).href, true);
-  xhr.onload = function () {
-    if (xhr.status === 200 || xhr.status === 0) {
-      callback(xhr.responseText);
-    } else {
-      alert('加载 CSV 失败: ' + xhr.status);
+  var ready = window.DashBootstrap || Promise.resolve();
+  ready.then(function () {
+    if (!window.DashData || typeof window.DashData.loadCSV !== 'function') {
+      throw new Error('Supabase数据源尚未初始化');
     }
-  };
-  xhr.send();
+    return window.DashData.loadCSV(path);
+  })
+      .then(callback)
+      .catch(function (error) {
+        console.error(error);
+        alert('加载Supabase数据失败：' + (error && error.message ? error.message : error));
+      });
+}
+
+function loadPersonalCSV(doctorName, callback) {
+  var ready = window.DashBootstrap || Promise.resolve();
+  ready.then(function () {
+    if (!window.DashData || typeof window.DashData.loadPersonalCSV !== 'function') {
+      throw new Error('Supabase个人数据源尚未初始化');
+    }
+    return window.DashData.loadPersonalCSV(doctorName);
+  })
+      .then(callback)
+      .catch(function (error) {
+        console.error(error);
+        alert('加载Supabase个人数据失败：' + (error && error.message ? error.message : error));
+      });
 }
 
 // 解析 CSV 为二维数组，支持引号、逗号与换行

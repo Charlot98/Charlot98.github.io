@@ -506,7 +506,13 @@
 
     if (!isResultPage) return;
 
-    loadCSV('csv/personal_daily_by_doctor.csv?v=20260731-4', function (dailyText) {
+    var selectedDoctor = queryDoctorName().trim();
+    if (!selectedDoctor || !doctorIndex[selectedDoctor]) {
+      window.location.replace(SEARCH_PAGE);
+      return;
+    }
+
+    loadPersonalCSV(selectedDoctor, function (dailyText) {
       var rows = parseCSV(dailyText);
       if (!rows.length) return;
       var header = rows[0].map(function (name) {
@@ -553,12 +559,7 @@
       }
       renderYearSelector();
 
-      var doctor = queryDoctorName().trim();
-      if (!doctor || !doctorIndex[doctor]) {
-        window.location.replace(SEARCH_PAGE);
-        return;
-      }
-      showResult(doctor);
+      showResult(selectedDoctor);
     });
   });
 })();

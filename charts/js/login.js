@@ -1,45 +1,32 @@
 (function () {
   function $(id) { return document.getElementById(id); }
-  function setError(msg) { $('error').textContent = msg || ''; }
-
-  function go(url) {
-    window.location.replace(url);
-  }
+  function setError(message) { $('error').textContent = message || ''; }
+  function go(url) { window.location.replace(url); }
 
   async function boot() {
     try {
-      var result = await DashAuth0.handleRedirectIfPresent();
-      if (result) {
-        var target = (result.appState && result.appState.returnTo) || DashAuth0.rootPath('index.html');
-        go(target);
+      if (await DashAuth.isAuthenticated()) {
+        go(DashAuth.rootPath('index.html'));
         return;
       }
-
-      if (await DashAuth0.isAuthenticated()) {
-        go(DashAuth0.rootPath('index.html'));
-        return;
-      }
-
-      await DashAuth0.login({ returnTo: DashAuth0.rootPath('index.html') });
-      return;
-    } catch (err) {
-      setError(err && err.message ? err.message : 'Auth0 初始化失败');
+    } catch (error) {
+      setError(error && error.message ? error.message : 'Supabase初始化失败');
     }
-
     document.querySelector('.login-card').hidden = false;
     $('login-btn').disabled = false;
   }
 
-  $('login-btn').addEventListener('click', async function () {
+  $('login-form').addEventListener('submit', async function (event) {
+    event.preventDefault();
     setError('');
     $('login-btn').disabled = true;
     try {
-      await DashAuth0.login({ returnTo: DashAuth0.rootPath('index.html') });
-    } catch (err) {
+      await DashAuth.login($('username').value, $('password').value);
+      go(DashAuth.rootPath('index.html'));
+    } catch (error) {
       $('login-btn').disabled = false;
-      setError(err && err.message ? err.message : '无法跳转到 Auth0 登录');
+      setError(error && error.message ? error.message : '登录失败');
     }
   });
-
   boot();
 })();

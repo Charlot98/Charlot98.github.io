@@ -10,12 +10,18 @@
 <body>
   <div class="login-card" hidden>
     <div class="login-title">统计看板登录</div>
-    <div class="login-sub">安全登录页面未能自动打开，请重试</div>
-    <div id="error" class="error"></div>
-    <button id="login-btn" class="login-btn" disabled>重新打开登录页面</button>
+    <div class="login-sub">使用管理员为你创建的账户名登录</div>
+    <form id="login-form">
+      <label for="username">账户名</label>
+      <input id="username" name="username" type="text" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9][A-Za-z0-9_-]{2,31}" required />
+      <label for="password">密码</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+      <div id="error" class="error"></div>
+      <button id="login-btn" class="login-btn" type="submit" disabled>登录</button>
+    </form>
   </div>
-  <script src="js/auth0-config.js"></script>
-  <script src="js/auth0-client.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/supabase-client.js"></script>
   <script src="js/login.js"></script>
 </body>
 </html>
