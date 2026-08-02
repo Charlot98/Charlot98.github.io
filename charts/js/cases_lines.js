@@ -176,7 +176,7 @@ loadCSV('csv/doctor_workload_by_level.csv', function (csv) {
 
     Highcharts.chart('container-level-fee', {
       chart: { type: 'line', zoomType: 'x' },
-      title: { text: '不同等级医生每日人均总费用（仅上午+下午）' },
+      title: { text: '不同等级医生每日人均总费用（不包含夜班）' },
       xAxis: {
         type: 'datetime',
         title: { text: null },

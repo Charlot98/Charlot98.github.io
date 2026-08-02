@@ -2,6 +2,12 @@ body {
   margin: 0;
   background: #fafaf7;
   font-family: var(--app-font-family);
+  font-weight: 400;
+}
+
+:root {
+  --dashboard-nav-font-size: 30px;
+  --dashboard-nav-line-height: 36px;
 }
 /* 首页保持原有的极简左侧入口，不使用内容页导航面板样式 */
 body .nav-sidebar {
@@ -24,6 +30,7 @@ body .nav-sidebar-inner > a {
   padding: 10px 12px;
   color: #6b7280;
   font-size: 14px;
+  font-weight: 400;
   text-align: center;
   white-space: nowrap;
 }
@@ -37,26 +44,28 @@ body .nav-sidebar-inner > a:hover {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 48px 20px 64px;
+  padding: 96px 20px 72px;
   box-sizing: border-box;
 }
 .dash-main {
   width: 100%;
-  max-width: 920px;
+  max-width: 620px;
   text-align: center;
 }
 .dash-section {
-  margin-bottom: 44px;
+  margin-bottom: 54px;
+  text-align: left;
 }
 .dash-section:last-child {
   margin-bottom: 0;
 }
 .dash-section-title {
-  font-size: 34px;
-  letter-spacing: 4px;
-  margin: 0 0 20px;
+  font-size: 18px;
+  letter-spacing: 1.6px;
+  line-height: 24px;
+  margin: 0 0 16px;
   color: #374151;
-  font-weight: normal;
+  font-weight: 400;
 }
 .dash-logout {
   position: fixed;
@@ -65,7 +74,8 @@ body .nav-sidebar-inner > a:hover {
 }
 .dash-logout button {
   padding: 6px 18px;
-  font-size: 20px;
+  font-size: 14px;
+  font-weight: 400;
   border-radius: 0;
   border: none;
   background: #f9fafb;
@@ -77,40 +87,63 @@ body .nav-sidebar-inner > a:hover {
   background: #e5e7eb;
 }
 .dash-title {
-  font-size: 48px;
-  letter-spacing: 6px;
-  margin: 0 0 52px;
+  font-size: 36px;
+  font-weight: 400;
+  letter-spacing: 0.8px;
+  line-height: 40px;
+  margin: 0 0 64px;
+}
+.dash-section > .dash-title {
+  margin: 0 0 24px;
+  color: #374151;
+  font-size: var(--dashboard-nav-font-size);
+  font-weight: 400;
+  letter-spacing: 1.6px;
+  line-height: var(--dashboard-nav-line-height);
+  text-align: center;
 }
 .dash-menu {
-  font-size: 40px;
-  line-height: 2.6;
-  display: inline-block;
+  display: block;
+  width: 100%;
   text-align: left;
 }
 .nav-label {
   display: inline-block;
-  width: 160px;
-  text-align: left;
-  margin-right: 48px;
-  line-height: 2;
+  justify-self: end;
+  width: auto;
+  text-align: right;
+  margin-right: 0;
+  color: #374151;
+  font-size: var(--dashboard-nav-font-size);
+  font-weight: 400;
+  letter-spacing: 1.6px;
+  line-height: var(--dashboard-nav-line-height);
 }
 .nav-text {
   display: inline-block;
+  justify-self: start;
   text-align: left;
   margin-left: 0;
 }
 .nav-row {
-  display: flex;
-  align-items: center;
+  display: grid;
+  /* 右侧链接普遍更长，中轴略向左移以获得更自然的视觉居中。 */
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+  column-gap: 36px;
+  align-items: baseline;
+  width: 100%;
+  max-width: 100%;
   padding: 0;
-  margin: 0;
-  line-height: 3;
+  margin: 0 auto 18px;
 }
 .nav-link {
   text-decoration: none;
   color: #111827;
   padding: 0;
-  line-height: 1.2;
+  font-size: var(--dashboard-nav-font-size);
+  font-weight: 400;
+  letter-spacing: 1.6px;
+  line-height: var(--dashboard-nav-line-height);
   border-radius: 0;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -140,24 +173,97 @@ body .nav-sidebar-inner > a:hover {
   background-color:  rgba(255, 80, 126, 0.85);
 }
 
-/* 窄屏下每行自动折成两行：第一行“工作量”，第二行右侧文字 */
-@media (max-width: 900px) {
+@media (max-width: 760px) {
+  body .nav-sidebar {
+    width: min(82vw, 280px);
+    min-width: 0;
+    overflow: hidden;
+    background: #ffffff;
+    border-right: 1px solid #d1d5db;
+  }
+
+  body .nav-sidebar-inner {
+    display: flex;
+    width: auto;
+    min-width: 0;
+    height: 100%;
+    padding: 58px 18px 18px 22px;
+  }
+
+  body .nav-sidebar-inner > a {
+    padding: 8px 0;
+    text-align: left;
+  }
+
+  .dash-root {
+    margin-left: 0;
+    padding: 84px 20px 52px;
+  }
+
+  .dash-main {
+    max-width: 100%;
+  }
+
+  .dash-title {
+    margin-bottom: 48px;
+    font-size: 36px;
+    letter-spacing: 0.8px;
+    line-height: 40px;
+  }
+
+  .dash-section {
+    margin-bottom: 44px;
+  }
+
+  .dash-section > .dash-title,
+  .dash-section-title {
+    margin-bottom: 20px;
+    font-size: var(--dashboard-nav-font-size);
+    line-height: var(--dashboard-nav-line-height);
+  }
+
   .dash-menu {
-    font-size: 28px;
+    width: max-content;
+    max-width: 100%;
+    margin: 0 auto;
   }
+
   .nav-row {
-    flex-wrap: wrap;
-    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    margin: 0 0 22px;
   }
+
   .nav-label {
     width: auto;
-    margin-right: 16px;
-  }
-  .nav-text {
-    display: block;
-    width: 100%;
+    margin: 0 0 4px;
     text-align: left;
-    margin-left: 0;
-    margin-top: 4px;
+  }
+
+  .nav-text {
+    width: auto;
+    max-width: 100%;
+    align-self: flex-start;
+    text-align: left;
+  }
+
+  .nav-link {
+    overflow-wrap: anywhere;
+    font-size: var(--dashboard-nav-font-size);
+    line-height: var(--dashboard-nav-line-height);
+  }
+
+  .dash-logout {
+    top: 12px;
+    right: 10px;
+  }
+
+  .dash-logout button {
+    padding: 7px 10px;
+    font-size: 15px;
   }
 }

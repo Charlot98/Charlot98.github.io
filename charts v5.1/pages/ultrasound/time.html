@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="../../">
+  <meta charset="UTF-8" />
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <title>time.html</title>
+  <link rel="stylesheet" href="css/common.css?v=20260801b" />
+  <link rel="stylesheet" href="css/vets.css?v=20260801a" />
+  <script src="js/auth.js"></script>
+  <script src="js/nav-items.js"></script>
+  <script src="js/nav-sidebar.js"></script>
+    <script src="js/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/heatmap.js"></script>
+  <script src="js/utils.js?v=20260801b"></script>
+</head>
+<body>
+  <div class="nav-sidebar">
+    <div class="nav-sidebar-inner">
+      <a href="index.html">返回首页</a>
+      <a></a>
+      <div class="nav-sidebar-more" data-nav-auto></div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div style="padding: 16px;">
+      <div class="page-header page-header-vets" style="position: sticky; top: 0; z-index: 10; background: #ffffff; padding-top: 4px; padding-bottom: 4px;">
+        <div class="page-controls">
+          <span class="range-quick">
+            <button type="button" class="range-quick-btn" data-months="1">近1月</button>
+            <button type="button" class="range-quick-btn" data-months="6">近半年</button>
+            <button type="button" class="range-quick-btn" data-months="12">近1年</button>
+          </span>
+          <span>开始月份：</span>
+          <select id="start-month"></select>
+          <span>结束月份：</span>
+          <select id="end-month"></select>
+          <button type="button" id="export-excel-btn" class="btn-export">导出 Excel</button>
+        </div>
+        <div class="page-title">交单时段</div>
+
+      </div>
+      <div style="margin-top: 16px;">
+        <div class="page-title"><b>图1：交单时段（月平均病例数）</b></div>
+        <div id="container-time-submit" class="chart-container"></div>
+      </div>
+
+
+      <div style="margin-top: 16px;">
+        <div class="page-title"><b>图2：交单时段（总病例数）</b></div>
+        <div id="container-time-submit-monthly-bubble" class="chart-container"></div>
+      </div>
+
+
+      <br>
+      <br>
+
+      <div class="page-title"><b>图3：等待时长</b></div>
+      <div style="margin-top: 16px;">
+        <div id="container-time-wait" class="chart-container"></div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <div class="page-title">图4：各时段报告数</div>
+        <div id="container-report-slot-monthly" class="chart-container"></div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <div class="page-title">图5：各时段报告数平均数</div>
+        <div id="container-report-slot-monthly-avg" class="chart-container"></div>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <div class="page-title">图6：心超各报告时段数量</div>
+        <div id="container-heart-report-slot-monthly" class="chart-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+  <script src="js/time.js"></script>
+</body>
+</html>
+

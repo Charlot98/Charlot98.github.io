@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="../../">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <title>个人查询结果（实验）</title>
+  <link rel="stylesheet" href="css/common.css?v=20260801b" />
+  <link rel="stylesheet" href="css/personal-heatmap.css?v=20260801a" />
+  <script src="js/auth.js"></script>
+  <script src="js/nav-items.js"></script>
+  <script src="js/nav-sidebar.js"></script>
+  <script src="js/highcharts.js"></script>
+  <script src="js/heatmap.js"></script>
+  <script src="js/utils.js?v=20260802a"></script>
+</head>
+<body class="page-personal">
+  <div class="nav-sidebar">
+    <div class="nav-sidebar-inner">
+      <a href="index.html">返回首页</a>
+      <a></a>
+      <div class="nav-sidebar-more" data-nav-auto></div>
+    </div>
+  </div>
+
+  <div class="main-content personal-main">
+    <div id="result-stage" class="personal-result-stage">
+      <div class="personal-result-header">
+        <div class="personal-result-title">
+          <span id="doctor-name"></span>
+        </div>
+        <a href="pages/experiment/personal.html" id="back-search" class="personal-back-btn">重新查询</a>
+      </div>
+
+      <div id="lifetime-stats" class="personal-lifetime-stats" aria-label="全部年份病例数"></div>
+
+      <div class="personal-heatmap-panel">
+        <div class="personal-heatmap-layout">
+          <div class="personal-heatmap-content">
+            <div class="personal-heatmap-toolbar">
+              <span id="year-label" class="personal-heatmap-meta"></span>
+            </div>
+            <div class="personal-heatmap-card">
+              <div class="personal-heatmap-chart-block">
+                <div id="heatmap" class="personal-heatmap-chart-host"></div>
+              </div>
+              <div class="personal-heatmap-footer">
+                <div class="personal-heatmap-legend" aria-label="Case count legend">
+                  <span>Less</span>
+                  <span class="personal-heatmap-swatch" style="background:#ebedf0"></span>
+                  <span class="personal-heatmap-swatch" style="background:#b8e4f5"></span>
+                  <span class="personal-heatmap-swatch" style="background:#69c5e8"></span>
+                  <span class="personal-heatmap-swatch" style="background:#009cdb"></span>
+                  <span class="personal-heatmap-swatch" style="background:#006b9e"></span>
+                  <span>More</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="year-selector" class="personal-year-selector" aria-label="选择统计年度"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/personal-heatmap.js?v=20260802a"></script>
+CT</body>
+</html>

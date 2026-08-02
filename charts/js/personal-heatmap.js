@@ -355,10 +355,7 @@
         marginRight: marginRight,
         spacingTop: spacingTop,
         spacingLeft: spacingLeft,
-        animation: false,
-        style: {
-          fontFamily: '"宋体", "SimSun", STSong, serif'
-        }
+        animation: false
       },
       title: { text: null },
       credits: { enabled: false },

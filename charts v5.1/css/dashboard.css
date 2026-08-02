@@ -1,0 +1,163 @@
+body {
+  margin: 0;
+  background: #fafaf7;
+  font-family: var(--app-font-family);
+}
+/* 首页保持原有的极简左侧入口，不使用内容页导航面板样式 */
+body .nav-sidebar {
+  width: 148px;
+  min-width: 148px;
+  background: transparent;
+  border-right: none;
+  box-shadow: none;
+  overflow: visible;
+}
+body .nav-sidebar-inner {
+  display: block;
+  width: 148px;
+  min-width: 148px;
+  height: auto;
+  padding: 12px 0;
+}
+body .nav-sidebar-inner > a {
+  display: block;
+  padding: 10px 12px;
+  color: #6b7280;
+  font-size: 14px;
+  text-align: center;
+  white-space: nowrap;
+}
+body .nav-sidebar-inner > a:hover {
+  color: #374151;
+}
+.dash-root {
+  min-height: 100vh;
+  margin-left: 148px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 48px 20px 64px;
+  box-sizing: border-box;
+}
+.dash-main {
+  width: 100%;
+  max-width: 920px;
+  text-align: center;
+}
+.dash-section {
+  margin-bottom: 44px;
+}
+.dash-section:last-child {
+  margin-bottom: 0;
+}
+.dash-section-title {
+  font-size: 34px;
+  letter-spacing: 4px;
+  margin: 0 0 20px;
+  color: #374151;
+  font-weight: normal;
+}
+.dash-logout {
+  position: fixed;
+  top: 16px;
+  right: 20px;
+}
+.dash-logout button {
+  padding: 6px 18px;
+  font-size: 20px;
+  border-radius: 0;
+  border: none;
+  background: #f9fafb;
+  cursor: pointer;
+  color: #090909;
+  font-family: var(--app-font-family);
+}
+.dash-logout button:hover {
+  background: #e5e7eb;
+}
+.dash-title {
+  font-size: 48px;
+  letter-spacing: 6px;
+  margin: 0 0 52px;
+}
+.dash-menu {
+  font-size: 40px;
+  line-height: 2.6;
+  display: inline-block;
+  text-align: left;
+}
+.nav-label {
+  display: inline-block;
+  width: 160px;
+  text-align: left;
+  margin-right: 48px;
+  line-height: 2;
+}
+.nav-text {
+  display: inline-block;
+  text-align: left;
+  margin-left: 0;
+}
+.nav-row {
+  display: flex;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  line-height: 3;
+}
+.nav-link {
+  text-decoration: none;
+  color: #111827;
+  padding: 0;
+  line-height: 1.2;
+  border-radius: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.dash-menu .nav-row:nth-child(1) .nav-link:hover {
+  background-color:rgba(0, 156, 219, 0.85);
+}
+.dash-menu .nav-row:nth-child(2) .nav-link:hover {
+  background-color: rgba(255, 80, 126, 0.85);
+}
+.dash-menu .nav-row:nth-child(3) .nav-link:hover {
+  background-color: rgba(123, 197, 137, 0.85);
+}
+.dash-menu .nav-row:nth-child(4) .nav-link:hover {
+  background-color: rgba(151, 115, 189, 0.85);
+}
+.dash-menu .nav-row:nth-child(5) .nav-link:hover {
+  background-color: rgba(202, 183, 10, 0.878);
+}
+.dash-menu .nav-row:nth-child(6) .nav-link:hover {
+  background-color: rgba(123, 197, 137, 0.85);
+}
+.dash-menu .nav-row:nth-child(7) .nav-link:hover {
+  background-color: rgba(0, 156, 219, 0.85);
+}
+.dash-menu .nav-row:nth-child(8) .nav-link:hover {
+  background-color:  rgba(255, 80, 126, 0.85);
+}
+
+/* 窄屏下每行自动折成两行：第一行“工作量”，第二行右侧文字 */
+@media (max-width: 900px) {
+  .dash-menu {
+    font-size: 28px;
+  }
+  .nav-row {
+    flex-wrap: wrap;
+    line-height: 1.6;
+  }
+  .nav-label {
+    width: auto;
+    margin-right: 16px;
+  }
+  .nav-text {
+    display: block;
+    width: 100%;
+    text-align: left;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+}

@@ -1,5 +1,5 @@
 (function () {
-  var font = '"宋体", "SimSun", STSong, serif';
+  var font = '"Noto Serif SC", "Source Han Serif SC", "Noto Serif CJK SC", "Songti SC", STSong, SimSun, serif';
   if (typeof Highcharts !== 'undefined') {
     Highcharts.setOptions({
       chart: {
@@ -10,17 +10,17 @@
         shadow: false,
         style: { fontFamily: font }
       },
-      title: { align: 'center', style: { fontFamily: font } },
-      subtitle: { style: { fontFamily: font } },
+      title: { align: 'center', style: { fontFamily: font, fontWeight: '400' } },
+      subtitle: { style: { fontFamily: font, fontWeight: '400' } },
       xAxis: {
-        title: { style: { fontFamily: font } },
+        title: { style: { fontFamily: font, fontWeight: '400' } },
         labels: { style: { fontFamily: font } }
       },
       yAxis: {
-        title: { style: { fontFamily: font } },
+        title: { style: { fontFamily: font, fontWeight: '400' } },
         labels: { style: { fontFamily: font } }
       },
-      legend: { itemStyle: { fontFamily: font } },
+      legend: { itemStyle: { fontFamily: font, fontWeight: '400' } },
       tooltip: { style: { fontFamily: font } },
       plotOptions: {
         series: { dataLabels: { style: { fontFamily: font } } }
@@ -32,6 +32,27 @@
 /**
  * 将日期或入职时长控件行移到内容区顶部，并交由共享样式保持置顶。
  */
+function groupRangeToolbarFields(toolbar) {
+  var children = Array.prototype.slice.call(toolbar.children);
+  children.forEach(function (label, index) {
+    var select = children[index + 1];
+    if (
+      !select ||
+      label.parentElement !== toolbar ||
+      select.parentElement !== toolbar ||
+      !/^(SPAN|LABEL)$/.test(label.tagName) ||
+      select.tagName !== 'SELECT' ||
+      label.classList.contains('range-quick')
+    ) return;
+
+    var field = document.createElement('span');
+    field.className = 'range-field';
+    toolbar.insertBefore(field, label);
+    field.appendChild(label);
+    field.appendChild(select);
+  });
+}
+
 function initStickyRangeToolbar() {
   var candidates = Array.prototype.slice.call(
     document.querySelectorAll('.page-controls, .month-range-controls, .chart-inner-controls')
@@ -40,7 +61,9 @@ function initStickyRangeToolbar() {
     if (candidate.classList.contains('month-range-controls')) return true;
     return Boolean(candidate.querySelector('#start-month, #tenure-range'));
   });
-  if (!toolbar || toolbar.classList.contains('page-range-toolbar')) return toolbar || null;
+  if (!toolbar) return null;
+  groupRangeToolbarFields(toolbar);
+  if (toolbar.classList.contains('page-range-toolbar')) return toolbar;
 
   var content = toolbar.closest('.main-content, .project-stats-main');
   if (!content) return null;
@@ -180,7 +203,7 @@ function parseCSV(text) {
 }
 
 /**
- * 在月份范围旁添加「重置」按钮，恢复初始化时的默认范围。
+ * 保留月份范围的程序化恢复能力，不在顶栏创建额外按钮。
  */
 function initMonthRangeReset(options) {
   var startSel = options.startSel;
@@ -202,16 +225,8 @@ function initMonthRangeReset(options) {
     if (typeof onReset === 'function') onReset();
   }
 
-  if (!resetButton) {
-    resetButton = document.createElement('button');
-    resetButton.type = 'button';
-    resetButton.className = 'range-reset-btn';
-    resetButton.textContent = '重置';
-    resetButton.title = '恢复默认日期范围';
-    endSel.insertAdjacentElement('afterend', resetButton);
-  }
-  resetButton.addEventListener('click', reset);
-  return { reset: reset, button: resetButton };
+  if (resetButton) resetButton.remove();
+  return { reset: reset, button: null };
 }
 
 /**

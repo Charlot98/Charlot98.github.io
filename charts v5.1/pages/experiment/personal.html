@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="../../">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <title>个人查询（实验）</title>
+  <link rel="stylesheet" href="css/common.css?v=20260801b" />
+  <link rel="stylesheet" href="css/personal-heatmap.css?v=20260801a" />
+  <script src="js/auth.js"></script>
+  <script src="js/nav-items.js"></script>
+  <script src="js/nav-sidebar.js"></script>
+  <script src="js/utils.js?v=20260802a"></script>
+</head>
+<body class="page-personal">
+  <div class="nav-sidebar">
+    <div class="nav-sidebar-inner">
+      <a href="index.html">返回首页</a>
+      <a></a>
+      <div class="nav-sidebar-more" data-nav-auto></div>
+    </div>
+  </div>
+
+  <div class="main-content personal-main">
+    <div id="search-stage" class="personal-search-stage">
+      <div class="personal-search-card">
+        <div class="personal-search-label">个人查询（实验）</div>
+        <input
+          id="doctor-search"
+          class="personal-search-input"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="输入医生姓名"
+        />
+        <div id="search-hint" class="personal-search-hint"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/personal-heatmap.js?v=20260802a"></script>
+</body>
+</html>

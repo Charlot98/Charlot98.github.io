@@ -1,5 +1,65 @@
 (function () {
+  var MOBILE_BREAKPOINT = 760;
+
+  function initMobileSidebar() {
+    var sidebar = document.querySelector('.nav-sidebar');
+    if (!sidebar || document.querySelector('.nav-sidebar-toggle')) return;
+
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'nav-sidebar-toggle';
+    if (!sidebar.id) sidebar.id = 'app-navigation';
+    toggle.setAttribute('aria-controls', sidebar.id);
+    toggle.setAttribute('aria-label', '打开导航菜单');
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.textContent = '☰';
+
+    var backdrop = document.createElement('div');
+    backdrop.className = 'nav-sidebar-backdrop';
+    backdrop.setAttribute('aria-hidden', 'true');
+
+    document.body.insertBefore(backdrop, document.body.firstChild);
+    document.body.insertBefore(toggle, document.body.firstChild);
+
+    function isMobile() {
+      return window.innerWidth <= MOBILE_BREAKPOINT;
+    }
+
+    function setOpen(open) {
+      var shouldOpen = !!open && isMobile();
+      document.body.classList.toggle('nav-sidebar-open', shouldOpen);
+      toggle.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+      toggle.setAttribute('aria-label', shouldOpen ? '关闭导航菜单' : '打开导航菜单');
+      toggle.textContent = shouldOpen ? '×' : '☰';
+      backdrop.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+      if (isMobile()) {
+        sidebar.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+        if ('inert' in sidebar) sidebar.inert = !shouldOpen;
+      } else {
+        sidebar.removeAttribute('aria-hidden');
+        if ('inert' in sidebar) sidebar.inert = false;
+      }
+    }
+
+    toggle.addEventListener('click', function () {
+      setOpen(!document.body.classList.contains('nav-sidebar-open'));
+    });
+    backdrop.addEventListener('click', function () { setOpen(false); });
+    sidebar.addEventListener('click', function (event) {
+      if (event.target && event.target.closest && event.target.closest('a[href]')) setOpen(false);
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') setOpen(false);
+    });
+    window.addEventListener('resize', function () {
+      setOpen(false);
+    });
+
+    setOpen(false);
+  }
+
   function init() {
+    initMobileSidebar();
     var sections = window.NAV_SECTIONS;
     var container = document.querySelector('.nav-sidebar-more[data-nav-auto]');
     if (!sections || !container) return;
