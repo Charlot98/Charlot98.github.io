@@ -209,6 +209,15 @@ async function main() {
     );
     await copyFile(notFoundSource, path.join(TEMP_DIR, '404.html'));
   }
+  for (const asset of manifest.portal?.assets || []) {
+    const relative = safeRelative(asset, 'portal.assets');
+    const source = path.join(ROOT, relative);
+    const destination = path.join(TEMP_DIR, relative);
+    const metadata = await lstat(source).catch(() => null);
+    if (!metadata?.isFile()) fail(`门户资源不存在：${relative}`);
+    await mkdir(path.dirname(destination), { recursive: true });
+    await copyFile(source, destination);
+  }
 
   const publishedVersions = {};
   for (const project of manifest.projects) {

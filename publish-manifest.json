@@ -2,14 +2,17 @@
   "schemaVersion": 1,
   "portal": {
     "source": "index.html",
-    "notFoundSource": "404.html"
+    "notFoundSource": "404.html",
+    "assets": [
+      "VetVault-Logo.png"
+    ]
   },
   "projects": [
     {
       "id": "dentalchart",
       "enabled": true,
-      "version": "v2.2.0",
-      "source": "dentalchart/pub/v2.2.0",
+      "version": "v2.1.2",
+      "source": "dentalchart/pub/v2.1.2",
       "destination": "dentalchart",
       "entry": "index.html"
     },

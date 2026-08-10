@@ -48,71 +48,26 @@
         overflow-x: hidden;
       }
 
-      body::before,
-      body::after {
+      body::before {
         content: "";
         position: fixed;
         z-index: 0;
         border-radius: 999px;
         pointer-events: none;
-        will-change: transform, opacity;
-      }
-
-      body::before {
-        width: min(460px, 62vw);
-        height: min(460px, 62vw);
-        left: max(-300px, -32vw);
-        bottom: max(-260px, -27vw);
+        width: min(980px, 110vw);
+        height: min(980px, 110vw);
+        left: max(-180px, -14vw);
+        top: clamp(-40px, -2vh, 24px);
         background: radial-gradient(
           circle,
-          rgba(96, 165, 250, 0.7) 0%,
-          rgba(59, 130, 246, 0.36) 34%,
-          transparent 72%
+          rgba(96, 165, 250, 0.82) 0%,
+          rgba(59, 130, 246, 0.42) 38%,
+          transparent 74%
         );
-        filter: blur(68px);
+        filter: blur(84px);
         mix-blend-mode: screen;
-        opacity: 0.48;
-        animation: glow-pulse-primary 8s ease-in-out infinite alternate;
-      }
-
-      body::after {
-        width: min(520px, 68vw);
-        height: min(520px, 68vw);
-        right: max(-350px, -37vw);
-        top: 50%;
-        background: radial-gradient(
-          circle,
-          rgba(103, 232, 249, 0.76) 0%,
-          rgba(34, 211, 238, 0.38) 34%,
-          transparent 72%
-        );
-        filter: blur(72px);
-        mix-blend-mode: screen;
-        opacity: 0.5;
-        transform: translateY(-50%);
-        animation: glow-pulse-secondary 9.5s ease-in-out 1s infinite alternate;
-      }
-
-      @keyframes glow-pulse-primary {
-        0% {
-          opacity: 0.28;
-          transform: scale(0.9);
-        }
-        100% {
-          opacity: 0.58;
-          transform: translate3d(8%, -5%, 0) scale(1.08);
-        }
-      }
-
-      @keyframes glow-pulse-secondary {
-        0% {
-          opacity: 0.3;
-          transform: translateY(-50%) scale(0.9);
-        }
-        100% {
-          opacity: 0.62;
-          transform: translate3d(-8%, -50%, 0) scale(1.08);
-        }
+        opacity: 0.58;
+        transform: translate3d(8%, -5%, 0) scale(1.08);
       }
 
       .starfield,
@@ -178,8 +133,6 @@
       }
 
       @media (prefers-reduced-motion: reduce) {
-        body::before,
-        body::after,
         .starfield::before,
         .starfield::after {
           animation: none;
@@ -203,7 +156,7 @@
 
       .brand {
         font-family: "Space Mono", monospace;
-        font-size: 12px;
+        font-size: 14px;
         letter-spacing: 0.04em;
         color: var(--text-main);
       }
@@ -216,7 +169,7 @@
       .nav-links a {
         color: var(--text-sub);
         text-decoration: none;
-        font-size: 13px;
+        font-size: 15px;
         padding: 6px 12px;
         border-radius: 8px;
         transition: color 0.2s, background 0.2s;
@@ -259,7 +212,7 @@
 
       .title {
         margin: 0 0 4px;
-        font-size: 20px;
+        font-size: 24px;
         line-height: 1.3;
         font-weight: 700;
         letter-spacing: -0.01em;
@@ -268,15 +221,11 @@
       .desc {
         margin: 0;
         color: var(--text-muted);
-        font-size: 13px;
+        font-size: 15px;
         line-height: 1.5;
       }
 
       .portal-hero {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 28px;
-        align-items: end;
         padding: 12px 4px 10px;
       }
 
@@ -284,66 +233,41 @@
         margin: 0 0 8px;
         color: var(--accent);
         font-family: "Space Mono", monospace;
-        font-size: 11px;
+        font-size: 13px;
         letter-spacing: 0.14em;
         text-transform: uppercase;
+      }
+
+      .portal-title-row {
+        display: flex;
+        align-items: center;
+        gap: clamp(12px, 2vw, 18px);
+      }
+
+      .portal-logo {
+        width: clamp(52px, 8vw, 80px);
+        height: clamp(52px, 8vw, 80px);
+        flex: 0 0 auto;
+        display: block;
+        object-fit: contain;
+        border-radius: 14px;
       }
 
       .portal-title {
         margin: 0;
         max-width: 720px;
-        font-size: clamp(32px, 6vw, 58px);
+        font-size: clamp(38px, 7vw, 68px);
         line-height: 1.04;
         letter-spacing: -0.045em;
       }
 
-      .portal-intro {
-        margin: 14px 0 0;
-        max-width: 680px;
-        color: var(--text-sub);
-        font-size: 14px;
-        line-height: 1.75;
-      }
-
-      .portal-stats {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(90px, 1fr));
-        gap: 8px;
-        min-width: 216px;
-      }
-
-      .portal-stat {
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: var(--surface-2);
-      }
-
-      .portal-stat strong,
-      .portal-stat span {
-        display: block;
-      }
-
-      .portal-stat strong {
-        font-family: "Space Mono", monospace;
-        font-size: 20px;
-        color: var(--text-main);
-      }
-
-      .portal-stat span {
-        margin-top: 3px;
-        color: var(--text-muted);
-        font-size: 10px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
-
       .portal-toolbar {
         display: flex;
-        align-items: center;
+        align-items: flex-end;
         justify-content: space-between;
         gap: 16px;
         margin-bottom: 18px;
+        border-bottom: 1px solid var(--line);
       }
 
       .portal-toolbar-copy h2,
@@ -351,45 +275,53 @@
         margin: 0;
       }
 
+      .portal-toolbar-copy {
+        padding-bottom: 10px;
+      }
+
       .portal-toolbar-copy h2 {
-        font-size: 17px;
+        font-size: 20px;
       }
 
       .portal-toolbar-copy p {
         margin-top: 4px;
         color: var(--text-muted);
-        font-size: 12px;
+        font-size: 14px;
       }
 
       .project-filters {
         display: flex;
         flex-wrap: wrap;
         justify-content: flex-end;
-        gap: 6px;
+        align-items: stretch;
+        gap: 0;
+        margin-bottom: -1px;
       }
 
       .project-filter {
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 6px 11px;
+        border: 1px solid transparent;
+        border-radius: 0;
+        padding: 10px 14px;
         color: var(--text-sub);
-        background: rgba(15, 23, 42, 0.42);
+        background: transparent;
         font: inherit;
-        font-size: 11px;
+        font-size: 13px;
         cursor: pointer;
-        transition: color 0.15s, border-color 0.15s, background 0.15s;
+        border-bottom: 2px solid transparent;
+        transition: color 0.15s, border-bottom-color 0.15s, border-bottom-width 0.15s;
       }
 
       .project-filter:hover,
       .project-filter:focus-visible {
         color: var(--text-main);
-        border-color: var(--link-border);
+        background: transparent;
       }
 
       .project-filter.active {
         color: var(--accent);
-        border-color: var(--link-border);
-        background: var(--accent-soft);
+        background: transparent;
+        border-bottom-width: 3px;
+        border-bottom-color: var(--accent);
       }
 
       .project-grid {
@@ -426,26 +358,14 @@
         gap: 12px;
       }
 
-      .project-mark {
-        width: 36px;
-        height: 36px;
-        display: grid;
-        place-items: center;
-        border: 1px solid var(--link-border);
-        border-radius: 10px;
-        color: var(--accent);
-        background: var(--accent-soft);
-        font-family: "Space Mono", monospace;
-        font-size: 11px;
-      }
-
       .project-status {
+        flex: 0 0 auto;
         padding: 4px 8px;
         border: 1px solid var(--line);
         border-radius: 999px;
         color: var(--text-muted);
         background: var(--surface-2);
-        font-size: 10px;
+        font-size: 12px;
       }
 
       .project-status[data-tone="active"] {
@@ -461,15 +381,17 @@
       }
 
       .project-title {
-        margin: 16px 0 0;
-        font-size: 16px;
+        margin: 0;
+        min-width: 0;
+        flex: 1 1 auto;
+        font-size: 18px;
         line-height: 1.35;
       }
 
       .project-description {
-        margin: 7px 0 0;
+        margin: 12px 0 0;
         color: var(--text-sub);
-        font-size: 12px;
+        font-size: 14px;
         line-height: 1.65;
       }
 
@@ -485,7 +407,7 @@
         border-radius: 6px;
         color: var(--text-muted);
         background: rgba(30, 41, 59, 0.42);
-        font-size: 10px;
+        font-size: 12px;
       }
 
       .project-card-footer {
@@ -502,7 +424,7 @@
         overflow: hidden;
         color: var(--text-muted);
         font-family: "SFMono-Regular", Consolas, monospace;
-        font-size: 10px;
+        font-size: 12px;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
@@ -510,12 +432,12 @@
       .project-open {
         flex-shrink: 0;
         text-decoration: none;
-        padding: 6px 10px;
+        padding: 7px 12px;
         border: 1px solid var(--link-border);
         border-radius: 7px;
         color: var(--accent);
         background: var(--accent-soft);
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 600;
       }
 
@@ -540,32 +462,32 @@
         text-decoration: none;
         color: inherit;
         padding: 14px 16px;
-        border-radius: 12px;
-        border: 1px solid var(--link-border);
-        background: var(--link-bg);
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(15, 23, 42, 0.48);
         transition: border-color 0.2s, background 0.2s, transform 0.15s;
       }
 
       .download-card:hover {
-        border-color: rgba(125, 211, 252, 0.42);
-        background: var(--link-bg-hover);
+        border-color: rgba(125, 211, 252, 0.28);
+        background: rgba(15, 23, 42, 0.66);
         transform: translateY(-1px);
       }
 
       .download-card--featured {
-        border-color: rgba(56, 189, 248, 0.38);
-        background: rgba(3, 105, 161, 0.46);
+        border-color: rgba(125, 211, 252, 0.28);
+        background: rgba(15, 23, 42, 0.48);
       }
 
       .download-card-icon {
         flex-shrink: 0;
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         border-radius: 8px;
         display: grid;
         place-items: center;
-        font-size: 16px;
-        background: rgba(15, 23, 42, 0.6);
+        font-size: 18px;
+        background: var(--surface-2);
         border: 1px solid var(--line);
       }
 
@@ -576,7 +498,7 @@
 
       .download-card-title {
         display: block;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 600;
         line-height: 1.3;
       }
@@ -584,19 +506,30 @@
       .download-card-meta {
         display: block;
         margin-top: 2px;
-        font-size: 11.5px;
+        font-size: 13px;
         color: var(--text-muted);
       }
 
-      .download-card-action {
+      .download-card-action,
+      .download-list .item-go {
         flex-shrink: 0;
-        font-size: 11.5px;
-        font-weight: 600;
+        text-decoration: none;
+        padding: 7px 12px;
+        border: 1px solid var(--link-border);
+        border-radius: 7px;
         color: var(--accent);
-        padding: 5px 10px;
-        border-radius: 6px;
-        background: rgba(56, 189, 248, 0.1);
-        border: 1px solid rgba(56, 189, 248, 0.18);
+        background: var(--accent-soft);
+        font-size: 13px;
+        font-weight: 600;
+        opacity: 1;
+        transition: background 0.15s;
+      }
+
+      .download-card:hover .download-card-action,
+      .download-card:focus-visible .download-card-action,
+      .download-list a:hover .item-go,
+      .download-list a:focus-visible .item-go {
+        background: var(--link-bg-hover);
       }
 
       .download-section {
@@ -611,7 +544,7 @@
 
       .download-section-title {
         margin: 0 0 8px;
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 600;
         color: var(--text-muted);
         letter-spacing: 0.08em;
@@ -623,7 +556,7 @@
         padding: 0;
         margin: 0;
         display: grid;
-        gap: 2px;
+        gap: 8px;
       }
 
       .download-list a {
@@ -633,17 +566,18 @@
         gap: 10px;
         text-decoration: none;
         color: var(--text-main);
-        padding: 8px 10px;
-        border-radius: 8px;
-        border: 1px solid var(--link-border);
-        background: var(--link-bg);
-        font-size: 13px;
-        transition: background 0.15s, border-color 0.15s;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        background: rgba(15, 23, 42, 0.48);
+        font-size: 15px;
+        transition: background 0.15s, border-color 0.15s, transform 0.15s;
       }
 
       .download-list a:hover {
-        background: var(--link-bg-hover);
-        border-color: rgba(125, 211, 252, 0.42);
+        background: rgba(15, 23, 42, 0.66);
+        border-color: rgba(125, 211, 252, 0.28);
+        transform: translateY(-1px);
       }
 
       .download-list .item-name {
@@ -655,21 +589,9 @@
       }
 
       .download-list .item-date {
-        font-size: 11px;
+        font-size: 13px;
         color: var(--text-muted);
         font-variant-numeric: tabular-nums;
-      }
-
-      .download-list .item-go {
-        font-size: 11px;
-        color: var(--accent);
-        font-weight: 600;
-        opacity: 0.7;
-        transition: opacity 0.15s;
-      }
-
-      .download-list a:hover .item-go {
-        opacity: 1;
       }
 
       .download-history-more {
@@ -680,7 +602,7 @@
       .download-history-more summary {
         padding: 10px;
         color: var(--text-sub);
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 600;
         cursor: pointer;
         user-select: none;
@@ -708,14 +630,6 @@
       @media (max-width: 820px) {
         .main {
           padding: 28px 16px 48px;
-        }
-
-        .portal-hero {
-          grid-template-columns: 1fr;
-        }
-
-        .portal-stats {
-          width: 100%;
         }
 
         .portal-toolbar {
@@ -779,14 +693,17 @@
       <section class="portal-hero" aria-labelledby="portal-title">
         <div>
           <p class="portal-eyebrow">Project Portal</p>
-          <h1 class="portal-title" id="portal-title">Vet Vault</h1>
-          <p class="portal-intro">
-            集中访问影像、报告、知识与临床工具。门户仅提供项目导航，不读取业务数据，也不会在后台启动服务。
-          </p>
-        </div>
-        <div class="portal-stats" aria-label="项目摘要">
-          <div class="portal-stat"><strong id="projectCount">0</strong><span>项目与资源</span></div>
-          <div class="portal-stat"><strong id="activeCount">0</strong><span>可直接访问</span></div>
+          <div class="portal-title-row">
+            <img
+              class="portal-logo"
+              src="VetVault-Logo.png"
+              alt=""
+              width="68"
+              height="68"
+              decoding="async"
+            />
+            <h1 class="portal-title" id="portal-title">Vet Vault</h1>
+          </div>
         </div>
       </section>
 
@@ -798,10 +715,10 @@
           </div>
           <div class="project-filters" aria-label="项目分类">
             <button type="button" class="project-filter active" data-filter="all">全部</button>
-            <button type="button" class="project-filter" data-filter="clinical">临床工具</button>
+            <button type="button" class="project-filter" data-filter="clinical">临床</button>
             <button type="button" class="project-filter" data-filter="content">内容</button>
             <button type="button" class="project-filter" data-filter="data">数据</button>
-            <button type="button" class="project-filter" data-filter="resource">资源与原型</button>
+            <button type="button" class="project-filter" data-filter="resource">模型</button>
           </div>
         </div>
         <div class="project-grid" id="projectGrid"></div>
@@ -915,23 +832,21 @@
       const projects = [
         {
           name: "心超报告助手",
-          mark: "EC",
-          description: "心脏超声参数录入、参考范围与报告文本生成工具。",
+          description: "动物心脏超声参数录入、参考范围与报告文本生成工具。",
           path: "echocardiography/",
           href: "echocardiography/",
           action: "打开",
           category: "clinical",
-          status: "可用",
+          status: "v5.6.0",
           tone: "active",
           stack: ["HTML", "JavaScript", "静态应用"]
         },
         {
           name: "DentalChart 牙表",
-          mark: "DC",
-          description: "犬、猫及兔牙表填写、历史版本、回收站与报告辅助。",
+          description: "犬、猫及兔牙齿标注工具。",
           path: "dentalchart/",
           href: "dentalchart/",
-          action: "打开 v2.2",
+          action: "打开 v2.1.2",
           category: "clinical",
           status: "试用",
           tone: "preview",
@@ -939,8 +854,7 @@
         },
         {
           name: "语音报告助手",
-          mark: "AR",
-          description: "面向兽医超声场景的语音转录与报告整理实验工具。",
+          description: "面向兽医超声场景的语音转录工具。",
           path: "audioreports/",
           href: "",
           action: "维护中",
@@ -950,9 +864,8 @@
           stack: ["HTML", "语音", "报告"]
         },
         {
-          name: "影像统计看板",
-          mark: "CH",
-          description: "超声、CT、MRI、X 线与门诊工作量统计及可视化。",
+          name: "统计看板",
+          description: "超声、CT、MRI、X 线工作量统计及可视化。",
           path: "charts/",
           href: "charts/",
           action: "进入看板",
@@ -962,9 +875,8 @@
           stack: ["Highcharts", "Python", "Supabase"]
         },
         {
-          name: "VetVault 知识库",
-          mark: "KB",
-          description: "兽医影像与心脏病学知识内容、参考资料和交互模型。",
+          name: "VetVault 资料库",
+          description: "兽医影像参考资料及交互模型。",
           path: "my-docs/",
           href: "my-docs/",
           action: "打开站点",
@@ -975,48 +887,45 @@
         },
         {
           name: "更新日志",
-          mark: "CL",
-          description: "集中记录各工具和知识内容的版本变化与发布说明。",
+          description: "记录各工具和资料内容的版本变化与发布说明。",
           path: "vetvault-changelog/",
           href: "vetvault-changelog/",
           action: "查看更新",
           category: "content",
-          status: "可用",
+          status: "v1.2.0",
           tone: "active",
-          stack: ["Nuxt", "Nuxt UI", "Markdown"]
+          stack: ["Nuxt", "Markdown"]
         },
         {
-          name: "TEE 模型资料",
-          mark: "3D",
-          description: "犬与人类心脏三维模型源资产及知识库中的交互展示。",
+          name: "TEE 模型",
+          description: "经食道超声交互模型。",
           path: "tee/model/",
           href: "my-docs/",
           action: "查看内容",
           category: "resource",
-          status: "资料",
-          tone: "neutral",
+          status: "测试",
+          tone: "preview",
           stack: ["GLB", "USDZ", "FBX"]
         },
         {
-          name: "排队界面 Demo",
-          mark: "QD",
+          name: "排队系统",
           description: "双屏排队系统的静态界面原型，用于布局与流程验证。",
           path: "queue_demo/",
           href: "queue_demo/screen1.html",
           action: "查看原型",
           category: "resource",
-          status: "原型",
-          tone: "preview",
+          status: "demo",
+          tone: "neutral",
           stack: ["HTML", "CSS", "JavaScript"]
         }
       ];
 
       const categoryLabels = {
         all: "全部",
-        clinical: "临床工具",
+        clinical: "临床",
         content: "内容",
         data: "数据",
-        resource: "资源与原型"
+        resource: "模型"
       };
 
       const projectGrid = document.getElementById("projectGrid");
@@ -1035,20 +944,15 @@
           const head = document.createElement("div");
           head.className = "project-card-head";
 
-          const mark = document.createElement("span");
-          mark.className = "project-mark";
-          mark.setAttribute("aria-hidden", "true");
-          mark.textContent = project.mark;
+          const title = document.createElement("h3");
+          title.className = "project-title";
+          title.textContent = project.name;
 
           const status = document.createElement("span");
           status.className = "project-status";
           status.dataset.tone = project.tone;
           status.textContent = project.status;
-          head.append(mark, status);
-
-          const title = document.createElement("h3");
-          title.className = "project-title";
-          title.textContent = project.name;
+          head.append(title, status);
 
           const description = document.createElement("p");
           description.className = "project-description";
@@ -1083,17 +987,12 @@
             link.setAttribute("aria-disabled", "true");
           }
           footer.append(path, link);
-          article.append(head, title, description, meta, footer);
+          article.append(head, description, meta, footer);
           return article;
         }));
 
         resultText.textContent = `${categoryLabels[filter]} · ${visibleProjects.length} 个入口`;
       }
-
-      document.getElementById("projectCount").textContent = String(projects.length);
-      document.getElementById("activeCount").textContent = String(
-        projects.filter((project) => project.tone === "active").length
-      );
 
       document.querySelectorAll(".project-filter").forEach((button) => {
         button.addEventListener("click", () => {
