@@ -11,8 +11,8 @@
     {
       "id": "dentalchart",
       "enabled": true,
-      "version": "v2.1.2",
-      "source": "dentalchart/pub/v2.1.2",
+      "version": "v2.2.2",
+      "source": "dentalchart/pub/v2.2.2",
       "destination": "dentalchart",
       "entry": "index.html"
     },
