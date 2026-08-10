@@ -1,7 +1,9 @@
 (function (global) {
     'use strict';
 
-    const ACCESS_KEY = 'dentalchart:access-password:v1';
+    const TOKEN_KEY = 'dentalchart:device-token:v1';
+    const TOKEN_META_KEY = 'dentalchart:device-token-meta:v1';
+    const LEGACY_PASSWORD_KEY = 'dentalchart:access-password:v1';
     const nativeFetch = global.fetch.bind(global);
     let promptPromise = null;
 
@@ -21,17 +23,32 @@
         return `${config().apiUrl}/${relative}`;
     }
 
-    function readPassword() {
-        return sessionStorage.getItem(ACCESS_KEY) || '';
+    function readToken() {
+        return localStorage.getItem(TOKEN_KEY) || '';
     }
 
-    async function requestPassword() {
+    function saveToken(token, meta) {
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(TOKEN_META_KEY, JSON.stringify(meta || {}));
+        sessionStorage.removeItem(LEGACY_PASSWORD_KEY);
+    }
+
+    function clearToken() {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(TOKEN_META_KEY);
+        sessionStorage.removeItem(LEGACY_PASSWORD_KEY);
+    }
+
+    function deviceName() {
+        return String(global.navigator?.userAgent || 'browser').slice(0, 100);
+    }
+
+    async function requestPairingPassword() {
         if (promptPromise) return promptPromise;
         promptPromise = Promise.resolve().then(() => {
-            const value = global.prompt('请输入 DentalChart 共享访问密码');
+            const value = global.prompt('首次使用请输入 DentalChart 配对密码');
             const password = String(value || '').trim();
-            if (!password) throw new Error('已取消访问验证');
-            sessionStorage.setItem(ACCESS_KEY, password);
+            if (!password) throw new Error('已取消设备配对');
             return password;
         }).finally(() => {
             promptPromise = null;
@@ -39,13 +56,44 @@
         return promptPromise;
     }
 
-    async function password() {
-        return readPassword() || requestPassword();
+    async function pairDevice(password) {
+        const response = await nativeFetch(apiUrl('pair'), {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+            },
+            credentials: 'omit',
+            body: JSON.stringify({
+                password,
+                deviceName: deviceName(),
+            }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload.message || '设备配对失败');
+        }
+        const token = String(payload.token || '').trim().toLowerCase();
+        if (!/^[a-f0-9]{64}$/.test(token)) {
+            throw new Error('服务返回的设备令牌无效');
+        }
+        saveToken(token, {
+            tokenId: payload.tokenId || '',
+            expiresAt: payload.expiresAt || '',
+        });
+        return token;
+    }
+
+    async function ensureAccess() {
+        const existing = readToken();
+        if (existing) return existing;
+        const password = await requestPairingPassword();
+        return pairDevice(password);
     }
 
     async function apiFetch(resource, options = {}, retry = true) {
         const headers = new Headers(options.headers || {});
-        headers.set('X-Dental-Access', await password());
+        headers.set('X-Dental-Device-Token', await ensureAccess());
         if (!headers.has('Accept')) headers.set('Accept', 'application/json');
 
         let response;
@@ -53,7 +101,7 @@
             response = await nativeFetch(apiUrl(resource), {
                 ...options,
                 headers,
-                credentials: 'omit'
+                credentials: 'omit',
             });
         } catch (error) {
             if (error?.name === 'AbortError') throw error;
@@ -61,19 +109,35 @@
         }
 
         if (response.status === 401 && retry) {
-            sessionStorage.removeItem(ACCESS_KEY);
-            await requestPassword();
+            clearToken();
+            await ensureAccess();
             return apiFetch(resource, options, false);
         }
         return response;
     }
 
+    async function logout() {
+        const token = readToken();
+        if (!token) return;
+        try {
+            await nativeFetch(apiUrl('logout'), {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Dental-Device-Token': token,
+                },
+                credentials: 'omit',
+            });
+        } finally {
+            clearToken();
+        }
+    }
+
     global.DentalApi = {
         fetch: apiFetch,
-        ensureAccess: password,
-        clearAccess() {
-            sessionStorage.removeItem(ACCESS_KEY);
-        },
-        endpoint: apiUrl
+        ensureAccess,
+        clearAccess: clearToken,
+        logout,
+        endpoint: apiUrl,
     };
 })(window);
