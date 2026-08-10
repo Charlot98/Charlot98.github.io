@@ -6,7 +6,7 @@
     <title>牙表</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/pub.css?v=20260810-3">
-    <link rel="stylesheet" href="css/app-ui.css?v=20260810-4">
+    <link rel="stylesheet" href="css/app-ui.css?v=20260810-5">
 </head>
 <body>
     <div class="app-shell">
@@ -1215,6 +1215,21 @@
             });
         }
 
+        function setupLegendHorizontalScroll() {
+            const legend = document.querySelector('.legend');
+            const grid = document.getElementById('legendGrid');
+            if (!legend || !grid) return;
+            grid.addEventListener('wheel', event => {
+                if (!legend.classList.contains('legend--collapsed') ||
+                    grid.scrollWidth <= grid.clientWidth ||
+                    Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+                const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? grid.clientWidth : 1;
+                const previous = grid.scrollLeft;
+                grid.scrollLeft += event.deltaY * unit;
+                if (grid.scrollLeft !== previous) event.preventDefault();
+            }, { passive: false });
+        }
+
         function applyToothTermList(input, list) {
             const toothNum = input.id.replace('tooth-', '');
             const next = serializeTermList(normalizeToothTerms(list, toothNum));
@@ -1968,6 +1983,7 @@
             initLegend();
             setInterval(() => loadCustomTerms(true), 30000);
             setupLegendSearch();
+            setupLegendHorizontalScroll();
             resetLegendState();
             initInputs();
             loadPositions();

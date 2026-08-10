@@ -204,6 +204,22 @@ body.dental-auth-open { overflow: hidden; }
     -webkit-overflow-scrolling: touch;
 }
 .term-bar .legend--collapsed .legend-grid::-webkit-scrollbar { display: none; }
+@media (hover: hover) and (pointer: fine) {
+    .term-bar .legend--collapsed .legend-grid {
+        padding-bottom: 5px;
+        scrollbar-width: thin;
+        scrollbar-color: #c8d7d0 transparent;
+    }
+    .term-bar .legend--collapsed .legend-grid::-webkit-scrollbar {
+        display: block;
+        height: 5px;
+    }
+    .term-bar .legend--collapsed .legend-grid::-webkit-scrollbar-thumb {
+        border-radius: 999px;
+        background: #c8d7d0;
+    }
+    .term-bar .legend--collapsed .legend-grid::-webkit-scrollbar-track { background: transparent; }
+}
 .term-bar .legend.legend--collapsed .legend-primary-grid,
 .term-bar .legend.legend--collapsed .legend-other-grid {
     display: flex;
