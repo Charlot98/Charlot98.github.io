@@ -193,6 +193,33 @@ body.dental-auth-open { overflow: hidden; }
     overflow-x: auto;
     scrollbar-width: none;
 }
+.term-bar .legend--collapsed .legend-grid {
+    display: flex;
+    align-items: stretch;
+    gap: 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.term-bar .legend--collapsed .legend-grid::-webkit-scrollbar { display: none; }
+.term-bar .legend.legend--collapsed .legend-primary-grid,
+.term-bar .legend.legend--collapsed .legend-other-grid {
+    display: flex;
+    width: max-content;
+    max-width: none;
+    flex: 0 0 auto;
+    overflow: visible;
+}
+.term-bar .legend.legend--collapsed .legend-other-grid {
+    margin: 0;
+    padding: 0;
+    border-top: 0;
+}
+.term-bar .legend.legend--collapsed .legend-other-grid .legend-item.legend-item--no-report {
+    display: flex;
+}
 .term-bar .legend:not(.legend--collapsed) .legend-grid { overflow: visible; }
 .term-bar .legend:not(.legend--collapsed) .legend-primary-grid,
 .term-bar .legend:not(.legend--collapsed) .legend-other-grid {
