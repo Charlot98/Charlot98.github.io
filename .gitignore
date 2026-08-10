@@ -1,0 +1,17 @@
+# This public repository tracks only Pages publication controls and output.
+# All application sources and local release archives remain on this machine.
+/*
+
+!/.gitignore
+!/PUBLISHING.md
+!/publish-manifest.json
+!/publish.command
+
+!/scripts/
+!/scripts/**
+
+!/.github/
+!/.github/**
+
+!/.site/
+!/.site/**

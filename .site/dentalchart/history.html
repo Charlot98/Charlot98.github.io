@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史牙表</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/history.css?v=20260726-46">
+</head>
+<body>
+    <div class="app-shell">
+        <header class="topbar">
+            <div></div>
+            <nav class="main-nav" aria-label="主导航">
+                <button type="button" onclick="location.href='index.html'">牙表填写</button>
+                <button type="button" class="active">历史记录</button>
+            </nav>
+            <div></div>
+        </header>
+
+        <main class="history-workspace">
+            <section class="filter-bar">
+                <div class="summary-strip" aria-label="牙表统计">
+                    <div><span>全部牙表</span><strong id="totalCount">—</strong></div>
+                    <div><span>今日新增</span><strong id="todayCount">—</strong></div>
+                </div>
+                <label class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="searchInput" placeholder="搜索检查编号、家长名或宠物名" autocomplete="off" aria-label="搜索历史牙表"></label>
+                <div class="filter-tabs" id="speciesFilters" role="group" aria-label="牙表类型筛选">
+                    <button type="button" class="active" data-type="">全部</button>
+                    <button type="button" data-type="dog">犬</button>
+                    <button type="button" data-type="cat">猫</button>
+                    <button type="button" data-type="rabbit">兔</button>
+                </div>
+                <button type="button" class="export-backup-button" id="exportBackupButton" onclick="exportBackup()">导出备份</button>
+                <div class="date-filter" aria-label="日期筛选">
+                    <div class="filter-tabs" id="dateFilters" role="group" aria-label="日期快捷筛选">
+                        <button type="button" class="active" data-date="">全部</button>
+                        <button type="button" data-date="today">今天</button>
+                        <button type="button" data-date="yesterday">昨天</button>
+                        <button type="button" data-date="last3">近3天</button>
+                        <button type="button" data-date="last7">近一周</button>
+                    </div>
+                    <div class="date-range" role="group" aria-label="选择特定日期">
+                        <label class="date-box">
+                            <input type="date" id="dateFilterStart" aria-label="起始日期">
+                        </label>
+                        <span class="date-range-sep" aria-hidden="true">至</span>
+                        <label class="date-box">
+                            <input type="date" id="dateFilterEnd" aria-label="结束日期">
+                        </label>
+                    </div>
+                </div>
+                <span class="result-count" id="historyStatus">正在读取...</span>
+            </section>
+
+            <div class="statistics-grid" id="statisticsGrid">
+            <section class="keyword-heatmap-card heatmap-card--collapsed" id="keywordHeatmapCard" aria-labelledby="keywordHeatmapTitle">
+                <header class="keyword-heatmap-header">
+                    <button type="button" class="heatmap-collapse-toggle" id="keywordHeatmapCollapse" onclick="toggleHeatmapCollapse('keywordHeatmapCard')" aria-expanded="false" aria-controls="keywordHeatmapBody" title="展开疾病关键词热力图">
+                        <span class="heatmap-title-block">
+                            <h2 id="keywordHeatmapTitle">疾病关键词热力图</h2>
+                        </span>
+                        <i aria-hidden="true">▾</i>
+                    </button>
+                    <div class="heatmap-header-actions">
+                        <button type="button" class="keyword-filter-chip" id="keywordFilterChip" onclick="clearKeywordFilter()" hidden></button>
+                        <button type="button" class="heatmap-expand-button" data-fullscreen-card="keywordHeatmapCard" onclick="toggleHeatmapFullscreen('keywordHeatmapCard')" aria-label="全屏显示疾病关键词热力图" title="全屏显示"></button>
+                    </div>
+                </header>
+                <div class="heatmap-card-body" id="keywordHeatmapBody">
+                    <div class="keyword-heatmap" id="keywordHeatmap" role="img" aria-label="各类牙表标记关键词出现百分比"></div>
+                    <div class="heatmap-scale-row">
+                        <div class="keyword-heatmap-scale" id="keywordHeatmapScale" aria-label="分段颜色从百分之零递增至百分之一百">
+                            <span>0%</span>
+                            <div class="keyword-heatmap-scale-steps" aria-hidden="true">
+                                <i class="level-0" title="0%"></i><i class="level-1" title="大于0%至5%"></i><i class="level-2" title="大于5%至15%"></i><i class="level-3" title="大于15%至30%"></i><i class="level-4" title="大于30%至50%"></i><i class="level-5" title="大于50%至75%"></i><i class="level-6" title="大于75%至100%"></i>
+                            </div>
+                            <span>100%</span>
+                        </div>
+                        <div class="heatmap-scale-meta">
+                            <span class="heatmap-meta-badge" id="keywordHeatmapScope">全部病例</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tooth-heatmap-card heatmap-card--collapsed" id="toothHeatmapCard" aria-labelledby="toothHeatmapTitle">
+                <header class="keyword-heatmap-header">
+                    <button type="button" class="heatmap-collapse-toggle" id="toothHeatmapCollapse" onclick="toggleHeatmapCollapse('toothHeatmapCard')" aria-expanded="false" aria-controls="toothHeatmapBody" title="展开单牙异常频率">
+                        <span class="heatmap-title-block">
+                            <h2 id="toothHeatmapTitle">单牙异常频率</h2>
+                        </span>
+                        <i aria-hidden="true">▾</i>
+                    </button>
+                    <button type="button" class="heatmap-expand-button" data-fullscreen-card="toothHeatmapCard" onclick="toggleHeatmapFullscreen('toothHeatmapCard')" aria-label="全屏显示单牙异常频率" title="全屏显示"></button>
+                </header>
+                <div class="heatmap-card-body" id="toothHeatmapBody">
+                    <div class="tooth-heatmap-grid">
+                        <section class="tooth-heatmap-panel">
+                            <div class="tooth-heatmap-panel-title"><strong>犬</strong></div>
+                            <div class="tooth-heatmap" id="dogToothHeatmap" role="img" aria-label="犬单牙异常频率热力图"></div>
+                        </section>
+                        <section class="tooth-heatmap-panel">
+                            <div class="tooth-heatmap-panel-title"><strong>猫</strong></div>
+                            <div class="tooth-heatmap" id="catToothHeatmap" role="img" aria-label="猫单牙异常频率热力图"></div>
+                        </section>
+                    </div>
+                    <div class="heatmap-scale-row">
+                        <div class="keyword-heatmap-scale" id="toothHeatmapScale" aria-label="分段颜色从百分之零递增至百分之一百">
+                            <span>0%</span>
+                            <div class="keyword-heatmap-scale-steps" aria-hidden="true">
+                                <i class="level-0" title="0%"></i><i class="level-1" title="大于0%至5%"></i><i class="level-2" title="大于5%至15%"></i><i class="level-3" title="大于15%至30%"></i><i class="level-4" title="大于30%至50%"></i><i class="level-5" title="大于50%至75%"></i><i class="level-6" title="大于75%至100%"></i>
+                            </div>
+                            <span>100%</span>
+                        </div>
+                        <div class="heatmap-scale-meta">
+                            <span class="heatmap-meta-badge" id="dogToothHeatmapScope">犬 · 病例数：0</span>
+                            <span class="heatmap-meta-badge" id="catToothHeatmapScope">猫 · 病例数：0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </div>
+
+            <div class="history-grid">
+                <section class="records-panel">
+                    <div class="table-head" role="row">
+                        <button type="button" data-sort="id">检查编号</button>
+                        <button type="button" data-sort="ownerName">家长 / 动物</button>
+                        <button type="button" data-sort="chartType">品种</button>
+                        <button type="button" data-sort="examCount">检查次数</button>
+                        <button type="button" data-sort="updatedAt">修改时间</button>
+                        <button type="button" data-sort="abnormalToothCount">异常</button>
+                        <span aria-hidden="true">操作</span>
+                    </div>
+                    <div id="recordsBody"></div>
+                    <div class="empty-state" id="emptyState" hidden>暂无历史牙表</div>
+                    <footer class="records-footer">
+                        <span id="recordsFooterText">共 0 条记录</span>
+                        <div class="pagination" id="pagination" hidden>
+                            <button type="button" id="prevPage" aria-label="上一页">‹</button>
+                            <span id="pageIndicator">1 / 1</span>
+                            <button type="button" id="nextPage" aria-label="下一页">›</button>
+                        </div>
+                    </footer>
+                </section>
+
+                <aside class="detail-panel" id="detailPanel">
+                    <div class="detail-empty" id="detailEmpty">点击左侧记录查看详情。</div>
+                    <div id="detailContent" hidden>
+                        <section class="detail-basic-info" aria-labelledby="detailBasicInfoTitle">
+                            <h2 class="detail-section-title" id="detailBasicInfoTitle">基本信息</h2>
+                            <dl>
+                                <div><dt>检查编号</dt><dd id="detailExamId"></dd></div>
+                                <div><dt>病历号</dt><dd id="detailMedicalRecordId"></dd></div>
+                                <div><dt>家长</dt><dd class="detail-editable-value" id="detailOwnerName" data-basic-field="ownerName" tabindex="0" title="双击修改"></dd></div>
+                                <div><dt>动物</dt><dd class="detail-editable-value" id="detailPetName" data-basic-field="petName" tabindex="0" title="双击修改"></dd></div>
+                                <div><dt>品种</dt><dd id="detailChartType"></dd></div>
+                                <div><dt>创建日期</dt><dd id="detailCreatedAt"></dd></div>
+                            </dl>
+                            <div class="detail-basic-info-status" id="detailBasicInfoStatus"></div>
+                        </section>
+                        <section class="detail-versions" aria-labelledby="detailVersionsTitle">
+                            <h2 class="detail-section-title" id="detailVersionsTitle">历史检查</h2>
+                            <div class="version-timeline" id="versionTimeline"></div>
+                        </section>
+                    </div>
+                </aside>
+            </div>
+            <div class="trash-dock">
+                <button type="button" class="trash-toggle" id="trashToggle" onclick="toggleTrash()">回收站</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/vendor/highcharts-12.4.0.js"></script>
+    <script src="js/vendor/highcharts-treemap-12.4.0.js"></script>
+    <script src="js/vendor/highcharts-heatmap-12.4.0.js"></script>
+    <script src="js/supabase-config.js?v=20260804-1"></script>
+    <script src="js/dental-api.js?v=20260804-1"></script>
+    <script src="js/report.js?v=20260726-6"></script>
+    <script>
+        const API = 'api/charts';
+        const WORKFLOW_LABELS = { saved: '已保存', submitted: '待审核', reviewed: '已审核' };
+        const TYPE_LABELS = { dog: '犬', cat: '猫', rabbit: '兔' };
+        const PAGE_SIZE = 15;
+        let charts = [];
+        let selectedId = '';
+        let selectedDetail = null;
+        let selectedType = '';
+        let dateFilterMode = '';
+        let dateFrom = '';
+        let dateTo = '';
+        let sortKey = 'id';
+        let sortDirection = 'desc';
+        let trashMode = false;
+        let currentPage = 1;
+        let selectedKeyword = '';
+        let keywordHeatmapChart = null;
+        const toothHeatmapCharts = { dog: null, cat: null };
+        const heatmapDefaultHeights = { keyword: 0, dog: 0, cat: 0 };
+        const TOOTH_ROWS = {
+            dog: {
+                upper: ['110', '109', '108', '107', '106', '105', '104', '103', '102', '101', '201', '202', '203', '204', '205', '206', '207', '208', '209', '210'],
+                lower: ['411', '410', '409', '408', '407', '406', '405', '404', '403', '402', '401', '301', '302', '303', '304', '305', '306', '307', '308', '309', '310', '311']
+            },
+            cat: {
+                upper: ['109', '108', '107', '106', '104', '103', '102', '101', '201', '202', '203', '204', '206', '207', '208', '209'],
+                lower: ['409', '408', '407', '404', '403', '402', '401', '301', '302', '303', '304', '307', '308', '309']
+            }
+        };
+
+        const dateFormatter = new Intl.DateTimeFormat('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+        const timeFormatter = new Intl.DateTimeFormat('zh-CN', {
+            hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: false
+        });
+
+        function formatDate(value) { return dateFormatter.format(new Date(Number(value))); }
+        function formatTime(value) { return timeFormatter.format(new Date(Number(value))); }
+        function dateKey(value) {
+            const date = new Date(Number(value));
+            return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+        }
+        function todayKey() { return dateKey(Date.now()); }
+        function calendarDateKey(offsetDays = 0) {
+            const date = new Date();
+            date.setHours(12, 0, 0, 0);
+            date.setDate(date.getDate() + offsetDays);
+            return dateKey(date.getTime());
+        }
+        function resolveDateRange(mode = dateFilterMode, from = dateFrom, to = dateTo) {
+            if (mode === 'today') {
+                const key = calendarDateKey(0);
+                return { from: key, to: key };
+            }
+            if (mode === 'yesterday') {
+                const key = calendarDateKey(-1);
+                return { from: key, to: key };
+            }
+            if (mode === 'last3') return { from: calendarDateKey(-2), to: calendarDateKey(0) };
+            if (mode === 'last7') return { from: calendarDateKey(-6), to: calendarDateKey(0) };
+            if (mode === 'custom') {
+                let start = from || '';
+                let end = to || '';
+                if (start && end && start > end) [start, end] = [end, start];
+                return { from: start, to: end };
+            }
+            return { from: '', to: '' };
+        }
+        function dateFilterLabel() {
+            if (dateFilterMode === 'today') return '今天';
+            if (dateFilterMode === 'yesterday') return '昨天';
+            if (dateFilterMode === 'last3') return '近3天';
+            if (dateFilterMode === 'last7') return '近一周';
+            if (dateFilterMode === 'custom') {
+                const { from, to } = resolveDateRange();
+                if (from && to) return from === to ? from : `${from} ~ ${to}`;
+                if (from) return `${from} 起`;
+                if (to) return `至 ${to}`;
+            }
+            return '';
+        }
+        function chartMatchesDate(item) {
+            const { from, to } = resolveDateRange();
+            if (!from && !to) return true;
+            const key = dateKey(item.createdAt);
+            if (from && key < from) return false;
+            if (to && key > to) return false;
+            return true;
+        }
+        function syncDateFilterControls() {
+            const { from, to } = resolveDateRange();
+            const startInput = document.getElementById('dateFilterStart');
+            const endInput = document.getElementById('dateFilterEnd');
+            if (startInput) startInput.value = from;
+            if (endInput) endInput.value = to;
+            document.querySelectorAll('#dateFilters button').forEach(button => {
+                const mode = button.dataset.date || '';
+                button.classList.toggle('active', dateFilterMode === mode);
+            });
+            document.querySelector('.date-range')?.classList.toggle('is-active', dateFilterMode === 'custom');
+        }
+        function applyDateFilter(mode, from = '', to = '') {
+            dateFilterMode = mode || '';
+            if (dateFilterMode === 'custom') {
+                dateFrom = from || '';
+                dateTo = to || '';
+                if (!dateFrom && !dateTo) dateFilterMode = '';
+            } else {
+                dateFrom = '';
+                dateTo = '';
+            }
+            syncDateFilterControls();
+            currentPage = 1;
+            renderRows();
+            renderKeywordHeatmap();
+            renderToothHeatmaps();
+        }
+        function openChart(id, version) {
+            location.href = `index.html?chart=${id}${version ? `&version=${version}` : ''}`;
+        }
+        function openFollowup(id) {
+            location.href = `index.html?chart=${id}&followup=1`;
+        }
+        function openView(id, version) {
+            location.href = `index.html?chart=${id}&view=1${version ? `&version=${version}` : ''}`;
+        }
+        function fullscreenElement() {
+            return document.fullscreenElement || document.webkitFullscreenElement || null;
+        }
+        function rememberHeatmapDefaultHeights(cardId) {
+            if (cardId === 'keywordHeatmapCard' && keywordHeatmapChart) {
+                heatmapDefaultHeights.keyword = keywordHeatmapChart.chartHeight;
+            }
+            if (cardId === 'toothHeatmapCard') {
+                ['dog', 'cat'].forEach(type => {
+                    if (toothHeatmapCharts[type]) {
+                        heatmapDefaultHeights[type] = toothHeatmapCharts[type].chartHeight;
+                    }
+                });
+            }
+        }
+        function restoreHeatmapDefaultHeights() {
+            if (keywordHeatmapChart && heatmapDefaultHeights.keyword) {
+                keywordHeatmapChart.setSize(null, heatmapDefaultHeights.keyword, false);
+            }
+            ['dog', 'cat'].forEach(type => {
+                if (toothHeatmapCharts[type] && heatmapDefaultHeights[type]) {
+                    toothHeatmapCharts[type].setSize(null, heatmapDefaultHeights[type], false);
+                }
+            });
+        }
+        function setHeatmapCollapsed(collapsed) {
+            [
+                { id: 'keywordHeatmapCard', title: '疾病关键词热力图' },
+                { id: 'toothHeatmapCard', title: '单牙异常频率' }
+            ].forEach(({ id, title }) => {
+                const card = document.getElementById(id);
+                const toggle = card?.querySelector('.heatmap-collapse-toggle');
+                if (!card || !toggle) return;
+                card.classList.toggle('heatmap-card--collapsed', collapsed);
+                toggle.setAttribute('aria-expanded', String(!collapsed));
+                toggle.title = collapsed ? `展开${title}` : `折叠${title}`;
+            });
+            if (!collapsed) {
+                requestAnimationFrame(() => {
+                    keywordHeatmapChart?.reflow();
+                    toothHeatmapCharts.dog?.reflow();
+                    toothHeatmapCharts.cat?.reflow();
+                });
+            }
+        }
+
+        function toggleHeatmapCollapse(cardId) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            setHeatmapCollapsed(!card.classList.contains('heatmap-card--collapsed'));
+        }
+
+        async function toggleHeatmapFullscreen(cardId) {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            try {
+                if (fullscreenElement() === card) {
+                    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+                    if (exit) await exit.call(document);
+                } else {
+                    if (card.classList.contains('heatmap-card--collapsed')) {
+                        setHeatmapCollapsed(false);
+                    }
+                    const request = card.requestFullscreen || card.webkitRequestFullscreen;
+                    if (!request) throw new Error('当前浏览器不支持全屏显示');
+                    rememberHeatmapDefaultHeights(cardId);
+                    await request.call(card);
+                }
+            } catch (error) {
+                document.getElementById('historyStatus').textContent = error.message || '无法进入全屏显示';
+            }
+        }
+        function updateHeatmapFullscreenState() {
+            const active = fullscreenElement();
+            document.querySelectorAll('.heatmap-expand-button').forEach(button => {
+                const expanded = active?.id === button.dataset.fullscreenCard;
+                const chartName = button.dataset.fullscreenCard === 'keywordHeatmapCard' ? '疾病关键词热力图' : '单牙异常频率';
+                button.classList.toggle('active', expanded);
+                button.setAttribute('aria-label', expanded ? '退出全屏' : `全屏显示${chartName}`);
+                button.title = expanded ? '退出全屏' : '全屏显示';
+            });
+            setTimeout(() => {
+                if (active) {
+                    keywordHeatmapChart?.reflow();
+                    toothHeatmapCharts.dog?.reflow();
+                    toothHeatmapCharts.cat?.reflow();
+                } else {
+                    restoreHeatmapDefaultHeights();
+                }
+            }, 80);
+        }
+        document.addEventListener('fullscreenchange', updateHeatmapFullscreenState);
+        document.addEventListener('webkitfullscreenchange', updateHeatmapFullscreenState);
+        function makeElement(tag, className, text) {
+            const element = document.createElement(tag);
+            if (className) element.className = className;
+            if (text !== undefined) element.textContent = text;
+            return element;
+        }
+
+        function renderDetailBasicInfo(detail) {
+            document.getElementById('detailExamId').textContent = detail.id || '';
+            document.getElementById('detailMedicalRecordId').textContent = detail.medicalRecordId || detail.id || '';
+            document.getElementById('detailOwnerName').textContent = detail.ownerName || '';
+            document.getElementById('detailPetName').textContent = detail.petName || '';
+            document.getElementById('detailChartType').textContent = TYPE_LABELS[detail.chartType] || '';
+            document.getElementById('detailCreatedAt').textContent = detail.createdAt
+                ? `${formatDate(detail.createdAt)} ${formatTime(detail.createdAt)}`
+                : '';
+            const status = document.getElementById('detailBasicInfoStatus');
+            if (status) status.textContent = '';
+            document.querySelectorAll('.detail-editable-value').forEach(element => {
+                element.classList.toggle('editable', !trashMode);
+                element.tabIndex = trashMode ? -1 : 0;
+            });
+        }
+
+        function createVersionReportSection(title, text) {
+            const section = makeElement('section', 'report-section');
+            const heading = makeElement('div', 'report-section-header');
+            heading.appendChild(makeElement('h4', '', title));
+            const textarea = makeElement('textarea', 'report-textarea' + (text ? '' : ' report-textarea--empty'));
+            textarea.readOnly = true;
+            textarea.rows = 5;
+            textarea.value = text || '';
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'report-copy-btn';
+            copyBtn.setAttribute('aria-label', `复制${title}`);
+            copyBtn.title = `复制${title}`;
+            copyBtn.addEventListener('click', () => copyVersionReportText(textarea, copyBtn));
+            heading.appendChild(copyBtn);
+            section.append(heading, textarea);
+            return section;
+        }
+
+        function copyVersionReportText(textarea, btn) {
+            const text = ((textarea && textarea.value) || '').trim();
+            if (!text) return;
+            const setCopiedState = () => {
+                if (!btn) return;
+                const oldLabel = btn.getAttribute('aria-label') || '复制';
+                const oldTitle = btn.title;
+                btn.classList.add('copied');
+                btn.setAttribute('aria-label', '已复制');
+                btn.title = '已复制';
+                setTimeout(() => {
+                    btn.classList.remove('copied');
+                    btn.setAttribute('aria-label', oldLabel);
+                    btn.title = oldTitle;
+                }, 1200);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(setCopiedState).catch(() => {
+                    textarea.select();
+                    document.execCommand('copy');
+                    setCopiedState();
+                });
+                return;
+            }
+            textarea.select();
+            document.execCommand('copy');
+            setCopiedState();
+        }
+
+        async function saveBasicInfo(field, value, element, originalValue) {
+            if (!selectedDetail || !selectedId) return;
+            const editingId = selectedId;
+            const next = {
+                ownerName: field === 'ownerName' ? value : selectedDetail.ownerName,
+                petName: field === 'petName' ? value : selectedDetail.petName
+            };
+            const status = document.getElementById('detailBasicInfoStatus');
+            if (status) status.textContent = '正在保存...';
+            try {
+                const response = await DentalApi.fetch(`${API}/${editingId}/basic-info`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(next)
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.message || '基本信息保存失败');
+                if (selectedId !== editingId) return;
+                selectedDetail = result;
+                const item = charts.find(chart => chart.id === editingId);
+                if (item) Object.assign(item, {
+                    ownerName: result.ownerName,
+                    petName: result.petName
+                });
+                renderDetailBasicInfo(result);
+                currentPage = 1;
+                renderRows();
+                if (status) status.textContent = '已保存';
+            } catch (error) {
+                element.textContent = originalValue;
+                if (status) status.textContent = error.message || '基本信息保存失败';
+            }
+        }
+
+        function beginBasicInfoEdit(element) {
+            if (trashMode || !selectedDetail || element.classList.contains('editing')) return;
+            const field = element.dataset.basicField;
+            const originalValue = field === 'ownerName' ? selectedDetail.ownerName || '' : selectedDetail.petName || '';
+            const input = makeElement('input', 'detail-inline-input');
+            input.type = 'text';
+            input.maxLength = 100;
+            input.value = originalValue;
+            input.setAttribute('aria-label', field === 'ownerName' ? '修改家长' : '修改动物');
+            const syncInputWidth = () => {
+                input.size = Math.max(2, (input.value || '').length || 1);
+            };
+            syncInputWidth();
+            element.classList.add('editing');
+            element.replaceChildren(input);
+            input.focus();
+            input.select();
+            input.addEventListener('input', syncInputWidth);
+            let finished = false;
+            const finish = save => {
+                if (finished) return;
+                finished = true;
+                element.classList.remove('editing');
+                const value = input.value.trim();
+                element.textContent = save ? value : originalValue;
+                if (save && value !== originalValue) saveBasicInfo(field, value, element, originalValue);
+            };
+            input.addEventListener('keydown', event => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    finish(true);
+                } else if (event.key === 'Escape') {
+                    event.preventDefault();
+                    finish(false);
+                }
+            });
+            input.addEventListener('blur', () => finish(true));
+        }
+
+        document.querySelectorAll('.detail-editable-value').forEach(element => {
+            element.addEventListener('dblclick', () => beginBasicInfoEdit(element));
+            element.addEventListener('click', () => {
+                if (window.matchMedia('(hover: none), (pointer: coarse)').matches) beginBasicInfoEdit(element);
+            });
+            element.addEventListener('keydown', event => {
+                if (event.key === 'Enter') beginBasicInfoEdit(element);
+            });
+        });
+
+        const pendingDeleteTimers = new WeakMap();
+
+        function trashIconSvg() {
+            return '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"></path><path d="M9 7V5h6v2"></path><path d="M7 7l1 13h8l1-13"></path><path d="M10 11v6M14 11v6"></path></svg>';
+        }
+
+        function confirmIconSvg() {
+            return '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>';
+        }
+
+        function fillDeleteButton(button, label) {
+            button.innerHTML = [
+                `<span class="row-delete-icon row-delete-icon--trash" aria-hidden="true">${trashIconSvg()}</span>`,
+                `<span class="row-delete-icon row-delete-icon--confirm" aria-hidden="true">${confirmIconSvg()}</span>`
+            ].join('');
+            button.classList.remove('confirm-mode');
+            button.setAttribute('aria-label', label);
+            button.title = label;
+        }
+
+        function resetDeleteButton(button, label) {
+            if (!button?.classList.contains('confirm-mode')) return;
+            const timer = pendingDeleteTimers.get(button);
+            if (timer) {
+                clearTimeout(timer);
+                pendingDeleteTimers.delete(button);
+            }
+            fillDeleteButton(button, label);
+        }
+
+        async function deleteChart(chart, event) {
+            event?.stopPropagation();
+            const button = event?.currentTarget;
+            if (!button || button.disabled) return;
+
+            const name = chart.petName || chart.id;
+            const permanent = trashMode;
+            const baseLabel = permanent ? `彻底删除${name}` : `删除${name}`;
+            const confirmLabel = permanent ? `再次点击彻底删除${name}` : `再次点击确认删除${name}`;
+
+            if (!button.classList.contains('confirm-mode')) {
+                button.classList.add('confirm-mode');
+                button.setAttribute('aria-label', confirmLabel);
+                button.title = confirmLabel;
+                const timer = setTimeout(() => resetDeleteButton(button, baseLabel), 2500);
+                pendingDeleteTimers.set(button, timer);
+                return;
+            }
+
+            const timer = pendingDeleteTimers.get(button);
+            if (timer) {
+                clearTimeout(timer);
+                pendingDeleteTimers.delete(button);
+            }
+            button.disabled = true;
+            try {
+                const response = await DentalApi.fetch(`${API}/${chart.id}${permanent ? '?permanent=true' : ''}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error((await response.json()).message || '删除失败');
+                charts = charts.filter(item => item.id !== chart.id);
+                if (selectedId === chart.id) {
+                    selectedId = '';
+                    document.getElementById('detailContent').hidden = true;
+                    document.getElementById('detailEmpty').hidden = false;
+                }
+                updateSummary();
+                renderRows();
+                const next = filteredCharts()[(currentPage - 1) * PAGE_SIZE];
+                if (next) selectChart(next.id);
+                document.getElementById('historyStatus').textContent = permanent ? '牙表已彻底删除' : '牙表已移入回收站';
+            } catch (error) {
+                button.disabled = false;
+                resetDeleteButton(button, baseLabel);
+                alert(`删除失败：${error.message}`);
+            }
+        }
+
+        async function restoreChart(chart, event) {
+            event?.stopPropagation();
+            const button = event?.currentTarget;
+            if (button) button.disabled = true;
+            try {
+                const response = await DentalApi.fetch(`${API}/${chart.id}/restore`, { method: 'POST' });
+                if (!response.ok) throw new Error('恢复失败');
+                charts = charts.filter(item => item.id !== chart.id);
+                renderRows();
+                document.getElementById('historyStatus').textContent = '牙表已恢复';
+            } catch (error) {
+                if (button) button.disabled = false;
+                alert(`恢复失败：${error.message}`);
+            }
+        }
+
+        function toggleTrash() {
+            trashMode = !trashMode;
+            currentPage = 1;
+            selectedId = '';
+            document.getElementById('trashToggle').classList.toggle('active', trashMode);
+            document.getElementById('trashToggle').textContent = trashMode ? '返回历史记录' : '回收站';
+            document.getElementById('detailContent').hidden = true;
+            document.getElementById('detailEmpty').hidden = false;
+            document.getElementById('emptyState').textContent = trashMode ? '回收站为空' : '暂无历史牙表';
+            document.getElementById('statisticsGrid').hidden = trashMode;
+            document.getElementById('keywordHeatmapCard').hidden = trashMode;
+            document.getElementById('toothHeatmapCard').hidden = trashMode;
+            loadCharts();
+        }
+
+        function keywordHeatmapColor(percentage) {
+            const value = Math.max(0, Math.min(100, Number(percentage) || 0));
+            if (value === 0) return '#e5e9e7';
+            if (value <= 5) return 'rgba(190,226,213,.55)';
+            if (value <= 15) return 'rgba(157,207,190,.68)';
+            if (value <= 30) return 'rgba(119,184,162,.78)';
+            if (value <= 50) return 'rgba(76,153,128,.86)';
+            if (value <= 75) return 'rgba(39,121,98,.94)';
+            return '#075e4b';
+        }
+
+        function chartHasKeyword(item, keyword) {
+            return !keyword || (item.reportKeywords || []).some(value => String(value || '') === keyword);
+        }
+
+        function clearKeywordFilter() {
+            applyKeywordFilter('');
+        }
+
+        function applyKeywordFilter(keyword) {
+            selectedKeyword = selectedKeyword === keyword ? '' : keyword;
+            currentPage = 1;
+            selectedId = '';
+            const content = document.getElementById('detailContent');
+            const empty = document.getElementById('detailEmpty');
+            content.hidden = true;
+            empty.hidden = false;
+            empty.textContent = selectedKeyword ? `正在显示包含“${selectedKeyword}”的病例。` : '点击左侧记录查看详情。';
+            renderKeywordHeatmap();
+            renderToothHeatmaps();
+            renderRows();
+            const first = filteredCharts()[0];
+            if (first) selectChart(first.id);
+        }
+
+        function keywordHeatmapItems() {
+            const scope = charts.filter(item =>
+                (!selectedType || item.chartType === selectedType) &&
+                chartMatchesDate(item)
+            );
+            const counts = new Map();
+            scope.forEach(item => {
+                const keywords = new Set((item.reportKeywords || []).map(value => String(value || '').trim()).filter(Boolean));
+                keywords.forEach(keyword => counts.set(keyword, (counts.get(keyword) || 0) + 1));
+            });
+            return {
+                total: scope.length,
+                points: [...counts.entries()]
+                    .map(([name, count]) => {
+                        const percentage = scope.length ? count / scope.length * 100 : 0;
+                        return {
+                            name,
+                            value: count,
+                            colorValue: percentage,
+                            color: keywordHeatmapColor(percentage),
+                            selected: name === selectedKeyword,
+                            opacity: selectedKeyword && name !== selectedKeyword ? .38 : 1,
+                            dataLabels: { style: { color: percentage > 50 ? '#ffffff' : '#143f34' } },
+                            custom: { count, total: scope.length, percentage }
+                        };
+                    })
+                    .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name, 'zh-CN'))
+            };
+        }
+
+        function renderKeywordHeatmap() {
+            const card = document.getElementById('keywordHeatmapCard');
+            const container = document.getElementById('keywordHeatmap');
+            const scale = document.getElementById('keywordHeatmapScale');
+            const scopeLabel = document.getElementById('keywordHeatmapScope');
+            const filterChip = document.getElementById('keywordFilterChip');
+            card.hidden = trashMode;
+            if (trashMode) return;
+
+            const { total, points } = keywordHeatmapItems();
+            const typeText = selectedType ? `${TYPE_LABELS[selectedType]}牙表` : '全部病例';
+            const dateText = dateFilterLabel();
+            scopeLabel.textContent = dateText ? `${typeText} · ${dateText} · ${total} 份` : `${typeText} · ${total} 份`;
+            filterChip.hidden = !selectedKeyword;
+            filterChip.textContent = selectedKeyword ? `${selectedKeyword} ×` : '';
+            filterChip.setAttribute('aria-label', selectedKeyword ? `清除${selectedKeyword}筛选` : '清除关键词筛选');
+            container.setAttribute('aria-label', `${typeText}中各类牙表标记关键词出现百分比，共${total}份病例`);
+
+            if (keywordHeatmapChart) {
+                keywordHeatmapChart.destroy();
+                keywordHeatmapChart = null;
+            }
+            container.classList.toggle('empty', !points.length);
+            scale.hidden = !points.length;
+            if (!points.length) {
+                container.textContent = total ? '当前病例暂无标记关键词' : '当前范围暂无病例';
+                return;
+            }
+            container.textContent = '';
+            if (!window.Highcharts || !Highcharts.seriesTypes.treemap) {
+                container.classList.add('empty');
+                container.textContent = '热力图组件未能加载';
+                return;
+            }
+
+            keywordHeatmapChart = Highcharts.chart(container, {
+                chart: {
+                    type: 'treemap',
+                    backgroundColor: 'transparent',
+                    spacing: [2, 2, 2, 2],
+                    animation: false,
+                    style: { fontFamily: '"Microsoft YaHei", "PingFang SC", Arial, sans-serif' }
+                },
+                title: { text: null },
+                credits: { enabled: false },
+                accessibility: { enabled: false },
+                legend: { enabled: false },
+                tooltip: {
+                    useHTML: true,
+                    borderWidth: 0,
+                    borderRadius: 9,
+                    backgroundColor: 'rgba(255,255,255,.97)',
+                    shadow: { color: 'rgba(25,58,47,.16)', offsetX: 0, offsetY: 5, opacity: .16, width: 12 },
+                    formatter: function () {
+                        const data = this.point.custom;
+                        return `<b>${this.point.name}</b><br><span>${data.count} / ${data.total} 份病例</span><br><b style="color:#0c7b62">${data.percentage.toFixed(2)}%</b>`;
+                    }
+                },
+                plotOptions: {
+                    series: {
+                        animation: false,
+                        cursor: 'pointer',
+                        allowPointSelect: true,
+                        point: {
+                            events: {
+                                click: function () {
+                                    const keyword = this.name;
+                                    setTimeout(() => applyKeywordFilter(keyword), 0);
+                                    return false;
+                                }
+                            }
+                        },
+                        states: {
+                            inactive: { opacity: 1 },
+                            hover: { brightness: .04, borderWidth: 1 },
+                            select: { borderColor: '#064c3d', borderWidth: 2, brightness: .08 }
+                        }
+                    }
+                },
+                series: [{
+                    type: 'treemap',
+                    name: '关键词出现率',
+                    layoutAlgorithm: 'squarified',
+                    borderColor: '#ffffff',
+                    borderWidth: 3,
+                    data: points,
+                    dataLabels: {
+                        enabled: true,
+                        allowOverlap: false,
+                        padding: 5,
+                        formatter: function () {
+                            return `${this.point.name}<br/>${this.point.custom.percentage.toFixed(2)}%`;
+                        },
+                        style: {
+                            color: '#143f34',
+                            fontSize: '11px',
+                            fontWeight: '650',
+                            textOutline: 'none'
+                        }
+                    }
+                }]
+            });
+        }
+
+        function toothHeatmapData(type) {
+            const cases = charts.filter(item =>
+                item.chartType === type &&
+                chartMatchesDate(item) &&
+                chartHasKeyword(item, selectedKeyword)
+            );
+            const supported = cases.every(item => (
+                Array.isArray(item.abnormalTeeth) &&
+                (!selectedKeyword || (item.toothKeywords && typeof item.toothKeywords === 'object'))
+            ));
+            const rows = TOOTH_ROWS[type];
+            const validTeeth = new Set([...rows.upper, ...rows.lower]);
+            const counts = new Map([...validTeeth].map(tooth => [tooth, 0]));
+            cases.forEach(item => {
+                const abnormal = selectedKeyword
+                    ? new Set(Object.entries(item.toothKeywords || {})
+                        .filter(([, keywords]) => Array.isArray(keywords) && keywords.includes(selectedKeyword))
+                        .map(([tooth]) => String(tooth))
+                        .filter(tooth => validTeeth.has(tooth)))
+                    : new Set((item.abnormalTeeth || []).map(String).filter(tooth => validTeeth.has(tooth)));
+                abnormal.forEach(tooth => counts.set(tooth, counts.get(tooth) + 1));
+            });
+            const width = Math.max(rows.upper.length, rows.lower.length);
+            const points = [];
+            [rows.upper, rows.lower].forEach((teeth, rowIndex) => {
+                const offset = (width - teeth.length) / 2;
+                teeth.forEach((tooth, index) => {
+                    const count = counts.get(tooth) || 0;
+                    const percentage = cases.length ? count / cases.length * 100 : 0;
+                    points.push({
+                        x: index + offset,
+                        y: rowIndex,
+                        value: percentage,
+                        name: tooth,
+                        color: keywordHeatmapColor(percentage),
+                        dataLabels: { style: { color: percentage > 50 ? '#ffffff' : '#143f34' } },
+                        custom: { count, total: cases.length, percentage }
+                    });
+                });
+            });
+            return { total: cases.length, width, points, supported };
+        }
+
+        function renderToothHeatmap(type) {
+            const container = document.getElementById(`${type}ToothHeatmap`);
+            const scope = document.getElementById(`${type}ToothHeatmapScope`);
+            const label = TYPE_LABELS[type];
+            const { total, width, points, supported } = toothHeatmapData(type);
+            scope.textContent = selectedKeyword
+                ? `${label} · 病例数：${total} · ${selectedKeyword}`
+                : `${label} · 病例数：${total}`;
+            container.setAttribute('aria-label', `${label}单牙异常频率热力图，共${total}份病例`);
+            if (toothHeatmapCharts[type]) {
+                toothHeatmapCharts[type].destroy();
+                toothHeatmapCharts[type] = null;
+            }
+            if (total && !supported) {
+                container.classList.add('empty');
+                container.textContent = '重启牙表服务后显示统计';
+                return;
+            }
+            container.classList.toggle('empty', !total);
+            if (!total) {
+                container.textContent = `暂无${label}病例`;
+                return;
+            }
+            container.textContent = '';
+            if (!window.Highcharts || !Highcharts.seriesTypes.heatmap) {
+                container.classList.add('empty');
+                container.textContent = '热力图组件未能加载';
+                return;
+            }
+            toothHeatmapCharts[type] = Highcharts.chart(container, {
+                chart: {
+                    type: 'heatmap',
+                    backgroundColor: 'transparent',
+                    plotBackgroundColor: 'transparent',
+                    margin: [4, 2, 4, 2],
+                    animation: false,
+                    style: { fontFamily: '"Microsoft YaHei", "PingFang SC", Arial, sans-serif' }
+                },
+                title: { text: null },
+                credits: { enabled: false },
+                accessibility: { enabled: false },
+                legend: { enabled: false },
+                xAxis: {
+                    min: -0.5,
+                    max: width - 0.5,
+                    visible: false
+                },
+                yAxis: {
+                    categories: ['上颌', '下颌'],
+                    min: -0.5,
+                    max: 1.5,
+                    reversed: true,
+                    title: { text: null },
+                    gridLineWidth: 0,
+                    lineWidth: 0,
+                    tickLength: 0,
+                    labels: { enabled: false }
+                },
+                tooltip: {
+                    useHTML: true,
+                    borderWidth: 0,
+                    borderRadius: 9,
+                    backgroundColor: 'rgba(255,255,255,.97)',
+                    formatter: function () {
+                        const data = this.point.custom;
+                        return `<b>${label} · ${this.point.name}牙</b><br><span>${data.count} / ${data.total} 份病例</span><br><b style="color:#0c7b62">${data.percentage.toFixed(2)}%</b>`;
+                    }
+                },
+                plotOptions: {
+                    series: {
+                        animation: false,
+                        borderColor: '#ffffff',
+                        borderWidth: 2,
+                        states: { inactive: { opacity: 1 }, hover: { brightness: .04, borderWidth: 1 } }
+                    }
+                },
+                series: [{
+                    type: 'heatmap',
+                    name: `${label}单牙异常频率`,
+                    colsize: 1,
+                    rowsize: 1,
+                    data: points,
+                    dataLabels: {
+                        enabled: true,
+                        allowOverlap: true,
+                        formatter: function () {
+                            return this.point.name;
+                        },
+                        style: {
+                            color: '#143f34',
+                            fontSize: '8px',
+                            fontWeight: '650',
+                            lineHeight: '10px',
+                            textOutline: 'none'
+                        }
+                    }
+                }]
+            });
+        }
+
+        function renderToothHeatmaps() {
+            const card = document.getElementById('toothHeatmapCard');
+            card.hidden = trashMode;
+            if (trashMode) return;
+            renderToothHeatmap('dog');
+            renderToothHeatmap('cat');
+        }
+
+        function updateSummary() {
+            document.getElementById('totalCount').textContent = charts.length;
+            const labels = document.querySelectorAll('.summary-strip span');
+            labels[0].textContent = trashMode ? '回收站记录' : '全部牙表';
+            labels[1].textContent = trashMode ? '自动清除' : '今日新增';
+            document.getElementById('todayCount').textContent = trashMode
+                ? '15天'
+                : charts.filter(item => dateKey(item.createdAt) === todayKey()).length;
+            renderKeywordHeatmap();
+            renderToothHeatmaps();
+        }
+
+        function filteredCharts() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const result = charts.filter(item => (
+                (!selectedType || item.chartType === selectedType) &&
+                chartMatchesDate(item) &&
+                (trashMode || chartHasKeyword(item, selectedKeyword)) &&
+                (!query || [item.id, item.ownerName, item.petName, ...(item.reportKeywords || [])].some(value => String(value || '').toLowerCase().includes(query)))
+            ));
+            return result.sort((a, b) => {
+                const left = a[sortKey] ?? '';
+                const right = b[sortKey] ?? '';
+                let comparison;
+                if (sortKey === 'id') {
+                    const leftId = Number(String(left).replace(/\D/g, '')) || 0;
+                    const rightId = Number(String(right).replace(/\D/g, '')) || 0;
+                    comparison = leftId - rightId;
+                } else if (['createdAt', 'updatedAt', 'abnormalToothCount', 'examCount'].includes(sortKey)) {
+                    comparison = Number(left) - Number(right);
+                } else {
+                    comparison = String(left).localeCompare(String(right), 'zh-CN', { numeric: true, sensitivity: 'base' });
+                }
+                return sortDirection === 'asc' ? comparison : -comparison;
+            });
+        }
+
+        function updateSortHeaders() {
+            document.querySelectorAll('.table-head [data-sort]').forEach(button => {
+                const active = button.dataset.sort === sortKey;
+                button.dataset.direction = active ? sortDirection : '';
+                button.setAttribute('aria-pressed', String(active));
+                button.title = active
+                    ? `当前${sortDirection === 'asc' ? '升序' : '降序'}，点击切换`
+                    : `按${button.textContent}排序`;
+            });
+        }
+
+        function renderRows() {
+            const items = filteredCharts();
+            const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+            currentPage = Math.min(Math.max(1, currentPage), totalPages);
+            const start = (currentPage - 1) * PAGE_SIZE;
+            const pageItems = items.slice(start, start + PAGE_SIZE);
+            const body = document.getElementById('recordsBody');
+            body.innerHTML = '';
+            document.getElementById('emptyState').hidden = items.length > 0;
+            document.getElementById('recordsFooterText').textContent = `共 ${items.length} 条记录`;
+            const pagination = document.getElementById('pagination');
+            pagination.hidden = totalPages <= 1;
+            document.getElementById('pageIndicator').textContent = `${currentPage} / ${totalPages}`;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+            updateSortHeaders();
+
+            pageItems.forEach(item => {
+                    const row = makeElement('article', 'record-row' + (item.id === selectedId ? ' selected' : ''));
+                    row.tabIndex = 0;
+                    const examIdCell = makeElement('div', 'exam-id-cell');
+                    examIdCell.append(
+                        makeElement('strong', '', item.id || ''),
+                        makeElement('span', '', item.medicalRecordId || '')
+                    );
+                    row.appendChild(examIdCell);
+                    const patient = makeElement('div', 'record-patient');
+                    const owner = item.ownerName || '未填写家长';
+                    const pet = item.petName || '未填写动物';
+                    patient.append(
+                        makeElement('strong', item.ownerName ? '' : 'is-empty', owner),
+                        makeElement('span', item.petName ? '' : 'is-empty', pet)
+                    );
+                    row.appendChild(patient);
+                    row.appendChild(makeElement('span', 'species-cell', TYPE_LABELS[item.chartType] || ''));
+                    const examCount = makeElement('span', 'exam-count-cell');
+                    examCount.append(makeElement('b', '', String(item.examCount ?? '—')));
+                    examCount.title = '历史检查次数';
+                    row.appendChild(examCount);
+                    const updated = makeElement('div', 'updated-cell');
+                    updated.append(
+                        makeElement('strong', '', formatDate(item.updatedAt)),
+                        makeElement('span', '', formatTime(item.updatedAt))
+                    );
+                    row.appendChild(updated);
+                    const percentage = Number(item.abnormalPercentage || 0);
+                    const abnormal = makeElement('span', 'abnormal-count');
+                    abnormal.append(
+                        makeElement('b', '', String(item.abnormalToothCount || 0)),
+                        document.createTextNode(` · ${percentage.toFixed(1)}%`)
+                    );
+                    row.appendChild(abnormal);
+                    const actions = makeElement('div', 'row-actions');
+                    if (trashMode) {
+                        const restore = makeElement('button', 'row-restore', '恢复');
+                        restore.type = 'button';
+                        restore.addEventListener('click', event => restoreChart(item, event));
+                        restore.addEventListener('dblclick', event => event.stopPropagation());
+                        actions.appendChild(restore);
+                    } else {
+                        const view = makeElement('button', 'row-view', '查看');
+                        view.type = 'button';
+                        view.setAttribute('aria-label', `查看${item.petName || item.id}的牙表`);
+                        view.addEventListener('click', event => {
+                            event.stopPropagation();
+                            openView(item.id);
+                        });
+                        view.addEventListener('dblclick', event => event.stopPropagation());
+                        const followup = makeElement('button', 'row-followup', '复查');
+                        followup.type = 'button';
+                        followup.setAttribute('aria-label', `复查${item.petName || item.id}的牙表`);
+                        followup.addEventListener('click', event => {
+                            event.stopPropagation();
+                            openFollowup(item.id);
+                        });
+                        followup.addEventListener('dblclick', event => event.stopPropagation());
+                        const edit = makeElement('button', 'row-edit', '编写');
+                        edit.type = 'button';
+                        edit.setAttribute('aria-label', `重新编写${item.petName || item.id}的牙表`);
+                        edit.addEventListener('click', event => {
+                            event.stopPropagation();
+                            openChart(item.id);
+                        });
+                        edit.addEventListener('dblclick', event => event.stopPropagation());
+                        actions.append(view, followup, edit);
+                    }
+                    const remove = makeElement('button', 'row-delete');
+                    remove.type = 'button';
+                    fillDeleteButton(remove, trashMode ? `彻底删除${item.petName || item.id}` : `删除${item.petName || item.id}`);
+                    remove.addEventListener('click', event => deleteChart(item, event));
+                    remove.addEventListener('dblclick', event => event.stopPropagation());
+                    actions.appendChild(remove);
+                    row.appendChild(actions);
+                    row.addEventListener('click', () => selectChart(item.id));
+                    if (!trashMode) {
+                        const modifiedToday = dateKey(item.updatedAt) === todayKey();
+                        row.title = modifiedToday
+                            ? '双击进入编写'
+                            : '双击进入复查';
+                        row.addEventListener('dblclick', () => {
+                            if (modifiedToday) openChart(item.id);
+                            else openFollowup(item.id);
+                        });
+                    }
+                    row.addEventListener('keydown', event => {
+                        if (event.key === 'Enter') selectChart(item.id);
+                    });
+                    body.appendChild(row);
+            });
+        }
+
+        function applyExamCountsByMedicalRecord() {
+            const idsByMedicalRecord = new Map();
+            charts.forEach(item => {
+                const medicalRecordId = item.medicalRecordId || item.id;
+                if (!idsByMedicalRecord.has(medicalRecordId)) {
+                    idsByMedicalRecord.set(medicalRecordId, new Set());
+                }
+                idsByMedicalRecord.get(medicalRecordId).add(item.id);
+            });
+            charts.forEach(item => {
+                const medicalRecordId = item.medicalRecordId || item.id;
+                item.examCount = idsByMedicalRecord.get(medicalRecordId)?.size || 1;
+            });
+        }
+
+        function buildHistoryCheckEntries(records) {
+            const byChartId = new Map();
+            (Array.isArray(records) ? records : []).forEach(record => {
+                const versions = (Array.isArray(record.versions) ? record.versions : [])
+                    .slice()
+                    .sort((a, b) => Number(b.updatedAt) - Number(a.updatedAt));
+                const finalVersion = versions[0];
+                if (!finalVersion) return;
+                const previous = byChartId.get(record.id);
+                if (!previous || Number(finalVersion.updatedAt) > Number(previous.finalVersion.updatedAt)) {
+                    byChartId.set(record.id, {
+                        chartId: record.id,
+                        medicalRecordId: record.medicalRecordId,
+                        finalVersion
+                    });
+                }
+            });
+            const entries = [...byChartId.values()];
+            return entries.sort((a, b) => (
+                Number(b.finalVersion.updatedAt) - Number(a.finalVersion.updatedAt)
+            ));
+        }
+
+        async function selectChart(id) {
+            selectedId = id;
+            selectedDetail = null;
+            renderRows();
+            const empty = document.getElementById('detailEmpty');
+            const content = document.getElementById('detailContent');
+            empty.hidden = true;
+            content.hidden = false;
+            document.getElementById('versionTimeline').innerHTML = '<div class="version-loading">正在读取...</div>';
+            try {
+                const response = await DentalApi.fetch(`${API}/${id}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error('读取版本失败');
+                const detail = await response.json();
+                if (selectedId !== id) return;
+                selectedDetail = detail;
+                renderDetailBasicInfo(detail);
+                let relatedRecords = [detail];
+                if (detail.medicalRecordId && !trashMode) {
+                    try {
+                        const relatedResponse = await DentalApi.fetch(
+                            `api/medical-records/${encodeURIComponent(detail.medicalRecordId)}/charts`,
+                            { cache: 'no-store' }
+                        );
+                        if (relatedResponse.ok) {
+                            const related = await relatedResponse.json();
+                            if (Array.isArray(related) && related.length) relatedRecords = related;
+                        }
+                    } catch (_) {
+                        // 关联检查读取失败时，仍显示当前检查。
+                    }
+                }
+                if (selectedId !== id) return;
+                const timeline = document.getElementById('versionTimeline');
+                timeline.innerHTML = '';
+                const entries = buildHistoryCheckEntries(relatedRecords);
+                const hasCurrentEntry = entries.some(entry => entry.chartId === id);
+                entries.forEach((entry, index) => {
+                    const { chartId, finalVersion } = entry;
+                    const isCurrent = hasCurrentEntry
+                        ? chartId === id
+                        : index === 0;
+                    const report = DentalReport.buildReport(finalVersion.inputData || {});
+                    const group = makeElement('section', 'version-group');
+                    group.classList.toggle('version-group--current', isCurrent);
+                    const header = makeElement('button', 'version-group-header');
+                    header.type = 'button';
+                    header.setAttribute('aria-expanded', String(isCurrent));
+                    header.title = '双击进入查看该次检查';
+                    const stamp = makeElement(
+                        'strong',
+                        '',
+                        `${formatDate(finalVersion.updatedAt)} ${formatTime(finalVersion.updatedAt)} · ${chartId}`
+                    );
+                    header.append(stamp, makeElement('i', '', '›'));
+                    const panel = makeElement('div', 'version-group-panel');
+                    panel.hidden = !isCurrent;
+                    panel.title = '双击进入查看该次检查';
+                    panel.append(
+                        createVersionReportSection('所见', report.empty ? '' : report.findings),
+                        createVersionReportSection('结论', report.empty ? '' : report.conclusion)
+                    );
+                    let clickTimer = null;
+                    const openVersionView = event => {
+                        event.preventDefault();
+                        clearTimeout(clickTimer);
+                        if (trashMode) return;
+                        if (event.target.closest('.report-copy-btn')) return;
+                        openView(chartId, finalVersion.version);
+                    };
+                    header.addEventListener('click', () => {
+                        clearTimeout(clickTimer);
+                        clickTimer = setTimeout(() => {
+                            const expanded = header.getAttribute('aria-expanded') === 'true';
+                            timeline.querySelectorAll('.version-group-header').forEach(item => item.setAttribute('aria-expanded', 'false'));
+                            timeline.querySelectorAll('.version-group-panel').forEach(item => { item.hidden = true; });
+                            if (!expanded) {
+                                header.setAttribute('aria-expanded', 'true');
+                                panel.hidden = false;
+                            }
+                        }, 180);
+                    });
+                    header.addEventListener('dblclick', openVersionView);
+                    panel.addEventListener('dblclick', openVersionView);
+                    group.append(header, panel);
+                    timeline.appendChild(group);
+                });
+                if (!entries.length) {
+                    timeline.appendChild(makeElement('div', 'version-empty', '暂无历史检查'));
+                }
+            } catch (error) {
+                document.getElementById('versionTimeline').innerHTML = '';
+                document.getElementById('versionTimeline').appendChild(makeElement('div', 'version-error', error.message));
+            }
+        }
+
+        async function loadCharts() {
+            const status = document.getElementById('historyStatus');
+            try {
+                const response = await DentalApi.fetch(`${API}${trashMode ? '?trash=true' : ''}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error('无法连接牙表服务');
+                charts = await response.json();
+                applyExamCountsByMedicalRecord();
+                updateSummary();
+                renderRows();
+                const first = filteredCharts()[0];
+                if (first) selectChart(first.id);
+            } catch (error) {
+                status.textContent = `读取失败：${error.message}`;
+                status.style.color = '#c62828';
+            }
+        }
+
+        async function exportBackup() {
+            const button = document.getElementById('exportBackupButton');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = '正在导出...';
+            try {
+                const response = await DentalApi.fetch('api/export', { cache: 'no-store' });
+                if (!response.ok) {
+                    const result = await response.json().catch(() => ({}));
+                    throw new Error(result.message || '导出失败');
+                }
+                const blob = await response.blob();
+                const disposition = response.headers.get('Content-Disposition') || '';
+                const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+                const filename = match?.[1] || `dentalchart-backup-${new Date().toISOString().slice(0, 10)}.json`;
+                const href = URL.createObjectURL(blob);
+                const anchor = document.createElement('a');
+                anchor.href = href;
+                anchor.download = filename;
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                URL.revokeObjectURL(href);
+                button.textContent = '导出完成';
+            } catch (error) {
+                alert(`导出失败：${error.message}`);
+                button.textContent = '导出失败';
+            } finally {
+                setTimeout(() => {
+                    button.disabled = false;
+                    button.textContent = originalText;
+                }, 1200);
+            }
+        }
+
+        document.getElementById('searchInput').addEventListener('input', () => {
+            currentPage = 1;
+            renderRows();
+        });
+        document.querySelectorAll('.table-head [data-sort]').forEach(button => {
+            button.addEventListener('click', () => {
+                if (sortKey === button.dataset.sort) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortKey = button.dataset.sort;
+                    sortDirection = ['createdAt', 'updatedAt', 'id'].includes(sortKey) ? 'desc' : 'asc';
+                }
+                currentPage = 1;
+                renderRows();
+            });
+        });
+        document.querySelectorAll('#speciesFilters button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('#speciesFilters button').forEach(item => item.classList.remove('active'));
+                button.classList.add('active');
+                selectedType = button.dataset.type;
+                currentPage = 1;
+                renderRows();
+                renderKeywordHeatmap();
+                renderToothHeatmaps();
+            });
+        });
+        document.querySelectorAll('#dateFilters button').forEach(button => {
+            button.addEventListener('click', () => {
+                applyDateFilter(button.dataset.date || '');
+            });
+        });
+        function onCustomDateChange() {
+            const from = document.getElementById('dateFilterStart').value || '';
+            const to = document.getElementById('dateFilterEnd').value || '';
+            applyDateFilter(from || to ? 'custom' : '', from, to);
+        }
+        document.getElementById('dateFilterStart').addEventListener('change', onCustomDateChange);
+        document.getElementById('dateFilterEnd').addEventListener('change', onCustomDateChange);
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage -= 1;
+                renderRows();
+            }
+        });
+        document.getElementById('nextPage').addEventListener('click', () => {
+            if (currentPage * PAGE_SIZE < filteredCharts().length) {
+                currentPage += 1;
+                renderRows();
+            }
+        });
+        loadCharts();
+    </script>
+</body>
+</html>

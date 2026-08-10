@@ -1,0 +1,553 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+    background-color: #ffffff;
+    padding: 12px 24px 20px;
+}
+
+.owner-name-input {
+    padding: 8px 12px;
+    border: 2px solid transparent;
+    border-radius: 0;
+    font-size: 16px;
+    color: #333;
+    background: white;
+    transition: all 0.3s;
+    min-width: 180px;
+    box-sizing: border-box;
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+}
+
+.owner-name-input:focus {
+    outline: none;
+    border-color: transparent;
+}
+
+.owner-name-input::placeholder {
+    color: #999;
+}
+
+.save-status {
+    color: #777;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.save-status[data-state="saving"] { color: #8a6200; }
+.save-status[data-state="saved"] { color: #168548; }
+.save-status[data-state="error"] { color: #c62828; }
+
+.chart-type-selector {
+    display: flex;
+    gap: 10px;
+}
+
+.chart-type-selector button {
+    padding: 10px 20px;
+    border: 2px solid transparent;
+    background: white;
+    color: #4CAF50;
+    cursor: pointer;
+    border-radius: 0;
+    font-size: 14px;
+    transition: all 0.3s;
+    height: 40px;
+    box-sizing: border-box;
+    min-width: 90px;
+}
+
+.chart-type-selector button.active {
+    background: #4CAF50;
+    color: white;
+}
+
+.chart-type-selector button:hover {
+    background: #45a049;
+    color: white;
+}
+
+.btn-clear {
+    background: transparent;
+    color: #f44336;
+    transition: all 0.3s ease;
+    min-width: 90px;
+    text-align: center;
+    border: 1px solid rgb(24, 24, 24);
+}
+
+.btn-clear:hover {
+    background: #f44336;
+    color: white;
+}
+
+/* 清空按钮确认状态 */
+.btn-clear.confirm-mode {
+    background: #f44336;
+    color: white;
+}
+
+.chart-container {
+    position: relative;
+    width: 100%;
+    margin: 20px auto;
+    overflow: auto;
+    border: transparent;
+    border-radius: 0;
+    background: white;
+}
+
+.chart-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+body.cat-mode .chart-container {
+    width: 90%;
+    max-width: 1300px;
+}
+
+#inputsContainer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+/* 兔牙表：独立体系，仅显示图片 */
+.rabbit-poster {
+    display: none;
+    margin: 20px auto 0;
+    text-align: center;
+}
+
+.rabbit-poster-image {
+    width: 100%;
+    max-width: 1200px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+body.rabbit-mode .rabbit-poster {
+    display: block;
+}
+
+body.rabbit-mode .chart-container::after {
+    content: "搭建中";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(-12deg);
+    color: rgba(40, 40, 40, 0.1);
+    font-size: clamp(56px, 10vw, 150px);
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    white-space: nowrap;
+    pointer-events: none;
+    user-select: none;
+    z-index: 2;
+}
+
+body.rabbit-mode #inputsContainer,
+body.rabbit-mode .legend,
+body.rabbit-mode .report-panel {
+    display: none;
+}
+
+.tooth-input {
+    position: absolute;
+    width: 3.8% !important;
+    height: 26px;
+    border: 2px solid transparent;
+    border-radius: 0;
+    text-align: center;
+    font-size: 11px;
+    background: transparent;
+    cursor: text;
+    padding: 1px 0;
+    font-weight: bold;
+    transition: border-color 0.2s, background 0.2s;
+    color: #1a1a1a;
+    caret-color: #1a1a1a;
+    /* left/top 为牙号中心点 */
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
+    line-height: 1.1;
+    pointer-events: auto;
+    resize: none;
+    /* Windows 的实体滚动条会占用单元格宽度导致标签被裁切，这里完全隐藏 */
+    overflow: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    white-space: pre;
+    font-family: "Arial Narrow", Arial, "Microsoft YaHei UI", "PingFang SC", "Noto Sans SC", sans-serif;
+    letter-spacing: -0.06em;
+}
+
+.tooth-input::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+body.term-paint-mode .tooth-input {
+    cursor: crosshair;
+    touch-action: none;
+    user-select: none;
+}
+
+body.term-paint-mode .chart-container {
+    user-select: none;
+}
+
+.tooth-input::placeholder {
+    color: transparent;
+    opacity: 1;
+}
+
+.tooth-input::-webkit-input-placeholder {
+    color: transparent;
+}
+
+.tooth-input::-moz-placeholder {
+    color: transparent;
+    opacity: 1;
+}
+
+.tooth-input:-ms-input-placeholder {
+    color: transparent;
+}
+
+.tooth-input:focus {
+    outline: none;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+.legend {
+    position: sticky;
+    top: 8px;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: minmax(180px, 260px) minmax(0, 1fr) 32px;
+    align-items: stretch;
+    gap: 8px;
+    margin: 8px 0 12px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid #4CAF50;
+    border-radius: 8px;
+    box-shadow: none;
+    backdrop-filter: blur(6px);
+}
+
+.legend h3 {
+    margin: 0;
+    color: #333;
+    flex-shrink: 0;
+}
+
+.legend-search {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    height: 32px;
+    padding: 6px 10px;
+    border: 1px solid #d0d0d0;
+    border-radius: 0;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #333;
+}
+
+.legend-search:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+.legend-search::placeholder {
+    color: #999;
+}
+
+.legend-more-btn {
+    grid-column: 3;
+    align-self: start;
+    margin-top: 32px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: 300;
+    line-height: 1;
+    transition: color 0.2s, background-color 0.2s;
+}
+
+.legend-more-btn:hover {
+    color: #333;
+    background-color: #f1f1f1;
+}
+
+.legend-more-btn:focus-visible {
+    outline: 1px dashed #999;
+    outline-offset: 2px;
+}
+
+.legend-grid {
+    grid-column: 1 / 3;
+    grid-row: 1;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.legend-primary-grid,
+.legend-other-grid {
+    display: grid;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow-x: auto;
+    overflow-y: hidden;
+    font-size: 12px;
+}
+
+.legend-primary-grid {
+    grid-template-rows: repeat(2, minmax(28px, auto));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(112px, 1fr);
+    gap: 4px 8px;
+}
+
+.legend-other-grid {
+    grid-template-rows: minmax(28px, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(112px, 1fr);
+    gap: 8px;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #eee;
+}
+
+.legend-item {
+    padding: 5px 10px;
+    background: transparent;
+    padding-left: 10px;
+    width: 100%;
+    min-height: 28px;
+    height: auto;
+    cursor: pointer;
+    /* 可以选择的有哪些？
+       可用的cursor属性值有很多，常用的包括：
+       - pointer   // 表示手型，通常用于按钮或可点击元素
+       - text      // 文本输入区的I形
+       - move      // 移动元素时
+       - not-allowed // 不可操作时显示禁用状态
+       - help      // 问号，表示有帮助提示
+       - crosshair // 十字准星
+       - grab, grabbing // 拖拽对象时用
+       - wait      // 等待，通常是表盘或沙漏
+       其他还包括 progress、cell、alias、zoom-in、zoom-out 等。详见 https://developer.mozilla.org/zh-CN/docs/Web/CSS/cursor
+    */
+    position: relative;
+    z-index: 1;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    word-break: break-word;
+    white-space: normal;
+    box-sizing: border-box;
+    line-height: 1.5;
+}
+
+.legend-item[data-term="ONF"] {
+    grid-row: 1;
+    grid-column: 1;
+}
+
+.legend-item[data-term="疑ONF"] {
+    grid-row: 1;
+    grid-column: 2;
+}
+
+.legend-item:hover {
+    background-color: #f0f8f0;
+}
+
+.legend-item--no-report {
+    color: #b5b5b5;
+}
+
+.legend--collapsed:not(.legend--show-other-match):not(.legend--has-active-other) .legend-other-grid {
+    display: none;
+}
+
+.legend--collapsed .legend-other-grid .legend-item--no-report:not(.active):not(.legend-item--match) {
+    display: none;
+}
+
+.legend-item--no-report:hover {
+    color: #9a9a9a;
+}
+
+.legend-item--no-report.active {
+    color: #333;
+}
+
+.legend-item.active {
+    background-color: #e8f5e9;
+    box-shadow: inset 0 0 0 1px #4CAF50;
+    z-index: 2;
+}
+
+.legend-item--match:not(.active) {
+    background-color: #fff8e1;
+    box-shadow: inset 0 0 0 1px #ffc107;
+}
+
+.legend-item--match.active {
+    background-color: #e8f5e9;
+    box-shadow: inset 0 0 0 1px #4CAF50;
+}
+
+@media (max-width: 599px) {
+    body {
+        padding-inline: 8px;
+    }
+
+    body.cat-mode .chart-container {
+        width: 100%;
+    }
+
+    .legend {
+        grid-template-columns: 120px minmax(0, 1fr) 30px;
+        gap: 5px;
+        padding-inline: 6px;
+    }
+
+    .legend-primary-grid,
+    .legend-other-grid {
+        grid-auto-columns: minmax(100px, 1fr);
+        font-size: 11px;
+    }
+}
+
+
+@media print {
+    .header, .legend {
+        display: none;
+    }
+    .chart-container {
+        border: 2px solid transparent;
+    }
+    .tooth-input {
+        border: 2px solid transparent;
+        background: transparent;
+        color: #1a1a1a;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+
+
+.report-panel {
+    margin-top: 24px;
+    padding: 14px;
+    background: transparent;
+}
+
+.report-panel h3 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.report-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.report-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.report-section h4 {
+    margin: 0;
+    font-size: 15px;
+    color: #333;
+}
+
+.report-copy-btn {
+    padding: 4px 10px;
+    border: 1px solid #d0d0d0;
+    background: #fff;
+    color: #555;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.2s;
+}
+
+.report-copy-btn:hover {
+    border-color: #4CAF50;
+    color: #2f7d32;
+}
+
+.report-copy-btn.copied {
+    border-color: #4CAF50;
+    background: #4CAF50;
+    color: #fff;
+}
+
+.report-textarea {
+    width: 100%;
+    min-height: 220px;
+    border: 1px solid #d6d6d6;
+    border-radius: 0;
+    padding: 10px;
+    background: #fff;
+    color: #333;
+    font-size: 13px;
+    line-height: 1.6;
+    resize: vertical;
+    font-family: 'Microsoft YaHei', Arial, sans-serif;
+}
+
+.report-textarea--empty {
+    color: #999;
+}
+
+.report-textarea:focus {
+    outline: none;
+    border-color: #4CAF50;
+}
+
+@media (max-width: 900px) {
+    .report-grid {
+        grid-template-columns: 1fr;
+    }
+}
