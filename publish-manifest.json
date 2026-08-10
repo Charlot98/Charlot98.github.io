@@ -35,12 +35,12 @@
       "enabled": true,
       "version": "legacy-current",
       "source": "changelog/pub/legacy-current",
-      "destination": "changelog",
+      "destination": "vetvault-changelog",
       "entry": "index.html",
       "replacements": [
         {
           "from": "/vetvault_changelog/",
-          "to": "/changelog/"
+          "to": "/vetvault-changelog/"
         }
       ]
     },
@@ -82,7 +82,7 @@
     },
     {
       "from": "vetvault_changelog",
-      "to": "/changelog/"
+      "to": "/vetvault-changelog/"
     }
   ]
 }

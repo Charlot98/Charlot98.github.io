@@ -255,7 +255,7 @@ async function main() {
   );
   await transformAndAudit(TEMP_DIR, [
     { from: '/my_docs/', to: '/my-docs/' },
-    { from: '/vetvault_changelog/', to: '/changelog/' },
+    { from: '/vetvault_changelog/', to: '/vetvault-changelog/' },
   ]);
 
   await rm(SITE_DIR, { recursive: true, force: true });
