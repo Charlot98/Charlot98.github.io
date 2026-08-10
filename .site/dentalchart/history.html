@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>历史牙表</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="css/history.css?v=20260726-46">
+    <link rel="stylesheet" href="css/history.css?v=20260810-2">
 </head>
 <body>
     <div class="app-shell">
@@ -177,7 +177,7 @@
     <script src="js/vendor/highcharts-treemap-12.4.0.js"></script>
     <script src="js/vendor/highcharts-heatmap-12.4.0.js"></script>
     <script src="js/supabase-config.js?v=20260804-1"></script>
-    <script src="js/dental-api.js?v=20260810-1"></script>
+    <script src="js/dental-api.js?v=20260810-4"></script>
     <script src="js/report.js?v=20260726-6"></script>
     <script>
         const API = 'api/charts';
@@ -272,8 +272,9 @@
             const { from, to } = resolveDateRange();
             const startInput = document.getElementById('dateFilterStart');
             const endInput = document.getElementById('dateFilterEnd');
-            if (startInput) startInput.value = from;
-            if (endInput) endInput.value = to;
+            const defaultDate = calendarDateKey(0);
+            if (startInput) startInput.value = from || defaultDate;
+            if (endInput) endInput.value = to || defaultDate;
             document.querySelectorAll('#dateFilters button').forEach(button => {
                 const mode = button.dataset.date || '';
                 button.classList.toggle('active', dateFilterMode === mode);
@@ -980,7 +981,7 @@
             renderToothHeatmap('cat');
         }
 
-        function updateSummary() {
+        function updateSummary(renderCharts = true) {
             document.getElementById('totalCount').textContent = charts.length;
             const labels = document.querySelectorAll('.summary-strip span');
             labels[0].textContent = trashMode ? '回收站记录' : '全部牙表';
@@ -988,8 +989,10 @@
             document.getElementById('todayCount').textContent = trashMode
                 ? '15天'
                 : charts.filter(item => dateKey(item.createdAt) === todayKey()).length;
-            renderKeywordHeatmap();
-            renderToothHeatmaps();
+            if (renderCharts) {
+                renderKeywordHeatmap();
+                renderToothHeatmaps();
+            }
         }
 
         function filteredCharts() {
@@ -1096,17 +1099,17 @@
                             openView(item.id);
                         });
                         view.addEventListener('dblclick', event => event.stopPropagation());
-                        const followup = makeElement('button', 'row-followup', '复查');
+                        const followup = makeElement('button', 'row-followup', '引用');
                         followup.type = 'button';
-                        followup.setAttribute('aria-label', `复查${item.petName || item.id}的牙表`);
+                        followup.setAttribute('aria-label', `引用${item.petName || item.id}的牙表`);
                         followup.addEventListener('click', event => {
                             event.stopPropagation();
                             openFollowup(item.id);
                         });
                         followup.addEventListener('dblclick', event => event.stopPropagation());
-                        const edit = makeElement('button', 'row-edit', '编写');
+                        const edit = makeElement('button', 'row-edit', '编辑');
                         edit.type = 'button';
-                        edit.setAttribute('aria-label', `重新编写${item.petName || item.id}的牙表`);
+                        edit.setAttribute('aria-label', `编辑${item.petName || item.id}的牙表`);
                         edit.addEventListener('click', event => {
                             event.stopPropagation();
                             openChart(item.id);
@@ -1279,10 +1282,16 @@
                 if (!response.ok) throw new Error('无法连接牙表服务');
                 charts = await response.json();
                 applyExamCountsByMedicalRecord();
-                updateSummary();
+                updateSummary(false);
                 renderRows();
-                const first = filteredCharts()[0];
-                if (first) selectChart(first.id);
+                const loadedTrashMode = trashMode;
+                requestAnimationFrame(() => setTimeout(() => {
+                    if (trashMode !== loadedTrashMode) return;
+                    renderKeywordHeatmap();
+                    renderToothHeatmaps();
+                    const first = filteredCharts()[0];
+                    if (first && !selectedId) selectChart(first.id);
+                }, 0));
             } catch (error) {
                 status.textContent = `读取失败：${error.message}`;
                 status.style.color = '#c62828';
@@ -1375,6 +1384,7 @@
                 renderRows();
             }
         });
+        syncDateFilterControls();
         loadCharts();
     </script>
 </body>

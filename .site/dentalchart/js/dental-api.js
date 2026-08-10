@@ -5,7 +5,7 @@
     const TOKEN_META_KEY = 'dentalchart:device-token-meta:v1';
     const LEGACY_PASSWORD_KEY = 'dentalchart:access-password:v1';
     const nativeFetch = global.fetch.bind(global);
-    let promptPromise = null;
+    let pairingPromise = null;
 
     function config() {
         const value = global.DENTALCHART_CONFIG || {};
@@ -43,17 +43,81 @@
         return String(global.navigator?.userAgent || 'browser').slice(0, 100);
     }
 
-    async function requestPairingPassword() {
-        if (promptPromise) return promptPromise;
-        promptPromise = Promise.resolve().then(() => {
-            const value = global.prompt('首次使用请输入 DentalChart 配对密码');
-            const password = String(value || '').trim();
-            if (!password) throw new Error('已取消设备配对');
-            return password;
-        }).finally(() => {
-            promptPromise = null;
+    function requestPairingPassword() {
+        return new Promise((resolve, reject) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'dental-auth-overlay';
+
+            const panel = document.createElement('section');
+            panel.className = 'dental-auth-panel';
+            panel.setAttribute('role', 'dialog');
+            panel.setAttribute('aria-modal', 'true');
+            panel.setAttribute('aria-labelledby', 'dentalAuthTitle');
+
+            const title = document.createElement('h2');
+            title.id = 'dentalAuthTitle';
+            title.textContent = '请输入密码';
+
+            const form = document.createElement('form');
+            form.className = 'dental-auth-form';
+
+            const input = document.createElement('input');
+            input.type = 'password';
+            input.autocomplete = 'current-password';
+            input.setAttribute('aria-label', '密码');
+
+            const hint = document.createElement('p');
+            hint.className = 'dental-auth-hint';
+            hint.textContent = '提示：c*****';
+
+            const error = document.createElement('p');
+            error.className = 'dental-auth-error';
+            error.setAttribute('aria-live', 'polite');
+
+            const actions = document.createElement('div');
+            actions.className = 'dental-auth-actions';
+            const cancel = document.createElement('button');
+            cancel.type = 'button';
+            cancel.textContent = '取消';
+            const confirm = document.createElement('button');
+            confirm.type = 'submit';
+            confirm.className = 'primary';
+            confirm.textContent = '确认';
+            actions.append(cancel, confirm);
+            form.append(input, hint, error, actions);
+            panel.append(title, form);
+            overlay.appendChild(panel);
+
+            const cleanup = () => {
+                document.removeEventListener('keydown', handleKeydown);
+                document.body.classList.remove('dental-auth-open');
+                overlay.remove();
+            };
+            const cancelPairing = () => {
+                cleanup();
+                reject(new Error('已取消设备配对'));
+            };
+            const handleKeydown = (event) => {
+                if (event.key === 'Escape') cancelPairing();
+            };
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const password = input.value.trim();
+                if (!password) {
+                    error.textContent = '请输入密码';
+                    input.focus();
+                    return;
+                }
+                cleanup();
+                resolve(password);
+            });
+            cancel.addEventListener('click', cancelPairing);
+            document.addEventListener('keydown', handleKeydown);
+            document.body.classList.add('dental-auth-open');
+            document.body.appendChild(overlay);
+            input.focus();
         });
-        return promptPromise;
     }
 
     async function pairDevice(password) {
@@ -87,13 +151,21 @@
     async function ensureAccess() {
         const existing = readToken();
         if (existing) return existing;
-        const password = await requestPairingPassword();
-        return pairDevice(password);
+        if (!pairingPromise) {
+            pairingPromise = Promise.resolve()
+                .then(requestPairingPassword)
+                .then(pairDevice)
+                .finally(() => {
+                    pairingPromise = null;
+                });
+        }
+        return pairingPromise;
     }
 
     async function apiFetch(resource, options = {}, retry = true) {
         const headers = new Headers(options.headers || {});
-        headers.set('X-Dental-Device-Token', await ensureAccess());
+        const requestToken = await ensureAccess();
+        headers.set('X-Dental-Device-Token', requestToken);
         if (!headers.has('Accept')) headers.set('Accept', 'application/json');
 
         let response;
@@ -109,7 +181,7 @@
         }
 
         if (response.status === 401 && retry) {
-            clearToken();
+            if (readToken() === requestToken) clearToken();
             await ensureAccess();
             return apiFetch(resource, options, false);
         }

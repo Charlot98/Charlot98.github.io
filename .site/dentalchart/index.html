@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>牙表</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="css/pub.css?v=20260726-5">
-    <link rel="stylesheet" href="css/app-ui.css?v=20260726-15">
+    <link rel="stylesheet" href="css/pub.css?v=20260810-1">
+    <link rel="stylesheet" href="css/app-ui.css?v=20260810-2">
 </head>
 <body>
     <div class="app-shell">
@@ -128,7 +128,7 @@
     </div>
 
     <script src="js/supabase-config.js?v=20260804-1"></script>
-    <script src="js/dental-api.js?v=20260810-1"></script>
+    <script src="js/dental-api.js?v=20260810-4"></script>
     <script src="js/report.js?v=20260726-6"></script>
     <script>
         const CHART_IMAGES = {
@@ -313,6 +313,7 @@
         let ownerSearchRequest = 0;
         let ownerSearchCharts = null;
         let ownerSearchChartsLoadedAt = 0;
+        let ownerSearchChartsPromise = null;
         const CHART_TYPE_LABELS = { dog: '犬', cat: '猫', rabbit: '兔' };
         const historyDateFormatter = new Intl.DateTimeFormat('zh-CN', {
             year: 'numeric', month: '2-digit', day: '2-digit'
@@ -715,12 +716,20 @@
         }
 
         async function getOwnerSearchCharts() {
-            if (ownerSearchCharts && Date.now() - ownerSearchChartsLoadedAt < 15000) return ownerSearchCharts;
-            const response = await fetchWithTimeout(CHART_API, { cache: 'no-store' });
-            if (!response.ok) throw new Error('读取历史牙表失败');
-            ownerSearchCharts = await response.json();
-            ownerSearchChartsLoadedAt = Date.now();
-            return ownerSearchCharts;
+            if (ownerSearchCharts && Date.now() - ownerSearchChartsLoadedAt < 5 * 60 * 1000) return ownerSearchCharts;
+            if (ownerSearchChartsPromise) return ownerSearchChartsPromise;
+            ownerSearchChartsPromise = (async () => {
+                const response = await fetchWithTimeout(CHART_API, { cache: 'no-store' });
+                if (!response.ok) throw new Error('读取历史牙表失败');
+                ownerSearchCharts = await response.json();
+                ownerSearchChartsLoadedAt = Date.now();
+                return ownerSearchCharts;
+            })();
+            try {
+                return await ownerSearchChartsPromise;
+            } finally {
+                ownerSearchChartsPromise = null;
+            }
         }
 
         function openMatchedChart(chart, mode) {
@@ -762,12 +771,12 @@
                 view.addEventListener('click', () => openMatchedChart(chart, 'view'));
                 const followup = document.createElement('button');
                 followup.type = 'button';
-                followup.textContent = '复查';
+                followup.textContent = '引用';
                 followup.className = 'owner-result-followup';
                 followup.addEventListener('click', () => openMatchedChart(chart, 'followup'));
                 const edit = document.createElement('button');
                 edit.type = 'button';
-                edit.textContent = '重新编辑';
+                edit.textContent = '编辑';
                 edit.addEventListener('click', () => openMatchedChart(chart, 'edit'));
                 actions.append(view, followup, edit);
                 item.append(info, actions);
@@ -1091,6 +1100,16 @@
             );
         }
 
+        function syncUsedLegendTerms() {
+            const usedTerms = new Set();
+            document.querySelectorAll('.tooth-input').forEach(input => {
+                normalizeTermList(input.value).forEach(term => usedTerms.add(term));
+            });
+            document.querySelectorAll('.legend-item[data-term]').forEach(item => {
+                item.classList.toggle('legend-item--used', usedTerms.has(item.dataset.term));
+            });
+        }
+
         function clearLegendSearch() {
             const search = document.getElementById('legendSearch');
             if (search) search.value = '';
@@ -1170,6 +1189,7 @@
             const next = serializeTermList(normalizeToothTerms(list, toothNum));
             input.value = next;
             inputData[toothNum] = next;
+            syncUsedLegendTerms();
             centerInputContent(input);
             DentalReport.updateReport();
             scheduleCacheSync();
@@ -1470,6 +1490,7 @@
                             }
                         }
                         inputData[toothNum] = next;
+                        syncUsedLegendTerms();
                         centerInputContent(target);
                         DentalReport.updateReport();
                         scheduleCacheSync();
@@ -1506,7 +1527,7 @@
                     centerInputContent(input);
                 });
             });
-
+            syncUsedLegendTerms();
         }
 
         // 切换牙表类型
@@ -1894,6 +1915,7 @@
                     (hasReportRule ? primaryGrid : otherGrid).appendChild(item);
             });
             if (addBtn) primaryGrid.appendChild(addBtn);
+            syncUsedLegendTerms();
         }
 
         // DOM 可用后立即初始化，不等待图片、视频等媒体资源。
@@ -1907,7 +1929,7 @@
             document.body.classList.toggle('cat-mode', currentChartType === 'cat');
             document.getElementById('chartImage').src = CHART_IMAGES[currentChartType];
             initLegend();
-            setInterval(() => loadCustomTerms(true), 3000);
+            setInterval(() => loadCustomTerms(true), 30000);
             setupLegendSearch();
             resetLegendState();
             initInputs();
@@ -1918,6 +1940,7 @@
             if (!viewOnlyMode) {
                 ownerNameInput?.addEventListener('input', handleOwnerNameInput);
                 ownerNameInput?.addEventListener('focus', () => {
+                    getOwnerSearchCharts().catch(() => {});
                     if (ownerNameInput.value.trim()) handleOwnerNameInput();
                 });
                 ownerNameInput?.addEventListener('keydown', event => {

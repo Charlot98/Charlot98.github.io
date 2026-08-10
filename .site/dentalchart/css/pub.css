@@ -397,7 +397,7 @@ body.term-paint-mode .chart-container {
     display: none;
 }
 
-.legend--collapsed .legend-other-grid .legend-item--no-report:not(.active):not(.legend-item--match) {
+.legend--collapsed .legend-other-grid .legend-item--no-report:not(.active):not(.legend-item--used):not(.legend-item--match) {
     display: none;
 }
 
