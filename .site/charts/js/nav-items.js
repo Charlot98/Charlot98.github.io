@@ -7,6 +7,7 @@ window.NAV_SECTIONS = [
       { href: 'pages/ultrasound/vets.html', cat: '工作量', text: '个人（正常日期）' },
       { href: 'pages/ultrasound/vets2.html', cat: '工作量', text: '个人（入职时长）' },
       { href: 'pages/ultrasound/ultra_contrast.html', cat: '技术', text: '超声造影' },
+      { href: 'pages/ultrasound/echo_species.html', cat: '病例', text: '心超病例统计' },
       { href: 'pages/ultrasound/project_stats.html', cat: '项目', text: '报告与审核统计' },
       { href: 'pages/ultrasound/time.html', cat: '病例', text: '交单及等待时长' },
       { href: 'pages/ultrasound/weekend.html', cat: '病例', text: '各星期病例数' },
