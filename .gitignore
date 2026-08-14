@@ -8,9 +8,6 @@
 !/publish.command
 !/VetVault-Logo.png
 
-!/scripts/
-!/scripts/**
-
 !/.github/
 !/.github/**
 
