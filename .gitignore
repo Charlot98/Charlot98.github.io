@@ -1,9 +1,8 @@
-# This public repository tracks only the GitHub Pages snapshot and deploy workflow.
-# Publish tooling and application sources remain on this machine.
+# GitHub Pages snapshot and deploy workflow only.
+# Portal, publish tooling, and application sources remain on this machine.
 /*
 
 !/.gitignore
-!/VetVault-Logo.png
 
 !/.github/
 !/.github/**
