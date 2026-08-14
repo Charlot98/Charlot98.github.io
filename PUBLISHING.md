@@ -19,7 +19,7 @@
 - `/my-docs/`
 - `/queue_demo/`
 
-`/my_docs/` 与 `/vetvault_changelog/` 保留兼容跳转。旧源码仓库占用了 GitHub 的 `/changelog/` 路由，因此更新日志使用 `/vetvault-changelog/`。AudioReports 在接入服务端安全代理前暂停公开发布。
+旧源码仓库占用了 GitHub 的 `/changelog/` 路由，因此更新日志使用 `/vetvault-changelog/`。AudioReports 在接入服务端安全代理前暂停公开发布。
 
 ## 本地备份
 

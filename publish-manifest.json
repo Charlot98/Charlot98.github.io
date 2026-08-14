@@ -28,8 +28,8 @@
     {
       "id": "charts",
       "enabled": true,
-      "version": "charts v5.2.2",
-      "source": "charts/pub/charts v5.2.2/public",
+      "version": "v5.2.2",
+      "source": "charts/pub/v5.2.2/public",
       "destination": "charts",
       "entry": "index.html"
     },
@@ -76,16 +76,6 @@
       "source": "queue_demo/pub/v0.0.0",
       "destination": "queue_demo",
       "entry": "screen1.html"
-    }
-  ],
-  "aliases": [
-    {
-      "from": "my_docs",
-      "to": "/my-docs/"
-    },
-    {
-      "from": "vetvault_changelog",
-      "to": "/vetvault-changelog/"
     }
   ]
 }
