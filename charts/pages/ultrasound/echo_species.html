@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="../../">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="statistics.png" type="image/png" />
+  <title>心超病例统计</title>
+  <link rel="stylesheet" href="css/common.css?v=20260801b" />
+  <link rel="stylesheet" href="css/echo-species.css?v=20260814" />
+  <script src="js/auth.js"></script>
+  <script src="js/nav-items.js"></script>
+  <script src="js/nav-sidebar.js"></script>
+  <script src="js/highcharts.js"></script>
+</head>
+<body>
+  <div class="nav-sidebar">
+    <div class="nav-sidebar-inner">
+      <a href="index.html">返回首页</a>
+      <a></a>
+      <div class="nav-sidebar-more" data-nav-auto></div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <main class="echo-main">
+      <div class="echo-shell">
+        <h1>心超病例统计</h1>
+        <p class="echo-subtitle">2024.01—2026.07</p>
+        <p id="echo-status" class="echo-status" role="status">正在加载统计数据…</p>
+
+        <section class="summary-grid" aria-label="年度犬猫心超病例总数">
+          <article class="summary-card">
+            <div class="summary-year">2024</div>
+            <div id="summary-2024" class="summary-value">—</div>
+            <div class="summary-label">犬猫病例</div>
+          </article>
+          <article class="summary-card">
+            <div class="summary-year">2025</div>
+            <div id="summary-2025" class="summary-value">—</div>
+            <div class="summary-label">犬猫病例</div>
+          </article>
+          <article class="summary-card">
+            <div class="summary-year">2026 1—7 月</div>
+            <div id="summary-2026" class="summary-value">—</div>
+            <div class="summary-label">犬猫病例</div>
+          </article>
+        </section>
+
+        <section class="chart-card">
+          <h2 class="chart-heading">图 1 每日犬猫心超病例趋势与预测</h2>
+          <p class="chart-kicker">2023.10—2026.07 每日散点与二次回归</p>
+          <div id="daily-trend-chart" aria-label="每日犬猫心超病例数与2026全年预测图"></div>
+          <div class="forecast-grid" aria-label="2026全年心超病例预测">
+            <div class="forecast-item">
+              <div class="forecast-name">全年预测 犬</div>
+              <div id="forecast-dog" class="forecast-value">—</div>
+            </div>
+            <div class="forecast-item cat">
+              <div class="forecast-name">全年预测 猫</div>
+              <div id="forecast-cat" class="forecast-value">—</div>
+            </div>
+            <div class="forecast-item total">
+              <div class="forecast-name">全年预测 合计</div>
+              <div id="forecast-total" class="forecast-value">—</div>
+            </div>
+          </div>
+          <div class="chart-note"><p>2023 数据自 10 月 13 日；零病例日不纳入回归。</p></div>
+        </section>
+
+        <div class="chart-pair">
+          <section class="chart-card">
+            <h2 class="chart-heading">图 2 HCM 占猫心超比例</h2>
+            <div id="hcm-share-chart" aria-label="各年度HCM占猫心超病例比例柱状图"></div>
+            <div class="chart-note"><p>心超且结论含 HCM；2026 为 1—7 月。</p></div>
+          </section>
+
+          <section class="chart-card">
+            <h2 class="chart-heading">图 3 犬猫占比</h2>
+            <div id="echo-species-chart" aria-label="各年度犬猫心超病例占比横向柱状图"></div>
+            <div class="chart-note"><p>其他或缺失记录排除：2024/2025/2026 分别为 9/6/8 例。</p></div>
+          </section>
+        </div>
+
+        <section class="chart-card">
+          <h2 class="chart-heading">图 4 HCM 猫年龄分布</h2>
+          <div class="chart-scroll"><div id="hcm-age-chart" aria-label="2024至2026年HCM猫年龄分布柱状图"></div></div>
+          <div class="chart-note"><p>按检查 ID 去重；月龄、日龄已换算，排除 1 条异常年龄。</p></div>
+        </section>
+
+        <section class="chart-card">
+          <h2 class="chart-heading">图 5 HCM 猫品种与性别分布</h2>
+
+          <h3 class="chart-subheading">5A 前 10 品种</h3>
+          <div class="chart-scroll"><div id="hcm-breed-chart" aria-label="2024至2026年HCM猫前十品种病例数柱状图"></div></div>
+
+          <h3 class="chart-subheading">5B 各品种 HCM 占猫心超比例</h3>
+          <div class="chart-scroll"><div id="hcm-breed-share-chart" aria-label="2024至2026年各品种HCM占猫心超病例百分比柱状图"></div></div>
+
+          <h3 class="chart-subheading">5C 性别百分比</h3>
+          <div id="hcm-sex-chart" aria-label="2024至2026年HCM猫性别百分比堆叠图"></div>
+
+          <div class="chart-note">
+            <p>统一品种：BSH（英短/英长/金银渐层/蓝猫）、ASH（美短/虎斑）、ESH（异短/加菲）、田园猫（DSH/DLH）、混血（mix）；重点色归布偶，折耳按表型独立。5B 按三年合并占比排序，仅纳入猫心超合计不少于 30 例的类别，不显示“其它”。</p>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/echo-species.js?v=20260814"></script>
+</body>
+</html>
