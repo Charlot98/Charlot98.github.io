@@ -1,7 +1,7 @@
 {
   "projects": {
-    "dentalchart": "v2.2.2",
-    "charts": "charts v5.2.2",
+    "dentalchart": "v2.2.3",
+    "charts": "v5.2.2",
     "changelog": "legacy-current",
     "echocardiography": "v5.1.2",
     "my-docs": "v1.1.0",

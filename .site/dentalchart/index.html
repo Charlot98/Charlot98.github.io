@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>牙表</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="css/pub.css?v=20260810-3">
+    <link rel="stylesheet" href="css/pub.css?v=20260810-1">
     <link rel="stylesheet" href="css/app-ui.css?v=20260810-5">
 </head>
 <body>
@@ -1044,21 +1044,17 @@
             return list.map(getTermDisplayName).join(',\n');
         }
 
-        const ONF_ALLOWED_TEETH = new Set([
-            '101', '102', '103', '104', '105', '106', '107',
-            '201', '202', '203', '204', '205', '206', '207'
-        ]);
-
         function isOnfTerm(term) {
             return term === 'ONF' || term === '疑ONF';
         }
 
         function canMarkOnf(toothNum) {
-            return ONF_ALLOWED_TEETH.has(String(toothNum || ''));
+            const quadrant = Math.floor(Number(toothNum) / 100);
+            return quadrant === 1 || quadrant === 2;
         }
 
         function notifyOnfRange() {
-            setSaveStatus('口鼻瘘仅可标记 101–107、201–207', 'error');
+            setSaveStatus('口鼻瘘仅可标记上颌牙齿', 'error');
         }
 
         function normalizeToothTerms(list, toothNum = '') {
@@ -1102,42 +1098,11 @@
 
         function syncUsedLegendTerms() {
             const usedTerms = new Set();
-            const focusedInput = document.activeElement?.closest?.('.tooth-input');
-            if (focusedInput) {
-                const value = focusedInput.value || '';
-                const isSeparator = character => /[\s,，;；、/]/u.test(character);
-                let start = focusedInput.selectionStart ?? value.length;
-                let end = focusedInput.selectionEnd ?? start;
-                while (start > 0 && !isSeparator(value[start - 1])) start -= 1;
-                while (end < value.length && !isSeparator(value[end])) end += 1;
-                const [focusedTerm] = normalizeTermList(value.slice(start, end));
-                if (focusedTerm) usedTerms.add(focusedTerm);
-            }
-            const highlightedItems = [];
-            document.querySelectorAll('.legend-item[data-term]').forEach(item => {
-                const highlighted = usedTerms.has(item.dataset.term);
-                item.classList.toggle('legend-item--used', highlighted);
-                if (highlighted) highlightedItems.push(item);
+            document.querySelectorAll('.tooth-input').forEach(input => {
+                normalizeTermList(input.value).forEach(term => usedTerms.add(term));
             });
-            const legend = document.querySelector('.legend');
-            legend?.classList.toggle(
-                'legend--has-used-other',
-                highlightedItems.some(item => item.classList.contains('legend-item--no-report'))
-            );
-            if (!highlightedItems.length) return;
-            requestAnimationFrame(() => {
-                highlightedItems.forEach(item => {
-                    if (!item.getClientRects().length) return;
-                    const grid = item.closest('.legend-grid');
-                    if (!grid) return;
-                    const itemRect = item.getBoundingClientRect();
-                    const gridRect = grid.getBoundingClientRect();
-                    const hidden = itemRect.left < gridRect.left || itemRect.right > gridRect.right ||
-                        itemRect.top < gridRect.top || itemRect.bottom > gridRect.bottom;
-                    if (hidden) {
-                        item.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-                    }
-                });
+            document.querySelectorAll('.legend-item[data-term]').forEach(item => {
+                item.classList.toggle('legend-item--used', usedTerms.has(item.dataset.term));
             });
         }
 
@@ -1552,12 +1517,6 @@
                     input.addEventListener('input', (e) => {
                         if (isComposing || e.isComposing) return;
                         syncInputValue(e.target, e.inputType || '');
-                    });
-                    input.addEventListener('focus', syncUsedLegendTerms);
-                    input.addEventListener('click', syncUsedLegendTerms);
-                    input.addEventListener('keyup', syncUsedLegendTerms);
-                    input.addEventListener('blur', () => {
-                        requestAnimationFrame(syncUsedLegendTerms);
                     });
                     input.addEventListener('keydown', (e) => {
                         const isSeparator = e.key === 'Enter' || /^[,，;；、/ ]$/u.test(e.key);

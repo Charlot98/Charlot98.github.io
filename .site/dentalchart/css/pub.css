@@ -393,6 +393,14 @@ body.term-paint-mode .chart-container {
     color: #b5b5b5;
 }
 
+.legend--collapsed:not(.legend--show-other-match):not(.legend--has-active-other) .legend-other-grid {
+    display: none;
+}
+
+.legend--collapsed .legend-other-grid .legend-item--no-report:not(.active):not(.legend-item--used):not(.legend-item--match) {
+    display: none;
+}
+
 .legend-item--no-report:hover {
     color: #9a9a9a;
 }
