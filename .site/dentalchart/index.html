@@ -6,16 +6,19 @@
     <title>牙表</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/pub.css?v=20260817-2">
-    <link rel="stylesheet" href="css/app-ui.css?v=20260810-5">
-    <link rel="prefetch" href="history.html">
+    <link rel="stylesheet" href="css/history.css?v=20260817-2">
+    <link rel="stylesheet" href="css/app-ui.css?v=20260817-2">
+    <link rel="prefetch" href="js/vendor/highcharts-12.4.0.js">
+    <link rel="prefetch" href="js/vendor/highcharts-treemap-12.4.0.js">
+    <link rel="prefetch" href="js/vendor/highcharts-heatmap-12.4.0.js">
 </head>
 <body>
     <div class="app-shell">
         <header class="topbar">
             <div></div>
             <nav class="main-nav" aria-label="主导航">
-                <button type="button" class="active">牙表填写</button>
-                <button type="button" onclick="saveDraftAndOpenHistory()">历史记录</button>
+                <button type="button" class="active" id="navChartButton" onclick="showChartView()">牙表填写</button>
+                <button type="button" id="navHistoryButton" onclick="saveDraftAndOpenHistory()">历史记录</button>
             </nav>
             <div></div>
         </header>
@@ -108,6 +111,180 @@
                 </div>
             </div>
         </main>
+        <main class="history-workspace">
+            <section class="filter-bar">
+                <div class="summary-strip" aria-label="牙表统计">
+                    <div><span>全部牙表</span><strong id="totalCount">—</strong></div>
+                    <div><span>今日新增</span><strong id="todayCount">—</strong></div>
+                </div>
+                <label class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="searchInput" placeholder="搜索检查编号、家长名或宠物名" autocomplete="off" aria-label="搜索历史牙表"></label>
+                <div class="filter-tabs" id="speciesFilters" role="group" aria-label="牙表类型筛选">
+                    <button type="button" class="active" data-type="">全部</button>
+                    <button type="button" data-type="dog">犬</button>
+                    <button type="button" data-type="cat">猫</button>
+                    <button type="button" data-type="rabbit">兔</button>
+                </div>
+                <div class="export-backup-wrap" id="exportBackupMenu">
+                    <button type="button" class="export-backup-button" id="exportBackupButton" aria-haspopup="true" aria-expanded="false" onclick="toggleExportMenu()">导出备份</button>
+                    <div class="export-backup-options" role="menu" aria-label="选择导出格式">
+                        <button type="button" role="menuitem" onclick="exportBackup('json')">JSON</button>
+                        <button type="button" role="menuitem" onclick="exportBackup('excel')">Excel</button>
+                    </div>
+                </div>
+                <div class="date-filter" aria-label="日期筛选">
+                    <div class="filter-tabs" id="dateFilters" role="group" aria-label="日期快捷筛选">
+                        <button type="button" class="active" data-date="">全部</button>
+                        <button type="button" data-date="today">今天</button>
+                        <button type="button" data-date="yesterday">昨天</button>
+                        <button type="button" data-date="last3">近3天</button>
+                        <button type="button" data-date="last7">近一周</button>
+                    </div>
+                    <div class="date-range" role="group" aria-label="选择特定日期">
+                        <label class="date-box">
+                            <input type="date" id="dateFilterStart" aria-label="起始日期">
+                        </label>
+                        <span class="date-range-sep" aria-hidden="true">至</span>
+                        <label class="date-box">
+                            <input type="date" id="dateFilterEnd" aria-label="结束日期">
+                        </label>
+                    </div>
+                </div>
+                <span class="result-count" id="historyStatus">正在读取...</span>
+            </section>
+
+            <div class="statistics-grid" id="statisticsGrid">
+            <section class="keyword-heatmap-card heatmap-card--collapsed" id="keywordHeatmapCard" aria-labelledby="keywordHeatmapTitle">
+                <header class="keyword-heatmap-header">
+                    <button type="button" class="heatmap-collapse-toggle" id="keywordHeatmapCollapse" onclick="toggleHeatmapCollapse('keywordHeatmapCard')" aria-expanded="false" aria-controls="keywordHeatmapBody" title="展开疾病关键词热力图">
+                        <span class="heatmap-title-block">
+                            <h2 id="keywordHeatmapTitle">疾病关键词热力图</h2>
+                        </span>
+                        <i aria-hidden="true">▾</i>
+                    </button>
+                    <div class="heatmap-header-actions">
+                        <button type="button" class="keyword-filter-chip" id="keywordFilterChip" onclick="clearKeywordFilter()" hidden></button>
+                        <button type="button" class="heatmap-expand-button" data-fullscreen-card="keywordHeatmapCard" onclick="toggleHeatmapFullscreen('keywordHeatmapCard')" aria-label="全屏显示疾病关键词热力图" title="全屏显示"></button>
+                    </div>
+                </header>
+                <div class="heatmap-card-body" id="keywordHeatmapBody">
+                    <div class="keyword-heatmap" id="keywordHeatmap" role="img" aria-label="各类牙表标记关键词出现百分比"></div>
+                    <div class="heatmap-scale-row">
+                        <div class="keyword-heatmap-scale" id="keywordHeatmapScale" aria-label="分段颜色从百分之零递增至百分之一百">
+                            <span>0%</span>
+                            <div class="keyword-heatmap-scale-steps" aria-hidden="true">
+                                <i class="level-0" title="0%"></i><i class="level-1" title="大于0%至5%"></i><i class="level-2" title="大于5%至15%"></i><i class="level-3" title="大于15%至30%"></i><i class="level-4" title="大于30%至50%"></i><i class="level-5" title="大于50%至75%"></i><i class="level-6" title="大于75%至100%"></i>
+                            </div>
+                            <span>100%</span>
+                        </div>
+                        <div class="heatmap-scale-meta">
+                            <span class="heatmap-meta-badge" id="keywordHeatmapScope">全部病例</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="tooth-heatmap-card heatmap-card--collapsed" id="toothHeatmapCard" aria-labelledby="toothHeatmapTitle">
+                <header class="keyword-heatmap-header">
+                    <button type="button" class="heatmap-collapse-toggle" id="toothHeatmapCollapse" onclick="toggleHeatmapCollapse('toothHeatmapCard')" aria-expanded="false" aria-controls="toothHeatmapBody" title="展开单牙异常频率">
+                        <span class="heatmap-title-block">
+                            <h2 id="toothHeatmapTitle">单牙异常频率</h2>
+                        </span>
+                        <i aria-hidden="true">▾</i>
+                    </button>
+                    <button type="button" class="heatmap-expand-button" data-fullscreen-card="toothHeatmapCard" onclick="toggleHeatmapFullscreen('toothHeatmapCard')" aria-label="全屏显示单牙异常频率" title="全屏显示"></button>
+                </header>
+                <div class="heatmap-card-body" id="toothHeatmapBody">
+                    <div class="tooth-heatmap-grid">
+                        <section class="tooth-heatmap-panel">
+                            <div class="tooth-heatmap-panel-title"><strong>犬</strong></div>
+                            <div class="tooth-heatmap" id="dogToothHeatmap" role="img" aria-label="犬单牙异常频率热力图"></div>
+                        </section>
+                        <section class="tooth-heatmap-panel">
+                            <div class="tooth-heatmap-panel-title"><strong>猫</strong></div>
+                            <div class="tooth-heatmap" id="catToothHeatmap" role="img" aria-label="猫单牙异常频率热力图"></div>
+                        </section>
+                    </div>
+                    <div class="heatmap-scale-row">
+                        <div class="keyword-heatmap-scale" id="toothHeatmapScale" aria-label="分段颜色从百分之零递增至百分之一百">
+                            <span>0%</span>
+                            <div class="keyword-heatmap-scale-steps" aria-hidden="true">
+                                <i class="level-0" title="0%"></i><i class="level-1" title="大于0%至5%"></i><i class="level-2" title="大于5%至15%"></i><i class="level-3" title="大于15%至30%"></i><i class="level-4" title="大于30%至50%"></i><i class="level-5" title="大于50%至75%"></i><i class="level-6" title="大于75%至100%"></i>
+                            </div>
+                            <span>100%</span>
+                        </div>
+                        <div class="heatmap-scale-meta">
+                            <span class="heatmap-meta-badge" id="dogToothHeatmapScope">犬 · 病例数：0</span>
+                            <span class="heatmap-meta-badge" id="catToothHeatmapScope">猫 · 病例数：0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            </div>
+
+            <div class="history-grid">
+                <section class="records-panel">
+                    <div class="table-head" role="row">
+                        <button type="button" data-sort="id">检查编号</button>
+                        <button type="button" data-sort="ownerName">家长 / 动物</button>
+                        <button type="button" data-sort="chartType">品种</button>
+                        <button type="button" data-sort="examCount">检查次数</button>
+                        <button type="button" data-sort="updatedAt">修改时间</button>
+                        <button type="button" data-sort="abnormalToothCount">异常</button>
+                        <span aria-hidden="true">操作</span>
+                    </div>
+                    <div id="recordsBody"></div>
+                    <div class="empty-state" id="emptyState" hidden>暂无历史牙表</div>
+                    <footer class="records-footer">
+                        <span id="recordsFooterText">共 0 条记录</span>
+                        <div class="pagination" id="pagination" hidden>
+                            <button type="button" id="prevPage" aria-label="上一页">‹</button>
+                            <span id="pageIndicator">1 / 1</span>
+                            <button type="button" id="nextPage" aria-label="下一页">›</button>
+                        </div>
+                    </footer>
+                </section>
+
+                <aside class="detail-panel" id="detailPanel">
+                    <div class="detail-empty" id="detailEmpty">点击左侧记录查看详情。</div>
+                    <div id="detailContent" hidden>
+                        <section class="detail-basic-info" aria-labelledby="detailBasicInfoTitle">
+                            <h2 class="detail-section-title" id="detailBasicInfoTitle">基本信息</h2>
+                            <dl>
+                                <div><dt>检查编号</dt><dd id="detailExamId"></dd></div>
+                                <div><dt>病历号</dt><dd id="detailMedicalRecordId"></dd></div>
+                                <div><dt>家长</dt><dd class="detail-editable-value" id="detailOwnerName" data-basic-field="ownerName" tabindex="0" title="双击修改"></dd></div>
+                                <div><dt>动物</dt><dd class="detail-editable-value" id="detailPetName" data-basic-field="petName" tabindex="0" title="双击修改"></dd></div>
+                                <div><dt>品种</dt><dd id="detailChartType"></dd></div>
+                                <div><dt>创建日期</dt><dd id="detailCreatedAt"></dd></div>
+                            </dl>
+                            <div class="detail-basic-info-status" id="detailBasicInfoStatus"></div>
+                        </section>
+                        <section class="detail-versions" aria-labelledby="detailVersionsTitle">
+                            <h2 class="detail-section-title" id="detailVersionsTitle">历史检查</h2>
+                            <div class="version-timeline" id="versionTimeline"></div>
+                        </section>
+                    </div>
+                </aside>
+            </div>
+            <div class="trash-dock">
+                <button type="button" class="trash-toggle" id="trashToggle" onclick="toggleTrash()">回收站</button>
+            </div>
+            <button type="button" class="feedback-fab" id="feedbackFab" onclick="toggleFeedbackPanel()" aria-expanded="false" aria-controls="feedbackPanel" title="意见反馈">反馈</button>
+            <section class="feedback-panel" id="feedbackPanel" hidden role="dialog" aria-labelledby="feedbackTitle">
+                <header class="feedback-panel-header">
+                    <h2 id="feedbackTitle">意见反馈</h2>
+                    <button type="button" class="feedback-close" onclick="toggleFeedbackPanel(false)" aria-label="关闭反馈">×</button>
+                </header>
+                <div class="feedback-messages" id="feedbackMessages" aria-live="polite"></div>
+                <form class="feedback-composer" id="feedbackForm">
+                    <textarea id="feedbackInput" rows="2" maxlength="2000" placeholder="输入意见或建议…" aria-label="反馈内容"></textarea>
+                    <div class="feedback-composer-bar">
+                        <span class="feedback-count" id="feedbackCount">0 / 2000</span>
+                        <button type="submit" class="feedback-send" id="feedbackSend">发送</button>
+                    </div>
+                </form>
+            </section>
+        </main>
     </div>
 
     <div id="termModal" class="term-modal" hidden>
@@ -131,6 +308,7 @@
     <script src="js/supabase-config.js?v=20260804-1"></script>
     <script src="js/dental-api.js?v=20260810-4"></script>
     <script src="js/report.js?v=20260817-1"></script>
+    <script src="js/history-app.js?v=20260817-2"></script>
     <script>
         const CHART_IMAGES = {
             dog: 'image/CANINE.png',
@@ -301,7 +479,8 @@
         let currentMedicalRecordId = '';
         let selectedHistoryVersion = Number(initialParams.get('version')) || null;
         let followupMode = initialParams.get('followup') === '1';
-        const viewOnlyMode = initialParams.get('view') === '1';
+        let viewOnlyMode = initialParams.get('view') === '1';
+        let currentAppView = initialParams.get('tab') === 'history' ? 'history' : 'chart';
         let editSessionId = createEditSessionId();
         let cacheSyncInFlight = false;
         let cacheSyncDirty = false;
@@ -695,7 +874,7 @@
                 inputData = { ...(snapshot.inputData || {}) };
                 document.getElementById('ownerNameInput').value = snapshot.ownerName || '';
                 document.getElementById('petNameInput').value = snapshot.petName || '';
-                if (currentChartId) history.replaceState(null, '', `index.html?chart=${currentChartId}`);
+                if (currentChartId && currentAppView === 'chart') syncAppUrl({ replace: true });
                 setSaveStatus('已恢复填写内容', 'saved');
                 return true;
             } catch (_) {
@@ -706,8 +885,84 @@
 
         function saveDraftAndOpenHistory() {
             persistWorkingDraft();
-            location.href = 'history.html';
+            setAppView('history', { replace: false });
         }
+
+        function chartPageUrl() {
+            const params = new URLSearchParams();
+            if (currentChartId) params.set('chart', currentChartId);
+            if (selectedHistoryVersion) params.set('version', String(selectedHistoryVersion));
+            if (followupMode) params.set('followup', '1');
+            if (viewOnlyMode) params.set('view', '1');
+            const query = params.toString();
+            return query ? `index.html?${query}` : 'index.html';
+        }
+
+        function syncAppUrl({ replace = true } = {}) {
+            const next = currentAppView === 'history' ? 'index.html?tab=history' : chartPageUrl();
+            if (replace) history.replaceState({ view: currentAppView }, '', next);
+            else history.pushState({ view: currentAppView }, '', next);
+        }
+
+        function setAppView(view, { url = true, replace = true, loadHistory = true } = {}) {
+            currentAppView = view === 'history' ? 'history' : 'chart';
+            document.body.classList.toggle('view-history', currentAppView === 'history');
+            document.getElementById('navChartButton')?.classList.toggle('active', currentAppView === 'chart');
+            document.getElementById('navHistoryButton')?.classList.toggle('active', currentAppView === 'history');
+            document.title = currentAppView === 'history' ? '历史牙表' : '牙表';
+            if (url) syncAppUrl({ replace });
+            if (currentAppView === 'history' && loadHistory) window.DentalHistory?.show?.();
+        }
+
+        function showChartView() {
+            if (viewOnlyMode) {
+                viewOnlyMode = false;
+                followupMode = false;
+                restoreWorkingDraftFromSession();
+                applyViewOnlyMode();
+                applyChartWorkspace();
+            }
+            setAppView('chart', { replace: false });
+        }
+
+        function applyChartWorkspace() {
+            document.getElementById('btn-dog')?.classList.toggle('active', currentChartType === 'dog');
+            document.getElementById('btn-cat')?.classList.toggle('active', currentChartType === 'cat');
+            document.getElementById('btn-rabbit')?.classList.toggle('active', currentChartType === 'rabbit');
+            document.body.classList.toggle('rabbit-mode', currentChartType === 'rabbit');
+            document.body.classList.toggle('cat-mode', currentChartType === 'cat');
+            if (currentChartType === 'rabbit') loadRabbitPosterImages();
+            const image = document.getElementById('chartImage');
+            if (!image) return;
+            const nextSrc = CHART_IMAGES[currentChartType];
+            const doInit = () => {
+                initInputs();
+                loadPositions();
+                DentalReport.updateReport();
+                applyViewOnlyMode();
+            };
+            if (image.getAttribute('src') === nextSrc && image.complete) {
+                doInit();
+            } else {
+                image.onload = doInit;
+                image.src = nextSrc;
+            }
+            resetLegendState();
+        }
+
+        async function enterChartFromHistory({ chartId = '', version = null, followup = false, viewOnly = false } = {}) {
+            persistWorkingDraft();
+            currentChartId = chartId || '';
+            selectedHistoryVersion = version ? Number(version) : null;
+            followupMode = !!followup;
+            viewOnlyMode = !!viewOnly;
+            historyPreviewActive = false;
+            currentDraftSnapshot = null;
+            setAppView('chart', { replace: false });
+            if (currentChartId) await loadRequestedChart();
+            applyChartWorkspace();
+        }
+        window.enterChartFromHistory = enterChartFromHistory;
 
         function closeOwnerSearch() {
             const results = document.getElementById('ownerSearchResults');
@@ -735,9 +990,11 @@
 
         function openMatchedChart(chart, mode) {
             closeTimeoutsBeforeNavigation();
-            persistWorkingDraft();
-            const suffix = mode === 'followup' ? '&followup=1' : mode === 'view' ? '&view=1' : '';
-            location.href = `index.html?chart=${encodeURIComponent(chart.id)}${suffix}`;
+            enterChartFromHistory({
+                chartId: chart.id,
+                followup: mode === 'followup',
+                viewOnly: mode === 'view'
+            });
         }
 
         function closeTimeoutsBeforeNavigation() {
@@ -855,26 +1112,28 @@
         }
 
         function applyViewOnlyMode() {
-            if (!viewOnlyMode) return;
-            document.body.classList.add('view-only');
+            document.body.classList.toggle('view-only', viewOnlyMode);
             closeOwnerSearch();
             ['ownerNameInput', 'petNameInput'].forEach(id => {
                 const input = document.getElementById(id);
                 if (!input) return;
-                input.readOnly = true;
-                input.setAttribute('aria-readonly', 'true');
+                input.readOnly = viewOnlyMode;
+                input.toggleAttribute('aria-readonly', viewOnlyMode);
             });
             document.querySelectorAll('.tooth-input').forEach(input => {
-                input.readOnly = true;
-                input.setAttribute('aria-readonly', 'true');
+                input.readOnly = viewOnlyMode;
+                input.toggleAttribute('aria-readonly', viewOnlyMode);
             });
             document.querySelectorAll('.chart-type-selector button').forEach(button => {
-                button.disabled = true;
+                button.disabled = viewOnlyMode;
             });
-            document.getElementById('saveChartButton').disabled = true;
-            document.querySelector('.btn-clear').disabled = false;
-            document.getElementById('restoreDraftButton').hidden = true;
-            setSaveStatus('仅查看', 'saved');
+            const save = document.getElementById('saveChartButton');
+            const restore = document.getElementById('restoreDraftButton');
+            const clear = document.querySelector('.btn-clear');
+            if (save) save.disabled = viewOnlyMode || historyPreviewActive;
+            if (restore) restore.hidden = viewOnlyMode || !historyPreviewActive;
+            if (clear) clear.disabled = historyPreviewActive && !viewOnlyMode;
+            if (viewOnlyMode) setSaveStatus('仅查看', 'saved');
         }
 
         async function previewHistoricalReport(record) {
@@ -931,10 +1190,11 @@
                 if (!currentChartId) {
                     currentChartId = saved.id;
                     selectedHistoryVersion = null;
-                    history.replaceState(null, '', `index.html?chart=${currentChartId}`);
+                    syncAppUrl({ replace: true });
                 }
                 historicalReportsCacheKey = '';
                 ownerSearchCharts = null;
+                window.DentalHistory?.invalidate?.();
                 setSaveStatus('已保存', 'saved');
                 persistWorkingDraft();
                 if (activeReportTab === 'history') loadHistoricalReports(true);
@@ -1005,7 +1265,7 @@
                     currentChartId = '';
                     selectedHistoryVersion = null;
                     editSessionId = createEditSessionId();
-                    history.replaceState(null, '', 'index.html');
+                    syncAppUrl({ replace: true });
                     setSaveStatus(`复查待保存 · 病历号 ${currentMedicalRecordId}`, 'saved');
                     followupMode = false;
                 } else {
@@ -1666,7 +1926,19 @@
             // 查看历史病例时，单击即退出查看并开始一份新的空白牙表。
             if (viewOnlyMode) {
                 try { sessionStorage.removeItem(WORKING_DRAFT_KEY); } catch (_) {}
-                location.href = 'index.html';
+                viewOnlyMode = false;
+                followupMode = false;
+                currentChartId = '';
+                currentMedicalRecordId = '';
+                selectedHistoryVersion = null;
+                inputData = {};
+                editSessionId = createEditSessionId();
+                document.getElementById('ownerNameInput').value = '';
+                document.getElementById('petNameInput').value = '';
+                applyViewOnlyMode();
+                applyChartWorkspace();
+                setSaveStatus('尚未保存');
+                syncAppUrl({ replace: true });
                 return;
             }
             
@@ -1698,7 +1970,7 @@
                 try { sessionStorage.removeItem(WORKING_DRAFT_KEY); } catch (_) {}
                 closeOwnerSearch();
                 editSessionId = createEditSessionId();
-                history.replaceState(null, '', 'index.html');
+                syncAppUrl({ replace: true });
                 const ownerInput = document.getElementById('ownerNameInput');
                 if (ownerInput) ownerInput.value = '';
                 const petInput = document.getElementById('petNameInput');
@@ -2022,7 +2294,11 @@
 
         // DOM 可用后立即初始化，不等待图片、视频等媒体资源。
         document.addEventListener('DOMContentLoaded', async function() {
-            const [loadedRequestedChart] = await Promise.all([loadRequestedChart(), loadCustomTerms(false)]);
+            const startHistory = currentAppView === 'history';
+            const [loadedRequestedChart] = await Promise.all([
+                startHistory ? Promise.resolve(false) : loadRequestedChart(),
+                loadCustomTerms(false)
+            ]);
             if (!loadedRequestedChart) restoreWorkingDraftFromSession();
             document.getElementById('btn-dog').classList.toggle('active', currentChartType === 'dog');
             document.getElementById('btn-cat').classList.toggle('active', currentChartType === 'cat');
@@ -2042,17 +2318,16 @@
             applyViewOnlyMode();
             setupRabbitPosterLightbox();
             const ownerNameInput = document.getElementById('ownerNameInput');
-            if (!viewOnlyMode) {
-                ownerNameInput?.addEventListener('input', handleOwnerNameInput);
-                ownerNameInput?.addEventListener('focus', () => {
-                    getOwnerSearchCharts().catch(() => {});
-                    if (ownerNameInput.value.trim()) handleOwnerNameInput();
-                });
-                ownerNameInput?.addEventListener('keydown', event => {
-                    if (event.key === 'Escape') closeOwnerSearch();
-                });
-                document.getElementById('petNameInput')?.addEventListener('input', scheduleCacheSync);
-            }
+            ownerNameInput?.addEventListener('input', handleOwnerNameInput);
+            ownerNameInput?.addEventListener('focus', () => {
+                if (viewOnlyMode) return;
+                getOwnerSearchCharts().catch(() => {});
+                if (ownerNameInput.value.trim()) handleOwnerNameInput();
+            });
+            ownerNameInput?.addEventListener('keydown', event => {
+                if (event.key === 'Escape') closeOwnerSearch();
+            });
+            document.getElementById('petNameInput')?.addEventListener('input', scheduleCacheSync);
             document.getElementById('chartContainer')?.addEventListener('dragstart', (e) => {
                 e.preventDefault();
             });
@@ -2060,6 +2335,7 @@
             // 窗口缩放时更新输入框尺寸
             let resizeTimer;
             window.addEventListener('resize', function() {
+                if (currentAppView !== 'chart') return;
                 clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(updateInputSizes, 80);
             });
@@ -2080,6 +2356,11 @@
             document.addEventListener('pointerup', endTermPaint);
             document.addEventListener('pointercancel', endTermPaint);
             window.addEventListener('pagehide', persistWorkingDraft);
+            window.addEventListener('popstate', () => {
+                const tab = new URLSearchParams(location.search).get('tab');
+                setAppView(tab === 'history' ? 'history' : 'chart', { url: false, loadHistory: tab === 'history' });
+            });
+            setAppView(startHistory ? 'history' : 'chart', { url: false, loadHistory: startHistory });
 
         });
     </script>

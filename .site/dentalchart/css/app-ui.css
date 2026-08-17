@@ -68,6 +68,9 @@ body.dental-auth-open { overflow: hidden; }
 .dental-auth-actions button.primary { color: #fff; background: #0c7b62; }
 .dental-auth-actions button:hover { filter: brightness(.97); }
 
+body:not(.view-history) .history-workspace { display: none; }
+body.view-history .workspace { display: none; }
+
 .app-shell { min-height: 100vh; }
 
 .topbar {
