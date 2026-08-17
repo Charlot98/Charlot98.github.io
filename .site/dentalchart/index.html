@@ -7,6 +7,7 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/pub.css?v=20260817-2">
     <link rel="stylesheet" href="css/app-ui.css?v=20260810-5">
+    <link rel="prefetch" href="history.html">
 </head>
 <body>
     <div class="app-shell">
@@ -57,7 +58,7 @@
                         <div id="inputsContainer"></div>
                     </div>
                     <div class="rabbit-poster" id="rabbitPoster">
-                        <img src="image/rabbit-dental-anatomy-poster.png" alt="兔牙解剖图" class="rabbit-poster-image" id="rabbitPosterImage" role="button" tabindex="0" title="点击全屏查看">
+                        <img data-src="image/rabbit-dental-anatomy-poster.png" alt="兔牙解剖图" class="rabbit-poster-image" id="rabbitPosterImage" role="button" tabindex="0" title="点击全屏查看">
                     </div>
                     <div class="chart-bottom-row">
                         <div class="workflow-control">
@@ -1578,12 +1579,23 @@
             syncUsedLegendTerms();
         }
 
+        function loadRabbitPosterImages() {
+            const src = 'image/rabbit-dental-anatomy-poster.png';
+            ['rabbitPosterImage', 'rabbitPosterLightboxImage'].forEach((id) => {
+                const image = document.getElementById(id);
+                if (image && image.getAttribute('src') !== src) {
+                    image.src = image.getAttribute('data-src') || src;
+                }
+            });
+        }
+
         function setupRabbitPosterLightbox() {
             const trigger = document.getElementById('rabbitPosterImage');
             const lightbox = document.getElementById('rabbitPosterLightbox');
             if (!trigger || !lightbox) return;
 
             const open = () => {
+                loadRabbitPosterImages();
                 lightbox.hidden = false;
                 document.body.classList.add('rabbit-lightbox-open');
             };
@@ -1621,6 +1633,7 @@
             const isRabbit = type === 'rabbit';
             document.body.classList.toggle('rabbit-mode', isRabbit);
             document.body.classList.toggle('cat-mode', type === 'cat');
+            if (isRabbit) loadRabbitPosterImages();
 
             image.onload = null;
             image.src = CHART_IMAGES[type];
@@ -2016,6 +2029,7 @@
             document.getElementById('btn-rabbit').classList.toggle('active', currentChartType === 'rabbit');
             document.body.classList.toggle('rabbit-mode', currentChartType === 'rabbit');
             document.body.classList.toggle('cat-mode', currentChartType === 'cat');
+            if (currentChartType === 'rabbit') loadRabbitPosterImages();
             document.getElementById('chartImage').src = CHART_IMAGES[currentChartType];
             initLegend();
             setInterval(() => loadCustomTerms(true), 30000);
@@ -2070,7 +2084,7 @@
         });
     </script>
     <div class="rabbit-poster-lightbox" id="rabbitPosterLightbox" hidden>
-        <img src="image/rabbit-dental-anatomy-poster.png" alt="兔牙解剖图">
+        <img data-src="image/rabbit-dental-anatomy-poster.png" alt="兔牙解剖图" id="rabbitPosterLightboxImage">
     </div>
 </body>
 </html>

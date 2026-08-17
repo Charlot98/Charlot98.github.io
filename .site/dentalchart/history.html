@@ -6,6 +6,10 @@
     <title>历史牙表</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/history.css?v=20260817-1">
+    <link rel="prefetch" href="index.html">
+    <link rel="prefetch" href="js/vendor/highcharts-12.4.0.js">
+    <link rel="prefetch" href="js/vendor/highcharts-treemap-12.4.0.js">
+    <link rel="prefetch" href="js/vendor/highcharts-heatmap-12.4.0.js">
 </head>
 <body>
     <div class="app-shell">
@@ -194,9 +198,6 @@
         </main>
     </div>
 
-    <script src="js/vendor/highcharts-12.4.0.js"></script>
-    <script src="js/vendor/highcharts-treemap-12.4.0.js"></script>
-    <script src="js/vendor/highcharts-heatmap-12.4.0.js"></script>
     <script src="js/supabase-config.js?v=20260804-1"></script>
     <script src="js/dental-api.js?v=20260810-4"></script>
     <script src="js/report.js?v=20260817-1"></script>
@@ -220,6 +221,11 @@
         let keywordHeatmapChart = null;
         const toothHeatmapCharts = { dog: null, cat: null };
         const heatmapDefaultHeights = { keyword: 0, dog: 0, cat: 0 };
+        const CHARTS_CACHE_KEY = 'dentalchart:history-list:v1';
+        const CHARTS_CACHE_TTL_MS = 60 * 1000;
+        let heatmapFieldsLoaded = false;
+        let heatmapRenderToken = 0;
+        let highchartsPromise = null;
         const TOOTH_ROWS = {
             dog: {
                 upper: ['110', '109', '108', '107', '106', '105', '104', '103', '102', '101', '201', '202', '203', '204', '205', '206', '207', '208', '209', '210'],
@@ -315,8 +321,7 @@
             syncDateFilterControls();
             currentPage = 1;
             renderRows();
-            renderKeywordHeatmap();
-            renderToothHeatmaps();
+            refreshVisibleHeatmaps();
         }
         function openChart(id, version) {
             location.href = `index.html?chart=${id}${version ? `&version=${version}` : ''}`;
@@ -365,11 +370,7 @@
                 toggle.title = collapsed ? `展开${title}` : `折叠${title}`;
             });
             if (!collapsed) {
-                requestAnimationFrame(() => {
-                    keywordHeatmapChart?.reflow();
-                    toothHeatmapCharts.dog?.reflow();
-                    toothHeatmapCharts.cat?.reflow();
-                });
+                ensureHeatmapsRendered();
             }
         }
 
@@ -390,6 +391,7 @@
                     if (card.classList.contains('heatmap-card--collapsed')) {
                         setHeatmapCollapsed(false);
                     }
+                    await ensureHeatmapsRendered();
                     const request = card.requestFullscreen || card.webkitRequestFullscreen;
                     if (!request) throw new Error('当前浏览器不支持全屏显示');
                     rememberHeatmapDefaultHeights(cardId);
@@ -682,6 +684,122 @@
             loadCharts();
         }
 
+        function isHeatmapExpanded() {
+            const card = document.getElementById('keywordHeatmapCard');
+            return !!card && !card.hidden && !card.classList.contains('heatmap-card--collapsed');
+        }
+
+        function loadScript(src) {
+            return new Promise((resolve, reject) => {
+                const existing = document.querySelector(`script[src="${src}"]`);
+                if (existing) {
+                    if (existing.dataset.loaded === 'true') return resolve();
+                    existing.addEventListener('load', () => resolve(), { once: true });
+                    existing.addEventListener('error', () => reject(new Error('热力图组件未能加载')), { once: true });
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    script.dataset.loaded = 'true';
+                    resolve();
+                };
+                script.onerror = () => reject(new Error('热力图组件未能加载'));
+                document.head.appendChild(script);
+            });
+        }
+
+        function loadHighcharts() {
+            if (window.Highcharts?.seriesTypes?.treemap && window.Highcharts?.seriesTypes?.heatmap) {
+                return Promise.resolve();
+            }
+            if (!highchartsPromise) {
+                highchartsPromise = loadScript('js/vendor/highcharts-12.4.0.js')
+                    .then(() => loadScript('js/vendor/highcharts-treemap-12.4.0.js'))
+                    .then(() => loadScript('js/vendor/highcharts-heatmap-12.4.0.js'));
+            }
+            return highchartsPromise;
+        }
+
+        function chartsHaveHeatmapFields() {
+            return charts.length > 0 && charts.every((item) => Array.isArray(item.abnormalTeeth));
+        }
+
+        function readChartsCache(trash) {
+            try {
+                const cache = JSON.parse(sessionStorage.getItem(CHARTS_CACHE_KEY) || 'null');
+                if (!cache || cache.trash !== trash) return null;
+                if (Date.now() - Number(cache.savedAt) > CHARTS_CACHE_TTL_MS) return null;
+                return Array.isArray(cache.charts) ? cache.charts : null;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        function writeChartsCache(trash, rows) {
+            try {
+                sessionStorage.setItem(CHARTS_CACHE_KEY, JSON.stringify({
+                    trash,
+                    savedAt: Date.now(),
+                    charts: rows
+                }));
+            } catch (_) {
+                // 会话存储不可用时忽略列表缓存。
+            }
+        }
+
+        async function ensureHeatmapFields() {
+            if (heatmapFieldsLoaded || !charts.length || chartsHaveHeatmapFields()) {
+                heatmapFieldsLoaded = heatmapFieldsLoaded || !charts.length || chartsHaveHeatmapFields();
+                return;
+            }
+            const query = `heatmap=true${trashMode ? '&trash=true' : ''}`;
+            const response = await DentalApi.fetch(`${API}?${query}`, { cache: 'no-store' });
+            if (!response.ok) throw new Error('无法读取热力图统计');
+            const detailed = await response.json();
+            const extra = new Map((Array.isArray(detailed) ? detailed : []).map((item) => [item.id, item]));
+            charts = charts.map((item) => {
+                const next = extra.get(item.id);
+                if (!next) return item;
+                return {
+                    ...item,
+                    abnormalTeeth: next.abnormalTeeth,
+                    toothKeywords: next.toothKeywords
+                };
+            });
+            heatmapFieldsLoaded = true;
+        }
+
+        function refreshVisibleHeatmaps() {
+            if (isHeatmapExpanded()) ensureHeatmapsRendered();
+        }
+
+        async function ensureHeatmapsRendered() {
+            if (!isHeatmapExpanded() || trashMode) return;
+            const token = ++heatmapRenderToken;
+            try {
+                await Promise.all([ensureHeatmapFields(), loadHighcharts()]);
+                if (token !== heatmapRenderToken || !isHeatmapExpanded() || trashMode) return;
+                renderKeywordHeatmap();
+                renderToothHeatmaps();
+            } catch (error) {
+                const container = document.getElementById('keywordHeatmap');
+                if (container) {
+                    container.classList.add('empty');
+                    container.textContent = error.message || '热力图加载失败';
+                }
+            }
+        }
+
+        function applyCharts(rows, fromCache = false) {
+            charts = Array.isArray(rows) ? rows : [];
+            heatmapFieldsLoaded = chartsHaveHeatmapFields();
+            applyExamCountsByMedicalRecord();
+            updateSummary(false);
+            renderRows();
+            if (!fromCache) refreshVisibleHeatmaps();
+        }
+
         function keywordHeatmapColor(percentage) {
             const value = Math.max(0, Math.min(100, Number(percentage) || 0));
             if (value === 0) return '#e5e9e7';
@@ -710,8 +828,7 @@
             content.hidden = true;
             empty.hidden = false;
             empty.textContent = selectedKeyword ? `正在显示包含“${selectedKeyword}”的病例。` : '点击左侧记录查看详情。';
-            renderKeywordHeatmap();
-            renderToothHeatmaps();
+            ensureHeatmapsRendered();
             renderRows();
             const first = filteredCharts()[0];
             if (first) selectChart(first.id);
@@ -1010,10 +1127,7 @@
             document.getElementById('todayCount').textContent = trashMode
                 ? '15天'
                 : charts.filter(item => dateKey(item.createdAt) === todayKey()).length;
-            if (renderCharts) {
-                renderKeywordHeatmap();
-                renderToothHeatmaps();
-            }
+            if (renderCharts) refreshVisibleHeatmaps();
         }
 
         function filteredCharts() {
@@ -1298,22 +1412,17 @@
 
         async function loadCharts() {
             const status = document.getElementById('historyStatus');
+            heatmapFieldsLoaded = false;
+            const cached = readChartsCache(trashMode);
+            if (cached) applyCharts(cached, true);
             try {
                 const response = await DentalApi.fetch(`${API}${trashMode ? '?trash=true' : ''}`, { cache: 'no-store' });
                 if (!response.ok) throw new Error('无法连接牙表服务');
-                charts = await response.json();
-                applyExamCountsByMedicalRecord();
-                updateSummary(false);
-                renderRows();
-                const loadedTrashMode = trashMode;
-                requestAnimationFrame(() => setTimeout(() => {
-                    if (trashMode !== loadedTrashMode) return;
-                    renderKeywordHeatmap();
-                    renderToothHeatmaps();
-                    const first = filteredCharts()[0];
-                    if (first && !selectedId) selectChart(first.id);
-                }, 0));
+                const rows = await response.json();
+                writeChartsCache(trashMode, rows);
+                applyCharts(rows);
             } catch (error) {
+                if (cached) return;
                 status.textContent = `读取失败：${error.message}`;
                 status.style.color = '#c62828';
             }
@@ -1357,18 +1466,18 @@
                 .replace(/"/g, '&quot;');
         }
 
-        function excelCellText(value) {
-            return escapeXml(String(value ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ''))
-                .replace(/\r\n|\r|\n/g, '&#10;');
+        function excelOneLine(value) {
+            return String(value ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').replace(/\s+/g, ' ').trim();
         }
 
-        function excelRowHeight(findings, conclusion) {
-            const lines = Math.max(
-                String(findings || '').split(/\n/).length,
-                String(conclusion || '').split(/\n/).length,
-                1
-            );
-            return Math.min(180, Math.max(32, 20 + lines * 16));
+        function excelCellText(value) {
+            return escapeXml(excelOneLine(value));
+        }
+
+        function excelCells(values, styleId) {
+            return values.map((value) =>
+                `<Cell ss:StyleID="${styleId}"><Data ss:Type="String">${excelCellText(value)}</Data></Cell>`
+            ).join('');
         }
 
         function buildExcelBackup(payload) {
@@ -1383,27 +1492,20 @@
                 '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>'
             ].join('');
             const rows = [
-                `<Row ss:Height="26" ss:StyleID="Header">${header.map((title) =>
-                    `<Cell><Data ss:Type="String" xml:space="preserve">${excelCellText(title)}</Data></Cell>`
-                ).join('')}</Row>`
+                `<Row ss:AutoFitHeight="0" ss:Height="20">${excelCells(header, 'Header')}</Row>`
             ];
             charts.forEach((chart) => {
                 const report = window.DentalReport?.buildReport?.(chart.input_data || {}) || {};
-                const findings = report.findings || '';
-                const conclusion = report.conclusion || '';
-                const values = [
-                    examLabel(chart.exam_no),
-                    chart.owner_name || '',
-                    chart.pet_name || '',
-                    TYPE_LABELS[chart.chart_type] || chart.chart_type || '',
-                    formatExportDateTime(chart.updated_at),
-                    findings,
-                    conclusion
-                ];
                 rows.push(
-                    `<Row ss:Height="${excelRowHeight(findings, conclusion)}">${values.map((value) =>
-                        `<Cell><Data ss:Type="String" xml:space="preserve">${excelCellText(value)}</Data></Cell>`
-                    ).join('')}</Row>`
+                    `<Row ss:AutoFitHeight="0" ss:Height="18">${excelCells([
+                        examLabel(chart.exam_no),
+                        chart.owner_name || '',
+                        chart.pet_name || '',
+                        TYPE_LABELS[chart.chart_type] || chart.chart_type || '',
+                        formatExportDateTime(chart.updated_at),
+                        report.findings || '',
+                        report.conclusion || ''
+                    ], 'Data')}</Row>`
                 );
             });
             return `<?xml version="1.0" encoding="UTF-8"?>
@@ -1414,19 +1516,23 @@
  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
  <Styles>
   <Style ss:ID="Default" ss:Name="Normal">
-   <Alignment ss:Vertical="Center" ss:WrapText="1"/>
-   <Borders>${solidBorder}</Borders>
+   <Alignment ss:Vertical="Center"/>
    <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Color="#26342E"/>
   </Style>
   <Style ss:ID="Header">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="0"/>
    <Borders>${solidBorder}</Borders>
-   <Font ss:FontName="Microsoft YaHei" ss:Size="11" ss:Bold="1" ss:Color="#075E4B"/>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Bold="1" ss:Color="#075E4B"/>
    <Interior ss:Color="#E5F4EF" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="Data">
+   <Alignment ss:Vertical="Center" ss:WrapText="0"/>
+   <Borders>${solidBorder}</Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Color="#26342E"/>
   </Style>
  </Styles>
  <Worksheet ss:Name="牙表备份">
-  <Table ss:ExpandedColumnCount="7" ss:ExpandedRowCount="${charts.length + 1}" x:FullColumns="1" x:FullRows="1">
+  <Table ss:ExpandedColumnCount="7" ss:ExpandedRowCount="${charts.length + 1}">
    ${widths.map((width) => `<Column ss:AutoFitWidth="0" ss:Width="${width}"/>`).join('')}
    ${rows.join('')}
   </Table>
@@ -1639,8 +1745,7 @@
                 selectedType = button.dataset.type;
                 currentPage = 1;
                 renderRows();
-                renderKeywordHeatmap();
-                renderToothHeatmaps();
+                refreshVisibleHeatmaps();
             });
         });
         document.querySelectorAll('#dateFilters button').forEach(button => {
