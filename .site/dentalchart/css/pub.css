@@ -424,7 +424,7 @@ body.term-paint-mode .chart-container {
     color: #b5b5b5;
 }
 
-.legend--collapsed:not(.legend--show-other-match):not(.legend--has-active-other) .legend-other-grid {
+.legend--collapsed:not(.legend--show-other-match):not(.legend--has-active-other):not(.legend--has-used-other) .legend-other-grid {
     display: none;
 }
 

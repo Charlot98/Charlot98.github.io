@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>历史牙表</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="css/history.css?v=20260810-3">
+    <link rel="stylesheet" href="css/history.css?v=20260817-1">
 </head>
 <body>
     <div class="app-shell">
@@ -31,7 +31,13 @@
                     <button type="button" data-type="cat">猫</button>
                     <button type="button" data-type="rabbit">兔</button>
                 </div>
-                <button type="button" class="export-backup-button" id="exportBackupButton" onclick="exportBackup()">导出备份</button>
+                <div class="export-backup-wrap" id="exportBackupMenu">
+                    <button type="button" class="export-backup-button" id="exportBackupButton" aria-haspopup="true" aria-expanded="false" onclick="toggleExportMenu()">导出备份</button>
+                    <div class="export-backup-options" role="menu" aria-label="选择导出格式">
+                        <button type="button" role="menuitem" onclick="exportBackup('json')">JSON</button>
+                        <button type="button" role="menuitem" onclick="exportBackup('excel')">Excel</button>
+                    </div>
+                </div>
                 <div class="date-filter" aria-label="日期筛选">
                     <div class="filter-tabs" id="dateFilters" role="group" aria-label="日期快捷筛选">
                         <button type="button" class="active" data-date="">全部</button>
@@ -170,6 +176,21 @@
             <div class="trash-dock">
                 <button type="button" class="trash-toggle" id="trashToggle" onclick="toggleTrash()">回收站</button>
             </div>
+            <button type="button" class="feedback-fab" id="feedbackFab" onclick="toggleFeedbackPanel()" aria-expanded="false" aria-controls="feedbackPanel" title="意见反馈">反馈</button>
+            <section class="feedback-panel" id="feedbackPanel" hidden role="dialog" aria-labelledby="feedbackTitle">
+                <header class="feedback-panel-header">
+                    <h2 id="feedbackTitle">意见反馈</h2>
+                    <button type="button" class="feedback-close" onclick="toggleFeedbackPanel(false)" aria-label="关闭反馈">×</button>
+                </header>
+                <div class="feedback-messages" id="feedbackMessages" aria-live="polite"></div>
+                <form class="feedback-composer" id="feedbackForm">
+                    <textarea id="feedbackInput" rows="2" maxlength="2000" placeholder="输入意见或建议…" aria-label="反馈内容"></textarea>
+                    <div class="feedback-composer-bar">
+                        <span class="feedback-count" id="feedbackCount">0 / 2000</span>
+                        <button type="submit" class="feedback-send" id="feedbackSend">发送</button>
+                    </div>
+                </form>
+            </section>
         </main>
     </div>
 
@@ -178,7 +199,7 @@
     <script src="js/vendor/highcharts-heatmap-12.4.0.js"></script>
     <script src="js/supabase-config.js?v=20260804-1"></script>
     <script src="js/dental-api.js?v=20260810-4"></script>
-    <script src="js/report.js?v=20260726-6"></script>
+    <script src="js/report.js?v=20260817-1"></script>
     <script>
         const API = 'api/charts';
         const WORKFLOW_LABELS = { saved: '已保存', submitted: '待审核', reviewed: '已审核' };
@@ -1298,7 +1319,129 @@
             }
         }
 
-        async function exportBackup() {
+        function toggleExportMenu(forceOpen) {
+            const menu = document.getElementById('exportBackupMenu');
+            const button = document.getElementById('exportBackupButton');
+            if (!menu || !button || button.disabled) return;
+            const open = forceOpen === undefined ? !menu.classList.contains('open') : forceOpen;
+            menu.classList.toggle('open', open);
+            button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        function downloadBlob(blob, filename) {
+            const href = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = href;
+            anchor.download = filename;
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            URL.revokeObjectURL(href);
+        }
+
+        function examLabel(examNo) {
+            return `A${String(examNo ?? '').padStart(7, '0')}`;
+        }
+
+        function formatExportDateTime(iso) {
+            const time = Date.parse(iso);
+            if (!Number.isFinite(time)) return iso ? String(iso) : '';
+            return `${formatDate(time)} ${formatTime(time)}`;
+        }
+
+        function escapeXml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function excelCellText(value) {
+            return escapeXml(String(value ?? '').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, ''))
+                .replace(/\r\n|\r|\n/g, '&#10;');
+        }
+
+        function excelRowHeight(findings, conclusion) {
+            const lines = Math.max(
+                String(findings || '').split(/\n/).length,
+                String(conclusion || '').split(/\n/).length,
+                1
+            );
+            return Math.min(180, Math.max(32, 20 + lines * 16));
+        }
+
+        function buildExcelBackup(payload) {
+            const charts = (Array.isArray(payload?.charts) ? payload.charts : [])
+                .filter((chart) => !chart?.deleted_at);
+            const header = ['检查编号', '家长', '动物', '品种', '修改时间', '所见', '结论'];
+            const widths = [86, 78, 78, 42, 128, 260, 260];
+            const solidBorder = [
+                '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>',
+                '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>',
+                '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>',
+                '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>'
+            ].join('');
+            const rows = [
+                `<Row ss:Height="26" ss:StyleID="Header">${header.map((title) =>
+                    `<Cell><Data ss:Type="String" xml:space="preserve">${excelCellText(title)}</Data></Cell>`
+                ).join('')}</Row>`
+            ];
+            charts.forEach((chart) => {
+                const report = window.DentalReport?.buildReport?.(chart.input_data || {}) || {};
+                const findings = report.findings || '';
+                const conclusion = report.conclusion || '';
+                const values = [
+                    examLabel(chart.exam_no),
+                    chart.owner_name || '',
+                    chart.pet_name || '',
+                    TYPE_LABELS[chart.chart_type] || chart.chart_type || '',
+                    formatExportDateTime(chart.updated_at),
+                    findings,
+                    conclusion
+                ];
+                rows.push(
+                    `<Row ss:Height="${excelRowHeight(findings, conclusion)}">${values.map((value) =>
+                        `<Cell><Data ss:Type="String" xml:space="preserve">${excelCellText(value)}</Data></Cell>`
+                    ).join('')}</Row>`
+                );
+            });
+            return `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>${solidBorder}</Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="10" ss:Color="#26342E"/>
+  </Style>
+  <Style ss:ID="Header">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>
+   <Borders>${solidBorder}</Borders>
+   <Font ss:FontName="Microsoft YaHei" ss:Size="11" ss:Bold="1" ss:Color="#075E4B"/>
+   <Interior ss:Color="#E5F4EF" ss:Pattern="Solid"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="牙表备份">
+  <Table ss:ExpandedColumnCount="7" ss:ExpandedRowCount="${charts.length + 1}" x:FullColumns="1" x:FullRows="1">
+   ${widths.map((width) => `<Column ss:AutoFitWidth="0" ss:Width="${width}"/>`).join('')}
+   ${rows.join('')}
+  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <FreezePanes/>
+   <FrozenNoSplit/>
+   <SplitHorizontal>1</SplitHorizontal>
+   <TopRowBottomPane>1</TopRowBottomPane>
+  </WorksheetOptions>
+ </Worksheet>
+</Workbook>`;
+        }
+
+        async function exportBackup(format) {
+            toggleExportMenu(false);
             const button = document.getElementById('exportBackupButton');
             const originalText = button.textContent;
             button.disabled = true;
@@ -1309,18 +1452,17 @@
                     const result = await response.json().catch(() => ({}));
                     throw new Error(result.message || '导出失败');
                 }
-                const blob = await response.blob();
-                const disposition = response.headers.get('Content-Disposition') || '';
-                const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
-                const filename = match?.[1] || `dentalchart-backup-${new Date().toISOString().slice(0, 10)}.json`;
-                const href = URL.createObjectURL(blob);
-                const anchor = document.createElement('a');
-                anchor.href = href;
-                anchor.download = filename;
-                document.body.appendChild(anchor);
-                anchor.click();
-                anchor.remove();
-                URL.revokeObjectURL(href);
+                const dateStamp = new Date().toISOString().slice(0, 10);
+                if (format === 'excel') {
+                    const payload = await response.json();
+                    const xml = '\uFEFF' + buildExcelBackup(payload);
+                    downloadBlob(new Blob([xml], { type: 'application/vnd.ms-excel;charset=utf-8' }), `dentalchart-backup-${dateStamp}.xls`);
+                } else {
+                    const blob = await response.blob();
+                    const disposition = response.headers.get('Content-Disposition') || '';
+                    const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+                    downloadBlob(blob, match?.[1] || `dentalchart-backup-${dateStamp}.json`);
+                }
                 button.textContent = '导出完成';
             } catch (error) {
                 alert(`导出失败：${error.message}`);
@@ -1330,6 +1472,147 @@
                     button.disabled = false;
                     button.textContent = originalText;
                 }, 1200);
+            }
+        }
+
+        const FEEDBACK_MAX = 2000;
+        let feedbackLoaded = false;
+        let feedbackSending = false;
+
+        function feedbackPanelOpen() {
+            return !document.getElementById('feedbackPanel')?.hidden;
+        }
+
+        function formatFeedbackTime(iso) {
+            const time = Date.parse(iso);
+            if (!Number.isFinite(time)) return '';
+            return `${formatDate(time)} ${formatTime(time)}`;
+        }
+
+        function appendFeedbackMessage({ text, createdAt, mine = false, pending = false, welcome = false }) {
+            const list = document.getElementById('feedbackMessages');
+            const bubble = document.createElement('div');
+            bubble.className = 'feedback-msg';
+            if (welcome) bubble.classList.add('feedback-msg--welcome');
+            if (mine) bubble.classList.add('feedback-msg--mine');
+            if (pending) bubble.classList.add('feedback-msg--pending');
+            bubble.textContent = text;
+            if (createdAt) {
+                const time = document.createElement('time');
+                time.textContent = formatFeedbackTime(createdAt);
+                bubble.appendChild(time);
+            }
+            list.appendChild(bubble);
+            list.scrollTop = list.scrollHeight;
+            return bubble;
+        }
+
+        function setFeedbackStatus(text, isError = false) {
+            const list = document.getElementById('feedbackMessages');
+            let status = list.querySelector('.feedback-status');
+            if (!text) {
+                status?.remove();
+                return;
+            }
+            if (!status) {
+                status = document.createElement('div');
+                status.className = 'feedback-status';
+                list.appendChild(status);
+            }
+            status.classList.toggle('is-error', isError);
+            status.textContent = text;
+            list.scrollTop = list.scrollHeight;
+        }
+
+        function renderFeedbackMessages(items) {
+            const list = document.getElementById('feedbackMessages');
+            list.innerHTML = '';
+            appendFeedbackMessage({
+                text: '欢迎反馈使用问题或建议，我们会在后台查看。',
+                welcome: true
+            });
+            (items || []).forEach((item) => {
+                appendFeedbackMessage({
+                    text: item.message,
+                    createdAt: item.created_at,
+                    mine: true
+                });
+            });
+        }
+
+        async function loadFeedbackMessages() {
+            setFeedbackStatus('正在读取…');
+            try {
+                const response = await DentalApi.fetch('api/feedback', { cache: 'no-store' });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.message || '无法读取反馈');
+                renderFeedbackMessages(result.messages || []);
+                feedbackLoaded = true;
+                setFeedbackStatus('');
+            } catch (error) {
+                if (!feedbackLoaded) renderFeedbackMessages([]);
+                setFeedbackStatus(error.message || '暂时无法连接反馈服务', true);
+            }
+        }
+
+        function toggleFeedbackPanel(forceOpen) {
+            const panel = document.getElementById('feedbackPanel');
+            const fab = document.getElementById('feedbackFab');
+            const open = forceOpen === undefined ? panel.hidden : forceOpen;
+            panel.hidden = !open;
+            fab.classList.toggle('is-open', open);
+            fab.setAttribute('aria-expanded', open ? 'true' : 'false');
+            if (open) {
+                loadFeedbackMessages();
+                document.getElementById('feedbackInput').focus();
+            }
+        }
+
+        async function sendFeedback(event) {
+            event.preventDefault();
+            if (feedbackSending) return;
+            const input = document.getElementById('feedbackInput');
+            const send = document.getElementById('feedbackSend');
+            const message = input.value.trim();
+            if (!message) return;
+            if (message.length > FEEDBACK_MAX) {
+                setFeedbackStatus(`最多 ${FEEDBACK_MAX} 字`, true);
+                return;
+            }
+            feedbackSending = true;
+            send.disabled = true;
+            const pending = appendFeedbackMessage({
+                text: message,
+                createdAt: new Date().toISOString(),
+                mine: true,
+                pending: true
+            });
+            setFeedbackStatus('');
+            input.value = '';
+            document.getElementById('feedbackCount').textContent = `0 / ${FEEDBACK_MAX}`;
+            try {
+                const response = await DentalApi.fetch('api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.message || '发送失败');
+                pending.classList.remove('feedback-msg--pending');
+                if (result.created_at) {
+                    const time = pending.querySelector('time');
+                    if (time) time.textContent = formatFeedbackTime(result.created_at);
+                }
+                feedbackLoaded = true;
+            } catch (error) {
+                pending.remove();
+                input.value = message;
+                document.getElementById('feedbackCount').textContent = `${message.length} / ${FEEDBACK_MAX}`;
+                setFeedbackStatus(error.message || '发送失败', true);
+            } finally {
+                feedbackSending = false;
+                send.disabled = false;
+                input.focus();
             }
         }
 
@@ -1382,6 +1665,25 @@
             if (currentPage * PAGE_SIZE < filteredCharts().length) {
                 currentPage += 1;
                 renderRows();
+            }
+        });
+        document.addEventListener('click', (event) => {
+            const menu = document.getElementById('exportBackupMenu');
+            if (menu && !menu.contains(event.target)) toggleExportMenu(false);
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            if (feedbackPanelOpen()) toggleFeedbackPanel(false);
+            else toggleExportMenu(false);
+        });
+        document.getElementById('feedbackForm').addEventListener('submit', sendFeedback);
+        document.getElementById('feedbackInput').addEventListener('input', (event) => {
+            document.getElementById('feedbackCount').textContent = `${event.target.value.length} / ${FEEDBACK_MAX}`;
+        });
+        document.getElementById('feedbackInput').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                document.getElementById('feedbackForm').requestSubmit();
             }
         });
         syncDateFilterControls();
