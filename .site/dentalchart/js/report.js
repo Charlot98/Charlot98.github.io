@@ -28,11 +28,13 @@
     const REPORT_PRIORITY = ['ONF', '疑ONF', 'AL', 'FX', 'RD', 'RE'];
 
     /** 图例中已经建立的术语；不在此列表中的自由输入内容使用通用报告规则 */
-    const KNOWN_TERMS = new Set([
+    const ANNOTATION_TERMS = [
         'AL', 'AT', 'CA', 'CWD', 'ED', 'EP', 'FE', 'FX', 'GH', 'GV', 'GP',
         'LPS', 'M', '0', 'OP', 'OM', 'ONF', '疑ONF', '髓腔增宽', 'PE', 'PP',
         'RD', 'RE', 'RL', 'ROT', 'RPC', 'RPO', 'RTR', 'X', 'XS', 'XSS'
-    ]);
+    ];
+    const KNOWN_TERMS = new Set(ANNOTATION_TERMS);
+    const CHART_TYPE_LABELS = { dog: '犬', cat: '猫', rabbit: '兔' };
     function termAllowedOnTooth(term, toothNum) {
         if (term !== 'ONF' && term !== '疑ONF') return true;
         const quadrant = Math.floor(Number(toothNum) / 100);
@@ -403,6 +405,57 @@
         return list;
     }
 
+    function formatCopiedReportText(text) {
+        return String(text || '')
+            .split('\n')
+            .map((line) => {
+                if (!line.trim()) return line;
+                return '　　' + line.replace(/^[\s\u3000]+/u, '');
+            })
+            .join('\n');
+    }
+
+    function copyText(text, btn, { indent = false } = {}) {
+        const value = String(text || '').trim();
+        if (!value || value === REPORT_EMPTY_TEXT) return;
+        const copiedText = indent ? formatCopiedReportText(value) : value;
+
+        const setCopiedState = () => {
+            if (!btn) return;
+            const oldLabel = btn.getAttribute('aria-label') || '复制';
+            const oldTitle = btn.title;
+            btn.classList.add('copied');
+            btn.setAttribute('aria-label', '已复制');
+            btn.title = '已复制';
+            setTimeout(() => {
+                btn.classList.remove('copied');
+                btn.setAttribute('aria-label', oldLabel);
+                btn.title = oldTitle;
+            }, 1200);
+        };
+
+        const copyWithFallback = () => {
+            const helper = document.createElement('textarea');
+            helper.value = copiedText;
+            helper.setAttribute('readonly', '');
+            helper.style.position = 'fixed';
+            helper.style.left = '-9999px';
+            document.body.appendChild(helper);
+            helper.select();
+            try {
+                document.execCommand('copy');
+                setCopiedState();
+            } catch (_) {}
+            helper.remove();
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(copiedText).then(setCopiedState).catch(copyWithFallback);
+            return;
+        }
+        copyWithFallback();
+    }
+
     global.DentalReport = {
         updateReport,
         hasReportRule,
@@ -411,8 +464,14 @@
         REPORT_EMPTY_TEXT,
         MISSING_TOOTH_TERM,
         REPORT_PRIORITY,
+        ANNOTATION_TERMS,
+        CHART_TYPE_LABELS,
         getOrderedReportTerms,
         REPORT_RULES,
-        buildReport
+        buildReport,
+        resolveTermAlias,
+        normalizeTermList,
+        termAllowedOnTooth,
+        copyText
     };
 })(typeof window !== 'undefined' ? window : this);

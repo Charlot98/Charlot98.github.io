@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>牙表</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="css/pub.css?v=20260817-2">
-    <link rel="stylesheet" href="css/history.css?v=20260817-2">
-    <link rel="stylesheet" href="css/app-ui.css?v=20260817-2">
+    <link rel="stylesheet" href="css/pub.css?v=20260817-5">
+    <link rel="stylesheet" href="css/history.css?v=20260817-11">
+    <link rel="stylesheet" href="css/app-ui.css?v=20260817-7">
     <link rel="prefetch" href="js/vendor/highcharts-12.4.0.js">
     <link rel="prefetch" href="js/vendor/highcharts-treemap-12.4.0.js">
     <link rel="prefetch" href="js/vendor/highcharts-heatmap-12.4.0.js">
@@ -34,12 +34,13 @@
                             <div class="legend-other-grid" id="legendOtherGrid"></div>
                         </div>
                         <button type="button" class="legend-more-btn" id="legendMoreBtn" onclick="toggleOtherTerms()" title="展开其他术语" aria-label="展开其他术语" aria-expanded="false"><span aria-hidden="true">▾</span></button>
-                    </div>
-                    <div class="term-search-actions">
-                        <label class="term-search">
-                            <span aria-hidden="true">⌕</span>
-                            <input type="search" id="legendSearch" class="legend-search" placeholder="检索缩写或中文" autocomplete="off" aria-label="检索术语缩写或中文">
-                        </label>
+                        <div class="term-search-actions">
+                            <label class="term-search">
+                                <span aria-hidden="true">⌕</span>
+                                <input type="search" id="legendSearch" class="legend-search" placeholder="检索缩写或中文" autocomplete="off" aria-label="检索术语缩写或中文" aria-keyshortcuts="Control+K Meta+K">
+                                <kbd class="search-shortcut" aria-hidden="true">Ctrl+K</kbd>
+                            </label>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -61,7 +62,7 @@
                         <div id="inputsContainer"></div>
                     </div>
                     <div class="rabbit-poster" id="rabbitPoster">
-                        <img data-src="image/rabbit-dental-anatomy-poster.png" alt="兔牙解剖图" class="rabbit-poster-image" id="rabbitPosterImage" role="button" tabindex="0" title="点击全屏查看">
+                        <img data-src="image/rabbit-dental-anatomy-poster.png" alt="兔牙解剖图" class="rabbit-poster-image" id="rabbitPosterImage" role="button" tabindex="0" title="点击放大查看">
                     </div>
                     <div class="chart-bottom-row">
                         <div class="workflow-control">
@@ -117,7 +118,7 @@
                     <div><span>全部牙表</span><strong id="totalCount">—</strong></div>
                     <div><span>今日新增</span><strong id="todayCount">—</strong></div>
                 </div>
-                <label class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="searchInput" placeholder="搜索检查编号、家长名或宠物名" autocomplete="off" aria-label="搜索历史牙表"></label>
+                <label class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="searchInput" placeholder="搜索检查编号、家长名或宠物名" autocomplete="off" aria-label="搜索历史牙表" aria-keyshortcuts="Control+K Meta+K"><kbd class="search-shortcut" aria-hidden="true">Ctrl+K</kbd></label>
                 <div class="filter-tabs" id="speciesFilters" role="group" aria-label="牙表类型筛选">
                     <button type="button" class="active" data-type="">全部</button>
                     <button type="button" data-type="dog">犬</button>
@@ -205,12 +206,21 @@
                         </section>
                     </div>
                     <div class="heatmap-scale-row">
-                        <div class="keyword-heatmap-scale" id="toothHeatmapScale" aria-label="分段颜色从百分之零递增至百分之一百">
-                            <span>0%</span>
-                            <div class="keyword-heatmap-scale-steps" aria-hidden="true">
-                                <i class="level-0" title="0%"></i><i class="level-1" title="大于0%至5%"></i><i class="level-2" title="大于5%至15%"></i><i class="level-3" title="大于15%至30%"></i><i class="level-4" title="大于30%至50%"></i><i class="level-5" title="大于50%至75%"></i><i class="level-6" title="大于75%至100%"></i>
+                        <div class="keyword-heatmap-scale tooth-heatmap-scales" id="toothHeatmapScale" aria-label="犬蓝色、猫粉色，分段颜色从百分之零递增至百分之一百">
+                            <div class="heatmap-scale-group">
+                                <span>犬 0%</span>
+                                <div class="keyword-heatmap-scale-steps palette-dog" aria-hidden="true">
+                                    <i class="level-0" title="0%"></i><i class="level-1" title="大于0%至5%"></i><i class="level-2" title="大于5%至15%"></i><i class="level-3" title="大于15%至30%"></i><i class="level-4" title="大于30%至50%"></i><i class="level-5" title="大于50%至75%"></i><i class="level-6" title="大于75%至100%"></i>
+                                </div>
+                                <span>100%</span>
                             </div>
-                            <span>100%</span>
+                            <div class="heatmap-scale-group">
+                                <span>猫 0%</span>
+                                <div class="keyword-heatmap-scale-steps palette-cat" aria-hidden="true">
+                                    <i class="level-0" title="0%"></i><i class="level-1" title="大于0%至5%"></i><i class="level-2" title="大于5%至15%"></i><i class="level-3" title="大于15%至30%"></i><i class="level-4" title="大于30%至50%"></i><i class="level-5" title="大于50%至75%"></i><i class="level-6" title="大于75%至100%"></i>
+                                </div>
+                                <span>100%</span>
+                            </div>
                         </div>
                         <div class="heatmap-scale-meta">
                             <span class="heatmap-meta-badge" id="dogToothHeatmapScope">犬 · 病例数：0</span>
@@ -269,22 +279,31 @@
             <div class="trash-dock">
                 <button type="button" class="trash-toggle" id="trashToggle" onclick="toggleTrash()">回收站</button>
             </div>
-            <button type="button" class="feedback-fab" id="feedbackFab" onclick="toggleFeedbackPanel()" aria-expanded="false" aria-controls="feedbackPanel" title="意见反馈">反馈</button>
-            <section class="feedback-panel" id="feedbackPanel" hidden role="dialog" aria-labelledby="feedbackTitle">
-                <header class="feedback-panel-header">
-                    <h2 id="feedbackTitle">意见反馈</h2>
-                    <button type="button" class="feedback-close" onclick="toggleFeedbackPanel(false)" aria-label="关闭反馈">×</button>
-                </header>
-                <div class="feedback-messages" id="feedbackMessages" aria-live="polite"></div>
-                <form class="feedback-composer" id="feedbackForm">
-                    <textarea id="feedbackInput" rows="2" maxlength="2000" placeholder="输入意见或建议…" aria-label="反馈内容"></textarea>
-                    <div class="feedback-composer-bar">
-                        <span class="feedback-count" id="feedbackCount">0 / 2000</span>
-                        <button type="submit" class="feedback-send" id="feedbackSend">发送</button>
-                    </div>
-                </form>
-            </section>
         </main>
+        <button type="button" class="feedback-fab" id="feedbackFab" onclick="toggleFeedbackPanel()" aria-expanded="false" aria-controls="feedbackPanel" title="意见反馈">反馈</button>
+        <section class="feedback-panel" id="feedbackPanel" hidden role="dialog" aria-labelledby="feedbackTitle">
+            <header class="feedback-panel-header">
+                <h2 id="feedbackTitle">意见反馈</h2>
+                <button type="button" class="feedback-close" onclick="toggleFeedbackPanel(false)" aria-label="关闭反馈">×</button>
+            </header>
+            <div class="feedback-messages" id="feedbackMessages" aria-live="polite"></div>
+            <form class="feedback-composer" id="feedbackForm">
+                <div class="feedback-drafts" id="feedbackDrafts" hidden></div>
+                <textarea id="feedbackInput" rows="2" maxlength="2000" placeholder="输入意见或建议，也可添加图片…" aria-label="反馈内容"></textarea>
+                <div class="feedback-composer-bar">
+                    <button type="button" class="feedback-attach" id="feedbackAttach" title="添加图片，最多 3 张、合计 2MB" aria-label="添加图片">
+                        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                            <rect x="3.5" y="5.5" width="17" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/>
+                            <circle cx="8.5" cy="10" r="1.3" fill="currentColor"/>
+                            <path d="M5 16.5l4.2-4.6 3.3 3.6 2.4-2.7 4.1 3.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <input type="file" id="feedbackFile" accept="image/jpeg,image/png,image/gif,image/webp" multiple hidden>
+                    <span class="feedback-count" id="feedbackCount">0 / 2000</span>
+                    <button type="submit" class="feedback-send" id="feedbackSend">发送</button>
+                </div>
+            </form>
+        </section>
     </div>
 
     <div id="termModal" class="term-modal" hidden>
@@ -307,8 +326,8 @@
 
     <script src="js/supabase-config.js?v=20260804-1"></script>
     <script src="js/dental-api.js?v=20260810-4"></script>
-    <script src="js/report.js?v=20260817-1"></script>
-    <script src="js/history-app.js?v=20260817-2"></script>
+    <script src="js/report.js?v=20260817-2"></script>
+    <script src="js/history-app.js?v=20260817-9"></script>
     <script>
         const CHART_IMAGES = {
             dog: 'image/CANINE.png',
@@ -431,30 +450,12 @@
         let activeLegendTerm = null;
         let termPaintState = null;
 
-        const ANNOTATION_TERMS = [
-            'AL', 'AT', 'CA', 'CWD', 'ED', 'EP', 'FE', 'FX', 'GH', 'GV', 'GP',
-            'LPS', 'M', '0', 'OP', 'OM', 'ONF', '疑ONF', '髓腔增宽', 'PE', 'PP',
-            'RD', 'RE', 'RL', 'ROT', 'RPC', 'RPO', 'RTR', 'X', 'XS', 'XSS'
-        ];
-
-        const TERM_ALIASES = {
-            PD: 'AL',
-            O: '0',
-            髓腔宽: '髓腔增宽'
-        };
-
+        const ANNOTATION_TERMS = DentalReport.ANNOTATION_TERMS;
+        const CHART_TYPE_LABELS = DentalReport.CHART_TYPE_LABELS;
+        const normalizeTermList = DentalReport.normalizeTermList;
         const TERM_DISPLAY_NAMES = {
             髓腔增宽: '髓腔宽'
         };
-
-        function resolveTermAlias(term) {
-            if (TERM_ALIASES[term]) return TERM_ALIASES[term];
-            if (term.startsWith('疑')) {
-                const baseTerm = term.slice(1);
-                if (TERM_ALIASES[baseTerm]) return '疑' + TERM_ALIASES[baseTerm];
-            }
-            return term;
-        }
 
         function getTermDisplayName(term) {
             if (TERM_DISPLAY_NAMES[term]) return TERM_DISPLAY_NAMES[term];
@@ -480,7 +481,7 @@
         let selectedHistoryVersion = Number(initialParams.get('version')) || null;
         let followupMode = initialParams.get('followup') === '1';
         let viewOnlyMode = initialParams.get('view') === '1';
-        let currentAppView = initialParams.get('tab') === 'history' ? 'history' : 'chart';
+        let currentAppView = viewFromLocation();
         let editSessionId = createEditSessionId();
         let cacheSyncInFlight = false;
         let cacheSyncDirty = false;
@@ -494,7 +495,6 @@
         let ownerSearchCharts = null;
         let ownerSearchChartsLoadedAt = 0;
         let ownerSearchChartsPromise = null;
-        const CHART_TYPE_LABELS = { dog: '犬', cat: '猫', rabbit: '兔' };
         const historyDateFormatter = new Intl.DateTimeFormat('zh-CN', {
             year: 'numeric', month: '2-digit', day: '2-digit'
         });
@@ -832,7 +832,7 @@
                 medicalRecordId: currentMedicalRecordId,
                 selectedVersion: selectedHistoryVersion,
                 editSessionId,
-                url: location.pathname.split('/').pop() + location.search,
+                url: chartPageUrl(),
                 statusText: status?.textContent || '尚未保存',
                 statusState: status?.dataset.state || ''
             };
@@ -888,6 +888,18 @@
             setAppView('history', { replace: false });
         }
 
+        function viewFromLocation() {
+            const hash = (location.hash || '').replace(/^#/, '').split('?')[0];
+            if (hash === 'history') return 'history';
+            return new URLSearchParams(location.search).get('tab') === 'history' ? 'history' : 'chart';
+        }
+
+        function appDirectoryPath() {
+            let path = location.pathname.replace(/\/index\.html$/i, '/');
+            if (!path.endsWith('/')) path += '/';
+            return path || '/';
+        }
+
         function chartPageUrl() {
             const params = new URLSearchParams();
             if (currentChartId) params.set('chart', currentChartId);
@@ -895,11 +907,17 @@
             if (followupMode) params.set('followup', '1');
             if (viewOnlyMode) params.set('view', '1');
             const query = params.toString();
-            return query ? `index.html?${query}` : 'index.html';
+            return query ? `${appDirectoryPath()}?${query}` : appDirectoryPath();
+        }
+
+        function historyPageUrl() {
+            return `${appDirectoryPath()}#history`;
         }
 
         function syncAppUrl({ replace = true } = {}) {
-            const next = currentAppView === 'history' ? 'index.html?tab=history' : chartPageUrl();
+            const next = currentAppView === 'history' ? historyPageUrl() : chartPageUrl();
+            const current = `${location.pathname}${location.search}${location.hash}`;
+            if (current === next) return;
             if (replace) history.replaceState({ view: currentAppView }, '', next);
             else history.pushState({ view: currentAppView }, '', next);
         }
@@ -1291,16 +1309,6 @@
             )) || null;
         }
 
-        function normalizeTermList(raw) {
-            if (!raw) return [];
-            return raw
-                .toUpperCase()
-                .split(/[\s,，;；、/]+/)
-                .map(s => s.trim())
-                .map(resolveTermAlias)
-                .filter(Boolean);
-        }
-
         function serializeTermList(list) {
             return list.map(getTermDisplayName).join(',\n');
         }
@@ -1310,8 +1318,7 @@
         }
 
         function canMarkOnf(toothNum) {
-            const quadrant = Math.floor(Number(toothNum) / 100);
-            return quadrant === 1 || quadrant === 2;
+            return DentalReport.termAllowedOnTooth('ONF', toothNum);
         }
 
         function notifyOnfRange() {
@@ -1448,6 +1455,31 @@
             if (firstMatch) {
                 firstMatch.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             }
+        }
+
+        function setupSearchShortcut() {
+            const isApple = /Mac|iPhone|iPad/.test(navigator.platform || '');
+            const hint = isApple ? '⌘K' : 'Ctrl+K';
+            document.querySelectorAll('.search-shortcut').forEach(el => {
+                el.textContent = hint;
+            });
+            document.addEventListener('keydown', event => {
+                if (event.defaultPrevented || event.repeat) return;
+                if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+                if (event.key.toLowerCase() !== 'k') return;
+                const termModal = document.getElementById('termModal');
+                const feedbackPanel = document.getElementById('feedbackPanel');
+                if (termModal && !termModal.hidden) return;
+                if (feedbackPanel && !feedbackPanel.hidden) return;
+                if (document.querySelector('.dental-auth-overlay')) return;
+                const input = document.body.classList.contains('view-history')
+                    ? document.getElementById('searchInput')
+                    : document.getElementById('legendSearch');
+                if (!input) return;
+                event.preventDefault();
+                input.focus();
+                input.select();
+            });
         }
 
         function setupLegendSearch() {
@@ -1840,40 +1872,164 @@
         }
 
         function loadRabbitPosterImages() {
-            const src = 'image/rabbit-dental-anatomy-poster.png';
-            ['rabbitPosterImage', 'rabbitPosterLightboxImage'].forEach((id) => {
-                const image = document.getElementById(id);
-                if (image && image.getAttribute('src') !== src) {
-                    image.src = image.getAttribute('data-src') || src;
-                }
-            });
+            const image = document.getElementById('rabbitPosterImage');
+            const src = image?.getAttribute('data-src') || 'image/rabbit-dental-anatomy-poster.png';
+            if (image && image.getAttribute('src') !== src) image.src = src;
+            return src;
         }
 
-        function setupRabbitPosterLightbox() {
+        function setupImageLightbox() {
+            const lightbox = document.getElementById('imageLightbox');
+            const stage = document.getElementById('imageLightboxStage');
+            const img = document.getElementById('imageLightboxImage');
+            const closeBtn = document.getElementById('imageLightboxClose');
             const trigger = document.getElementById('rabbitPosterImage');
-            const lightbox = document.getElementById('rabbitPosterLightbox');
-            if (!trigger || !lightbox) return;
+            if (!lightbox || !stage || !img) return;
 
-            const open = () => {
-                loadRabbitPosterImages();
-                lightbox.hidden = false;
-                document.body.classList.add('rabbit-lightbox-open');
+            const MIN_SCALE = 1;
+            const MAX_SCALE = 6;
+            const ZOOM_STEP = 2;
+            const PAN_THRESHOLD = 6;
+            let scale = 1;
+            let tx = 0;
+            let ty = 0;
+            let dragging = false;
+            let moved = false;
+            let startedOnImage = false;
+            let lastX = 0;
+            let lastY = 0;
+            let startX = 0;
+            let startY = 0;
+            let activePointer = null;
+
+            const apply = () => {
+                img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+                lightbox.classList.toggle('is-zoomed', scale > 1.01);
             };
+
+            const resetView = () => {
+                scale = 1;
+                tx = 0;
+                ty = 0;
+                dragging = false;
+                moved = false;
+                startedOnImage = false;
+                activePointer = null;
+                lightbox.classList.remove('is-panning');
+                apply();
+            };
+
+            const zoomAt = (clientX, clientY, nextScale) => {
+                nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, nextScale));
+                if (nextScale === scale) return;
+                const rect = img.getBoundingClientRect();
+                const cx = clientX - (rect.left + rect.width / 2);
+                const cy = clientY - (rect.top + rect.height / 2);
+                const factor = nextScale / scale;
+                tx += cx * (1 - factor);
+                ty += cy * (1 - factor);
+                scale = nextScale;
+                if (scale <= MIN_SCALE) {
+                    tx = 0;
+                    ty = 0;
+                }
+                apply();
+            };
+
+            const zoomAtClick = (clientX, clientY) => {
+                if (scale >= MAX_SCALE - 0.01) {
+                    resetView();
+                    return;
+                }
+                zoomAt(clientX, clientY, scale * ZOOM_STEP);
+            };
+
+            const open = (src, alt = '') => {
+                if (!src) return;
+                img.src = src;
+                img.alt = alt;
+                resetView();
+                lightbox.hidden = false;
+                document.body.classList.add('image-lightbox-open');
+            };
+
             const close = () => {
                 lightbox.hidden = true;
-                document.body.classList.remove('rabbit-lightbox-open');
+                document.body.classList.remove('image-lightbox-open');
+                resetView();
             };
 
-            trigger.addEventListener('click', open);
-            trigger.addEventListener('keydown', (event) => {
+            window.openImageLightbox = open;
+            window.closeImageLightbox = close;
+
+            const openRabbitPoster = () => {
+                open(loadRabbitPosterImages(), trigger?.alt || '兔牙解剖图');
+            };
+
+            trigger?.addEventListener('click', openRabbitPoster);
+            trigger?.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                     event.preventDefault();
-                    open();
+                    openRabbitPoster();
                 }
             });
-            lightbox.addEventListener('click', close);
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape' && !lightbox.hidden) close();
+
+            closeBtn?.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                close();
+            });
+
+            img.addEventListener('dragstart', (event) => event.preventDefault());
+
+            stage.addEventListener('pointerdown', (event) => {
+                if (lightbox.hidden || event.target === closeBtn) return;
+                activePointer = event.pointerId;
+                startedOnImage = event.target === img;
+                moved = false;
+                lastX = event.clientX;
+                lastY = event.clientY;
+                startX = event.clientX;
+                startY = event.clientY;
+                stage.setPointerCapture(event.pointerId);
+                if (startedOnImage && scale > 1.01) {
+                    dragging = true;
+                    lightbox.classList.add('is-panning');
+                }
+            });
+
+            stage.addEventListener('pointermove', (event) => {
+                if (event.pointerId !== activePointer) return;
+                if (Math.hypot(event.clientX - startX, event.clientY - startY) > PAN_THRESHOLD) {
+                    moved = true;
+                }
+                if (!dragging || scale <= 1.01) return;
+                tx += event.clientX - lastX;
+                ty += event.clientY - lastY;
+                lastX = event.clientX;
+                lastY = event.clientY;
+                apply();
+            });
+
+            const endPointer = (event) => {
+                if (event.pointerId !== activePointer) return;
+                const shouldZoom = startedOnImage && !moved;
+                const x = event.clientX;
+                const y = event.clientY;
+                dragging = false;
+                startedOnImage = false;
+                activePointer = null;
+                lightbox.classList.remove('is-panning');
+                if (shouldZoom && !lightbox.hidden) zoomAtClick(x, y);
+            };
+            stage.addEventListener('pointerup', endPointer);
+            stage.addEventListener('pointercancel', (event) => {
+                if (event.pointerId !== activePointer) return;
+                dragging = false;
+                startedOnImage = false;
+                activePointer = null;
+                moved = false;
+                lightbox.classList.remove('is-panning');
             });
         }
 
@@ -2006,58 +2162,10 @@
             }
         }
 
-        function formatCopiedReportText(text) {
-            return String(text || '')
-                .split('\n')
-                .map((line) => {
-                    if (!line.trim()) return line;
-                    return '　　' + line.replace(/^[\s\u3000]+/u, '');
-                })
-                .join('\n');
-        }
-
         function copyReportText(textareaId, btn) {
             const el = document.getElementById(textareaId);
             if (!el) return;
-            const text = (el.value || '').trim();
-            if (!text || text === DentalReport.REPORT_EMPTY_TEXT) return;
-            const copiedText = formatCopiedReportText(text);
-
-            const setCopiedState = () => {
-                if (!btn) return;
-                const oldLabel = btn.getAttribute('aria-label') || '复制';
-                const oldTitle = btn.title;
-                btn.classList.add('copied');
-                btn.setAttribute('aria-label', '已复制');
-                btn.title = '已复制';
-                setTimeout(() => {
-                    btn.classList.remove('copied');
-                    btn.setAttribute('aria-label', oldLabel);
-                    btn.title = oldTitle;
-                }, 1200);
-            };
-
-            const copyWithFallback = () => {
-                const helper = document.createElement('textarea');
-                helper.value = copiedText;
-                helper.setAttribute('readonly', '');
-                helper.style.position = 'fixed';
-                helper.style.left = '-9999px';
-                document.body.appendChild(helper);
-                helper.select();
-                try {
-                    document.execCommand('copy');
-                    setCopiedState();
-                } catch (_) {}
-                helper.remove();
-            };
-
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(copiedText).then(setCopiedState).catch(copyWithFallback);
-                return;
-            }
-
-            copyWithFallback();
+            DentalReport.copyText(el.value, btn, { indent: true });
         }
 
         // 加载位置配置（v2：left 为中心点；忽略旧版缓存以免错位）
@@ -2310,13 +2418,14 @@
             initLegend();
             setInterval(() => loadCustomTerms(true), 30000);
             setupLegendSearch();
+            setupSearchShortcut();
             setupLegendHorizontalScroll();
             resetLegendState();
             initInputs();
             loadPositions();
             DentalReport.updateReport();
             applyViewOnlyMode();
-            setupRabbitPosterLightbox();
+            setupImageLightbox();
             const ownerNameInput = document.getElementById('ownerNameInput');
             ownerNameInput?.addEventListener('input', handleOwnerNameInput);
             ownerNameInput?.addEventListener('focus', () => {
@@ -2357,15 +2466,23 @@
             document.addEventListener('pointercancel', endTermPaint);
             window.addEventListener('pagehide', persistWorkingDraft);
             window.addEventListener('popstate', () => {
-                const tab = new URLSearchParams(location.search).get('tab');
-                setAppView(tab === 'history' ? 'history' : 'chart', { url: false, loadHistory: tab === 'history' });
+                const view = viewFromLocation();
+                setAppView(view, { url: false, loadHistory: view === 'history' });
             });
-            setAppView(startHistory ? 'history' : 'chart', { url: false, loadHistory: startHistory });
+            window.addEventListener('hashchange', () => {
+                const view = viewFromLocation();
+                setAppView(view, { url: false, loadHistory: view === 'history' });
+            });
+            setAppView(startHistory ? 'history' : 'chart', { url: true, loadHistory: startHistory });
 
         });
     </script>
-    <div class="rabbit-poster-lightbox" id="rabbitPosterLightbox" hidden>
-        <img data-src="image/rabbit-dental-anatomy-poster.png" alt="兔牙解剖图" id="rabbitPosterLightboxImage">
+    <div class="image-lightbox" id="imageLightbox" hidden>
+        <button type="button" class="image-lightbox-close" id="imageLightboxClose" aria-label="关闭">×</button>
+        <div class="image-lightbox-stage" id="imageLightboxStage">
+            <img id="imageLightboxImage" alt="">
+        </div>
+        <p class="image-lightbox-hint">点击图片可局部放大，放大后可拖动查看，点右上角 × 关闭</p>
     </div>
 </body>
 </html>

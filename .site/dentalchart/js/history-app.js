@@ -1,6 +1,5 @@
         const API = 'api/charts';
-        const WORKFLOW_LABELS = { saved: '已保存', submitted: '待审核', reviewed: '已审核' };
-        const TYPE_LABELS = { dog: '犬', cat: '猫', rabbit: '兔' };
+        const TYPE_LABELS = DentalReport.CHART_TYPE_LABELS;
         const PAGE_SIZE = 15;
         let charts = [];
         let selectedId = '';
@@ -255,39 +254,10 @@
             copyBtn.className = 'report-copy-btn';
             copyBtn.setAttribute('aria-label', `复制${title}`);
             copyBtn.title = `复制${title}`;
-            copyBtn.addEventListener('click', () => copyVersionReportText(textarea, copyBtn));
+            copyBtn.addEventListener('click', () => DentalReport.copyText(textarea.value, copyBtn));
             heading.appendChild(copyBtn);
             section.append(heading, textarea);
             return section;
-        }
-
-        function copyVersionReportText(textarea, btn) {
-            const text = ((textarea && textarea.value) || '').trim();
-            if (!text) return;
-            const setCopiedState = () => {
-                if (!btn) return;
-                const oldLabel = btn.getAttribute('aria-label') || '复制';
-                const oldTitle = btn.title;
-                btn.classList.add('copied');
-                btn.setAttribute('aria-label', '已复制');
-                btn.title = '已复制';
-                setTimeout(() => {
-                    btn.classList.remove('copied');
-                    btn.setAttribute('aria-label', oldLabel);
-                    btn.title = oldTitle;
-                }, 1200);
-            };
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text).then(setCopiedState).catch(() => {
-                    textarea.select();
-                    document.execCommand('copy');
-                    setCopiedState();
-                });
-                return;
-            }
-            textarea.select();
-            document.execCommand('copy');
-            setCopiedState();
         }
 
         async function saveBasicInfo(field, value, element, originalValue) {
@@ -596,15 +566,33 @@
             if (!fromCache) refreshVisibleHeatmaps();
         }
 
-        function keywordHeatmapColor(percentage) {
+        function heatmapColor(percentage, palette = 'keyword') {
+            const stops = {
+                keyword: ['#e5e9e7', 'rgba(190,226,213,.55)', 'rgba(157,207,190,.68)', 'rgba(119,184,162,.78)', 'rgba(76,153,128,.86)', 'rgba(39,121,98,.94)', '#075e4b'],
+                dog: ['#e5e9e7', 'rgba(186,214,236,.58)', 'rgba(147,191,227,.70)', 'rgba(106,163,214,.80)', 'rgba(66,133,196,.88)', 'rgba(37,99,171,.94)', '#1a4f96'],
+                cat: ['#e5e9e7', 'rgba(244,196,214,.58)', 'rgba(236,166,196,.70)', 'rgba(224,130,174,.80)', 'rgba(209,94,150,.88)', 'rgba(189,64,122,.94)', '#9a2d68']
+            }[palette] || ['#e5e9e7', 'rgba(190,226,213,.55)', 'rgba(157,207,190,.68)', 'rgba(119,184,162,.78)', 'rgba(76,153,128,.86)', 'rgba(39,121,98,.94)', '#075e4b'];
             const value = Math.max(0, Math.min(100, Number(percentage) || 0));
-            if (value === 0) return '#e5e9e7';
-            if (value <= 5) return 'rgba(190,226,213,.55)';
-            if (value <= 15) return 'rgba(157,207,190,.68)';
-            if (value <= 30) return 'rgba(119,184,162,.78)';
-            if (value <= 50) return 'rgba(76,153,128,.86)';
-            if (value <= 75) return 'rgba(39,121,98,.94)';
-            return '#075e4b';
+            if (value === 0) return stops[0];
+            if (value <= 5) return stops[1];
+            if (value <= 15) return stops[2];
+            if (value <= 30) return stops[3];
+            if (value <= 50) return stops[4];
+            if (value <= 75) return stops[5];
+            return stops[6];
+        }
+
+        function heatmapInk(percentage, palette = 'keyword') {
+            if (percentage > 50) return '#ffffff';
+            if (palette === 'dog') return '#1e3a5f';
+            if (palette === 'cat') return '#5c243c';
+            return '#143f34';
+        }
+
+        function heatmapAccent(palette = 'keyword') {
+            if (palette === 'dog') return '#1a4f96';
+            if (palette === 'cat') return '#9a2d68';
+            return '#0c7b62';
         }
 
         function chartHasKeyword(item, keyword) {
@@ -649,10 +637,10 @@
                             name,
                             value: count,
                             colorValue: percentage,
-                            color: keywordHeatmapColor(percentage),
+                            color: heatmapColor(percentage),
                             selected: name === selectedKeyword,
                             opacity: selectedKeyword && name !== selectedKeyword ? .38 : 1,
-                            dataLabels: { style: { color: percentage > 50 ? '#ffffff' : '#143f34' } },
+                            dataLabels: { style: { color: heatmapInk(percentage) } },
                             custom: { count, total: scope.length, percentage }
                         };
                     })
@@ -798,8 +786,8 @@
                         y: rowIndex,
                         value: percentage,
                         name: tooth,
-                        color: keywordHeatmapColor(percentage),
-                        dataLabels: { style: { color: percentage > 50 ? '#ffffff' : '#143f34' } },
+                        color: heatmapColor(percentage, type),
+                        dataLabels: { style: { color: heatmapInk(percentage, type) } },
                         custom: { count, total: cases.length, percentage }
                     });
                 });
@@ -872,7 +860,7 @@
                     backgroundColor: 'rgba(255,255,255,.97)',
                     formatter: function () {
                         const data = this.point.custom;
-                        return `<b>${label} · ${this.point.name}牙</b><br><span>${data.count} / ${data.total} 份病例</span><br><b style="color:#0c7b62">${data.percentage.toFixed(2)}%</b>`;
+                        return `<b>${label} · ${this.point.name}牙</b><br><span>${data.count} / ${data.total} 份病例</span><br><b style="color:${heatmapAccent(type)}">${data.percentage.toFixed(2)}%</b>`;
                     }
                 },
                 plotOptions: {
@@ -1378,8 +1366,12 @@
         }
 
         const FEEDBACK_MAX = 2000;
+        const FEEDBACK_MAX_IMAGES = 3;
+        const FEEDBACK_MAX_BYTES = 2 * 1024 * 1024;
+        const FEEDBACK_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
         let feedbackLoaded = false;
         let feedbackSending = false;
+        let feedbackDrafts = [];
 
         function feedbackPanelOpen() {
             return !document.getElementById('feedbackPanel')?.hidden;
@@ -1391,22 +1383,237 @@
             return `${formatDate(time)} ${formatTime(time)}`;
         }
 
-        function appendFeedbackMessage({ text, createdAt, mine = false, pending = false, welcome = false }) {
+        function feedbackDraftBytes() {
+            return feedbackDrafts.reduce((sum, item) => sum + (item.size || 0), 0);
+        }
+
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || '').replace(/^data:[^;]+;base64,/, ''));
+                reader.onerror = () => reject(new Error('无法读取图片'));
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function canvasToBlob(canvas, type, quality) {
+            return new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('图片压缩失败'));
+                }, type, quality);
+            });
+        }
+
+        function loadImageElement(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const image = new Image();
+                image.onload = () => {
+                    URL.revokeObjectURL(url);
+                    resolve(image);
+                };
+                image.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error('无法读取图片'));
+                };
+                image.src = url;
+            });
+        }
+
+        async function compressFeedbackImage(file, maxBytes) {
+            if (file.size <= maxBytes && FEEDBACK_TYPES.has(file.type)) return file;
+            if (file.type === 'image/gif') {
+                throw new Error(file.size > maxBytes ? '图片合计不能超过 2MB' : '仅支持 JPG、PNG、GIF 或 WebP');
+            }
+            const image = await loadImageElement(file);
+            let width = image.naturalWidth || image.width;
+            let height = image.naturalHeight || image.height;
+            const maxDim = 1600;
+            if (Math.max(width, height) > maxDim) {
+                const scale = maxDim / Math.max(width, height);
+                width = Math.max(1, Math.round(width * scale));
+                height = Math.max(1, Math.round(height * scale));
+            }
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error('图片压缩失败');
+            let quality = 0.86;
+            let blob = null;
+            for (let attempt = 0; attempt < 6; attempt += 1) {
+                canvas.width = width;
+                canvas.height = height;
+                context.fillStyle = '#fff';
+                context.fillRect(0, 0, width, height);
+                context.drawImage(image, 0, 0, width, height);
+                blob = await canvasToBlob(canvas, 'image/jpeg', quality);
+                if (blob.size <= maxBytes) break;
+                if (quality > 0.55) quality -= 0.12;
+                else {
+                    width = Math.max(1, Math.round(width * 0.82));
+                    height = Math.max(1, Math.round(height * 0.82));
+                }
+            }
+            if (!blob || blob.size > maxBytes) throw new Error('图片合计不能超过 2MB');
+            return new File([blob], (file.name || 'image').replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' });
+        }
+
+        async function fileToFeedbackDraft(file, maxBytes) {
+            if (!FEEDBACK_TYPES.has(file.type)) throw new Error('仅支持 JPG、PNG、GIF 或 WebP');
+            const prepared = await compressFeedbackImage(file, maxBytes);
+            const data = await blobToBase64(prepared);
+            return {
+                name: prepared.name || 'image.jpg',
+                type: prepared.type,
+                size: prepared.size,
+                data,
+                preview: URL.createObjectURL(prepared)
+            };
+        }
+
+        function renderFeedbackDrafts() {
+            const box = document.getElementById('feedbackDrafts');
+            const attach = document.getElementById('feedbackAttach');
+            box.innerHTML = '';
+            box.hidden = !feedbackDrafts.length;
+            feedbackDrafts.forEach((item, index) => {
+                const draft = document.createElement('div');
+                draft.className = 'feedback-draft';
+                const image = document.createElement('img');
+                image.src = item.preview;
+                image.alt = item.name;
+                image.title = '点击放大查看';
+                image.addEventListener('click', () => {
+                    if (item.preview && typeof window.openImageLightbox === 'function') {
+                        window.openImageLightbox(item.preview, item.name || '反馈图片');
+                    }
+                });
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'feedback-draft-remove';
+                remove.setAttribute('aria-label', `移除${item.name}`);
+                remove.textContent = '×';
+                remove.addEventListener('click', () => {
+                    const [removed] = feedbackDrafts.splice(index, 1);
+                    if (removed?.preview) URL.revokeObjectURL(removed.preview);
+                    renderFeedbackDrafts();
+                });
+                draft.append(image, remove);
+                box.appendChild(draft);
+            });
+            attach.disabled = feedbackDrafts.length >= FEEDBACK_MAX_IMAGES;
+            const used = feedbackDraftBytes();
+            const remain = Math.max(0, FEEDBACK_MAX_BYTES - used);
+            attach.title = feedbackDrafts.length
+                ? `已选 ${feedbackDrafts.length}/3 张，剩余 ${(remain / (1024 * 1024)).toFixed(2)}MB`
+                : '添加图片，最多 3 张、合计 2MB';
+        }
+
+        function clearFeedbackDrafts() {
+            feedbackDrafts.forEach((item) => {
+                if (item.preview) URL.revokeObjectURL(item.preview);
+            });
+            feedbackDrafts = [];
+            renderFeedbackDrafts();
+        }
+
+        async function addFeedbackFiles(fileList) {
+            const files = [...fileList];
+            if (!files.length) return;
+            try {
+                for (const file of files) {
+                    if (feedbackDrafts.length >= FEEDBACK_MAX_IMAGES) {
+                        setFeedbackStatus('一次最多发送 3 张图片', true);
+                        break;
+                    }
+                    const remain = FEEDBACK_MAX_BYTES - feedbackDraftBytes();
+                    if (remain <= 0) {
+                        setFeedbackStatus('图片合计不能超过 2MB', true);
+                        break;
+                    }
+                    feedbackDrafts.push(await fileToFeedbackDraft(file, remain));
+                    renderFeedbackDrafts();
+                }
+            } catch (error) {
+                setFeedbackStatus(error.message || '无法添加图片', true);
+            }
+        }
+
+        function appendFeedbackMessage({ id = '', text, createdAt, mine = false, pending = false, welcome = false, images = [] }) {
             const list = document.getElementById('feedbackMessages');
             const bubble = document.createElement('div');
             bubble.className = 'feedback-msg';
             if (welcome) bubble.classList.add('feedback-msg--welcome');
             if (mine) bubble.classList.add('feedback-msg--mine');
             if (pending) bubble.classList.add('feedback-msg--pending');
-            bubble.textContent = text;
+            if (text) {
+                const body = document.createElement('div');
+                body.className = 'feedback-msg-text';
+                body.textContent = text;
+                bubble.appendChild(body);
+            }
+            if (images.length) {
+                const gallery = document.createElement('div');
+                gallery.className = 'feedback-msg-images';
+                images.forEach((image) => {
+                    const src = image.url || image.preview || '';
+                    const wrap = document.createElement('button');
+                    wrap.type = 'button';
+                    wrap.title = '点击放大查看';
+                    wrap.addEventListener('click', () => {
+                        if (src && typeof window.openImageLightbox === 'function') {
+                            window.openImageLightbox(src, image.name || '反馈图片');
+                        }
+                    });
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.alt = image.name || '反馈图片';
+                    wrap.appendChild(img);
+                    gallery.appendChild(wrap);
+                });
+                bubble.appendChild(gallery);
+            }
+            const meta = document.createElement('div');
+            meta.className = 'feedback-msg-meta';
             if (createdAt) {
                 const time = document.createElement('time');
                 time.textContent = formatFeedbackTime(createdAt);
-                bubble.appendChild(time);
+                meta.appendChild(time);
             }
+            if (mine && !welcome && id) attachFeedbackDelete(bubble, id, meta);
+            if (meta.childNodes.length) bubble.appendChild(meta);
             list.appendChild(bubble);
             list.scrollTop = list.scrollHeight;
             return bubble;
+        }
+
+        function attachFeedbackDelete(bubble, id, meta) {
+            if (!id || bubble.querySelector('.feedback-msg-delete')) return;
+            bubble.dataset.id = id;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'feedback-msg-delete';
+            button.title = '删除';
+            button.setAttribute('aria-label', '删除这条反馈');
+            button.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 7h10M9.5 7V5.8c0-.4.3-.8.8-.8h3.4c.4 0 .8.4.8.8V7M9 10v7M12 10v7M15 10v7M8 7l.7 12.2c0 .4.4.8.8.8h5c.4 0 .8-.4.8-.8L16 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+            button.addEventListener('click', () => deleteFeedbackMessage(id, bubble));
+            (meta || bubble).appendChild(button);
+            if (meta && !meta.parentNode) bubble.appendChild(meta);
+        }
+
+        async function deleteFeedbackMessage(id, bubble) {
+            if (!id || bubble.classList.contains('is-deleting')) return;
+            bubble.classList.add('is-deleting');
+            try {
+                const response = await DentalApi.fetch(`api/feedback/${id}`, { method: 'DELETE' });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.message || '删除失败');
+                bubble.remove();
+                setFeedbackStatus('');
+            } catch (error) {
+                bubble.classList.remove('is-deleting');
+                setFeedbackStatus(error.message || '删除失败', true);
+            }
         }
 
         function setFeedbackStatus(text, isError = false) {
@@ -1435,9 +1642,11 @@
             });
             (items || []).forEach((item) => {
                 appendFeedbackMessage({
+                    id: item.id,
                     text: item.message,
                     createdAt: item.created_at,
-                    mine: true
+                    mine: true,
+                    images: item.images || []
                 });
             });
         }
@@ -1476,40 +1685,75 @@
             const input = document.getElementById('feedbackInput');
             const send = document.getElementById('feedbackSend');
             const message = input.value.trim();
-            if (!message) return;
+            if (!message && !feedbackDrafts.length) return;
             if (message.length > FEEDBACK_MAX) {
                 setFeedbackStatus(`最多 ${FEEDBACK_MAX} 字`, true);
                 return;
             }
             feedbackSending = true;
             send.disabled = true;
+            const pendingImages = feedbackDrafts.map((item) => ({
+                name: item.name,
+                preview: item.preview
+            }));
             const pending = appendFeedbackMessage({
                 text: message,
                 createdAt: new Date().toISOString(),
                 mine: true,
-                pending: true
+                pending: true,
+                images: pendingImages
             });
             setFeedbackStatus('');
             input.value = '';
             document.getElementById('feedbackCount').textContent = `0 / ${FEEDBACK_MAX}`;
+            const payload = {
+                message,
+                images: feedbackDrafts.map((item) => ({
+                    name: item.name,
+                    type: item.type,
+                    data: item.data
+                }))
+            };
+            feedbackDrafts = [];
+            renderFeedbackDrafts();
             try {
                 const response = await DentalApi.fetch('api/feedback', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message })
+                    body: JSON.stringify(payload)
                 });
                 const result = await response.json().catch(() => ({}));
                 if (!response.ok) throw new Error(result.message || '发送失败');
                 pending.classList.remove('feedback-msg--pending');
+                if (result.id) {
+                    let meta = pending.querySelector('.feedback-msg-meta');
+                    if (!meta) {
+                        meta = document.createElement('div');
+                        meta.className = 'feedback-msg-meta';
+                        pending.appendChild(meta);
+                    }
+                    attachFeedbackDelete(pending, result.id, meta);
+                }
                 if (result.created_at) {
                     const time = pending.querySelector('time');
                     if (time) time.textContent = formatFeedbackTime(result.created_at);
                 }
+                pendingImages.forEach((item) => {
+                    if (item.preview) URL.revokeObjectURL(item.preview);
+                });
                 feedbackLoaded = true;
             } catch (error) {
                 pending.remove();
                 input.value = message;
                 document.getElementById('feedbackCount').textContent = `${message.length} / ${FEEDBACK_MAX}`;
+                payload.images.forEach((item, index) => {
+                    feedbackDrafts.push({
+                        ...item,
+                        size: Math.ceil((item.data.length * 3) / 4),
+                        preview: pendingImages[index]?.preview || ''
+                    });
+                });
+                renderFeedbackDrafts();
                 setFeedbackStatus(error.message || '发送失败', true);
             } finally {
                 feedbackSending = false;
@@ -1578,6 +1822,19 @@
             else toggleExportMenu(false);
         });
         document.getElementById('feedbackForm').addEventListener('submit', sendFeedback);
+        document.getElementById('feedbackAttach').addEventListener('click', () => {
+            document.getElementById('feedbackFile').click();
+        });
+        document.getElementById('feedbackFile').addEventListener('change', (event) => {
+            addFeedbackFiles(event.target.files || []);
+            event.target.value = '';
+        });
+        document.getElementById('feedbackInput').addEventListener('paste', (event) => {
+            const files = [...(event.clipboardData?.files || [])].filter((file) => FEEDBACK_TYPES.has(file.type));
+            if (!files.length) return;
+            event.preventDefault();
+            addFeedbackFiles(files);
+        });
         document.getElementById('feedbackInput').addEventListener('input', (event) => {
             document.getElementById('feedbackCount').textContent = `${event.target.value.length} / ${FEEDBACK_MAX}`;
         });
