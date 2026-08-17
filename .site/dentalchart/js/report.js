@@ -33,13 +33,10 @@
         'LPS', 'M', '0', 'OP', 'OM', 'ONF', '疑ONF', '髓腔增宽', 'PE', 'PP',
         'RD', 'RE', 'RL', 'ROT', 'RPC', 'RPO', 'RTR', 'X', 'XS', 'XSS'
     ]);
-    const ONF_ALLOWED_TEETH = new Set([
-        '101', '102', '103', '104', '105', '106', '107',
-        '201', '202', '203', '204', '205', '206', '207'
-    ]);
-
     function termAllowedOnTooth(term, toothNum) {
-        return (term !== 'ONF' && term !== '疑ONF') || ONF_ALLOWED_TEETH.has(String(toothNum));
+        if (term !== 'ONF' && term !== '疑ONF') return true;
+        const quadrant = Math.floor(Number(toothNum) / 100);
+        return quadrant === 1 || quadrant === 2;
     }
 
     function getToothCount(teethStr) {
@@ -104,7 +101,7 @@
         },
         ONF: {
             findingsLabel: '口鼻瘘',
-            conclusion: (teethStr) => conclusionByCount(teethStr, '口鼻瘘', '多齿口鼻瘘')
+            conclusion: (teethStr) => teethStr + '口鼻瘘'
         },
         AT: {
             findingsLabel: '牙齿齿冠偏短',

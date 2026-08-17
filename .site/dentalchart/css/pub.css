@@ -133,10 +133,41 @@ body.cat-mode .chart-container {
     height: auto;
     display: block;
     margin: 0 auto;
+    cursor: zoom-in;
 }
 
 body.rabbit-mode .rabbit-poster {
     display: block;
+}
+
+.rabbit-poster-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(8, 12, 10, 0.92);
+    cursor: zoom-out;
+}
+
+.rabbit-poster-lightbox[hidden] {
+    display: none !important;
+}
+
+.rabbit-poster-lightbox img {
+    max-width: min(96vw, 1600px);
+    max-height: 96vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    cursor: default;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.45);
+}
+
+body.rabbit-lightbox-open {
+    overflow: hidden;
 }
 
 body.rabbit-mode .chart-container::after {

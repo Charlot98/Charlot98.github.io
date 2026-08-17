@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>牙表</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="css/pub.css?v=20260810-1">
+    <link rel="stylesheet" href="css/pub.css?v=20260817-1">
     <link rel="stylesheet" href="css/app-ui.css?v=20260810-5">
 </head>
 <body>
@@ -57,7 +57,7 @@
                         <div id="inputsContainer"></div>
                     </div>
                     <div class="rabbit-poster" id="rabbitPoster">
-                        <img src="image/rabbit-dental-anatomy-poster_223f9cd7-9074-4ce6-8b45-e4d403c71fac.webp" alt="兔牙解剖图" class="rabbit-poster-image">
+                        <img src="image/rabbit-dental-anatomy-poster.png" alt="兔牙解剖图" class="rabbit-poster-image" id="rabbitPosterImage" role="button" tabindex="0" title="点击全屏查看">
                     </div>
                     <div class="chart-bottom-row">
                         <div class="workflow-control">
@@ -129,7 +129,7 @@
 
     <script src="js/supabase-config.js?v=20260804-1"></script>
     <script src="js/dental-api.js?v=20260810-4"></script>
-    <script src="js/report.js?v=20260726-6"></script>
+    <script src="js/report.js?v=20260817-1"></script>
     <script>
         const CHART_IMAGES = {
             dog: 'image/CANINE.png',
@@ -1541,6 +1541,33 @@
             syncUsedLegendTerms();
         }
 
+        function setupRabbitPosterLightbox() {
+            const trigger = document.getElementById('rabbitPosterImage');
+            const lightbox = document.getElementById('rabbitPosterLightbox');
+            if (!trigger || !lightbox) return;
+
+            const open = () => {
+                lightbox.hidden = false;
+                document.body.classList.add('rabbit-lightbox-open');
+            };
+            const close = () => {
+                lightbox.hidden = true;
+                document.body.classList.remove('rabbit-lightbox-open');
+            };
+
+            trigger.addEventListener('click', open);
+            trigger.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    open();
+                }
+            });
+            lightbox.addEventListener('click', close);
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !lightbox.hidden) close();
+            });
+        }
+
         // 切换牙表类型
         function switchChart(type) {
             if (viewOnlyMode) return;
@@ -1948,6 +1975,7 @@
             loadPositions();
             DentalReport.updateReport();
             applyViewOnlyMode();
+            setupRabbitPosterLightbox();
             const ownerNameInput = document.getElementById('ownerNameInput');
             if (!viewOnlyMode) {
                 ownerNameInput?.addEventListener('input', handleOwnerNameInput);
@@ -1990,5 +2018,8 @@
 
         });
     </script>
+    <div class="rabbit-poster-lightbox" id="rabbitPosterLightbox" hidden>
+        <img src="image/rabbit-dental-anatomy-poster.png" alt="兔牙解剖图">
+    </div>
 </body>
 </html>
