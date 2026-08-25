@@ -3,201 +3,438 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>科室排班第9版 · 2026.08.31—09.27</title>
+  <title>排班总览 · 第9版</title>
   <style>
     :root {
       --blue-950: #0b1f3a;
       --blue-900: #10335e;
       --blue-700: #175ea8;
-      --line: #d9e1ea;
+      --blue-600: #2874c6;
+      --blue-100: #e9f3ff;
+      --blue-50: #f4f9ff;
       --ink: #111827;
       --muted: #667085;
+      --line: #d9e1ea;
       --surface: #ffffff;
       --canvas: #f4f7fa;
     }
     * { box-sizing: border-box; }
+    html { background: var(--canvas); }
     body {
       margin: 0;
       background: var(--canvas);
       color: var(--ink);
       font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
     }
-    .app-shell { padding: 28px 30px 48px; }
-    header {
+    .app-shell {
+      min-height: 100vh;
+      padding: 30px 34px 48px;
+    }
+    .page-header {
       display: flex;
-      flex-wrap: wrap;
       align-items: flex-end;
       justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 20px;
+      gap: 24px;
+      max-width: 100%;
+      margin-bottom: 22px;
     }
-    h1 {
+    .heading-block h1 {
       margin: 0;
       color: var(--blue-950);
-      font-size: clamp(24px, 3vw, 34px);
+      font-size: clamp(26px, 3vw, 38px);
+      font-weight: 780;
       letter-spacing: -0.03em;
     }
-    .meta {
+    .period-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-width: 250px;
+      padding: 12px 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      box-shadow: 0 5px 18px rgb(16 51 94 / 7%);
+    }
+    .period-card strong {
+      color: var(--blue-950);
+      font-size: 15px;
+    }
+    .period-card span {
+      color: var(--blue-700);
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .toolbar {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px 18px;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .meta strong { color: var(--blue-900); }
-    .panel {
-      margin-bottom: 22px;
+      align-items: end;
+      gap: 24px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
       border: 1px solid var(--line);
       border-radius: 12px;
       background: var(--surface);
+    }
+    .summary {
+      display: flex;
+      gap: 18px;
+      margin-left: auto;
+    }
+    .summary div {
+      display: grid;
+      gap: 4px;
+      min-width: 64px;
+    }
+    .summary span {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+    }
+    .summary strong {
+      color: var(--blue-950);
+      font-size: 20px;
+      font-weight: 780;
+    }
+    .save-state {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .statistics-panel,
+    .schedule-panel {
+      margin-bottom: 14px;
+      border: 1px solid #cfd8e3;
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 10px 28px rgb(16 51 94 / 7%);
       overflow: hidden;
     }
-    .panel h2 {
-      margin: 0;
-      padding: 14px 18px;
+    .schedule-panel {
+      box-shadow: 0 12px 32px rgb(16 51 94 / 8%);
+    }
+    .statistics-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      min-height: 54px;
+      padding: 0 18px;
       border-bottom: 1px solid var(--line);
+    }
+    .statistics-header h2,
+    .schedule-heading h2 {
+      margin: 0;
       color: var(--blue-950);
       font-size: 16px;
     }
-    .legend {
+    .schedule-heading {
+      display: flex;
+      align-items: center;
+      min-height: 54px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .heatmap-header-tools {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+    }
+    .heatmap-legend {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px 14px;
-      padding: 10px 18px;
-      border-bottom: 1px solid var(--line);
+      justify-content: flex-end;
+      gap: 8px 16px;
       color: #475467;
       font-size: 12px;
     }
-    .legend span { display: inline-flex; align-items: center; gap: 6px; }
-    .legend i {
+    .heatmap-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .heatmap-legend i {
       width: 13px;
       height: 13px;
-      border: 1px solid rgb(16 51 94 / 12%);
+      border: 1px solid rgb(16 51 94 / 10%);
       border-radius: 3px;
+      font-style: normal;
     }
-    .scroll { overflow-x: auto; padding: 12px; }
-    table {
-      border-collapse: collapse;
+    .legend-day { background: rgba(0, 144, 242, 0.56); }
+    .legend-night { background: rgba(15, 66, 148, 0.88); }
+    .legend-other { background: rgba(215, 175, 0, 0.5); }
+    .legend-none { border-color: #d9e0e8; background: #f7f9fc; }
+    .legend-previous { border-color: rgba(71, 85, 105, 0.22); background: rgba(100, 116, 139, 0.42); }
+    .legend-rest,
+    .legend-expansion,
+    .legend-management,
+    .legend-no-night {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 750;
+    }
+    .legend-rest { border-color: #cbd5e1; background: #f7f9fc; color: #475467; }
+    .legend-expansion { border-color: rgba(159, 126, 0, 0.35); background: rgba(215, 175, 0, 0.28); color: #5f4d00; }
+    .legend-management { border-color: rgba(69, 104, 140, 0.3); background: rgba(93, 130, 168, 0.2); color: #334e68; }
+    .legend-no-night { border-color: rgba(92, 104, 120, 0.26); background: rgba(148, 163, 184, 0.16); color: #475467; }
+    .heatmap-scroll {
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-color: #9bb8d8 #edf3f8;
+      scrollbar-width: thin;
+    }
+    .heatmap-chart-frame {
+      width: 1284px;
+      min-width: 1284px;
+      margin: 0 auto;
+      padding: 12px 10px 8px;
+      overflow: visible;
+    }
+    .highcharts-heatmap-chart,
+    .highcharts-heatmap-chart .highcharts-container,
+    .highcharts-heatmap-chart .highcharts-root {
+      overflow: visible !important;
+    }
+    .table-scroll {
+      max-width: 100%;
+      max-height: calc(100vh - 278px);
+      overflow: auto;
+      scrollbar-color: #9bb8d8 #edf3f8;
+      scrollbar-width: thin;
+    }
+    .schedule-table {
+      width: max-content;
       min-width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
     }
-    .schedule th,
-    .schedule td {
-      border: 1px solid #dde5ef;
-      padding: 8px 10px;
-      font-size: 12px;
-      vertical-align: top;
+    .schedule-table th,
+    .schedule-table td {
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
     }
-    .schedule thead th {
+    .schedule-table thead th {
       position: sticky;
+      z-index: 4;
+      color: white;
+      text-align: center;
+    }
+    .date-head {
+      left: 0;
+      z-index: 8;
+      width: 118px;
+      min-width: 118px;
+      background: var(--blue-950);
+    }
+    .shift-row th {
       top: 0;
-      background: #f7fbff;
-      color: #344054;
-      white-space: nowrap;
+      width: 130px;
+      min-width: 130px;
+      height: 64px;
+      padding: 7px 8px;
+      background: var(--blue-900);
+      font-size: 11px;
+      line-height: 1.35;
+      white-space: normal;
     }
-    .schedule .date-cell {
-      white-space: nowrap;
-      background: #fff;
-      color: var(--blue-950);
-      font-weight: 700;
-    }
-    .schedule .date-cell small {
-      display: block;
-      color: var(--muted);
-      font-weight: 600;
-    }
-    .schedule .weekend-row td,
-    .schedule .weekend-row .date-cell { background: #f7fafc; }
-    .schedule .night-cell { color: #0f4294; font-weight: 700; }
-    .schedule .week-gap td {
-      height: 10px;
-      border: 0;
-      background: transparent;
-    }
-    .heatmap th,
-    .heatmap td {
-      width: 30px;
-      height: 30px;
-      padding: 0;
-      border: 1px solid rgba(0, 0, 0, 0.28);
+    .shift-row .night-head { background: #5a7190; }
+    .shift-row .date-head { background: var(--blue-950); }
+    .schedule-table tbody tr:not(.week-gap) { height: 42px; }
+    .schedule-table tbody td {
+      width: 130px;
+      min-width: 130px;
+      padding: 4px 7px;
+      background: white;
       text-align: center;
       vertical-align: middle;
-      font-size: 11px;
-      font-weight: 700;
-      color: #27364a;
     }
-    .heatmap thead th {
-      background: #fff;
-      color: #344054;
-      font-weight: 600;
-    }
-    .heatmap .name {
+    .date-cell {
       position: sticky;
       left: 0;
-      z-index: 2;
-      width: 82px;
-      min-width: 82px;
-      padding: 0 8px 0 0;
-      border-color: transparent;
-      background: #fff;
-      color: #26384f;
-      font-size: 12px;
-      font-weight: 600;
-      text-align: right;
+      z-index: 3;
+      width: 118px;
+      min-width: 118px;
+      padding: 4px 13px;
+      background: #f8fbff;
+      box-shadow: 5px 0 8px rgb(16 51 94 / 5%);
+      text-align: left;
     }
-    .heatmap thead .name { z-index: 3; }
-    .heatmap .week-gap {
-      width: 12px;
-      min-width: 12px;
-      border: 0;
-      background: transparent;
+    .date-cell span {
+      display: block;
+      color: var(--blue-950);
+      font-size: 13px;
+      font-weight: 760;
     }
-    .note {
-      margin: 0;
-      padding: 0 4px;
+    .date-cell small {
+      display: block;
+      margin-top: 3px;
       color: var(--muted);
-      font-size: 12px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .weekend-row td { background: #fbfcfe; }
+    .weekend-row .date-cell { background: #eef4fa; }
+    .weekend-row .date-cell span,
+    .weekend-row .date-cell small { color: #1f2937; }
+    .night-cell { background: #f6f8fb; }
+    .person-list {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 4px;
+    }
+    .person-list span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 20px;
+      padding: 2px 6px;
+      border: 1px solid #b9d4f2;
+      border-radius: 5px;
+      background: var(--blue-100);
+      color: var(--blue-900);
+      font-size: 10px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .person-list span.grade-two {
+      border-color: #a8d8c2;
+      background: #eaf8f1;
+      color: #176545;
+    }
+    .person-list span.grade-one {
+      border-color: #e4c27b;
+      background: #fff6dc;
+      color: #78520a;
+    }
+    .night-cell .person-list span {
+      border-color: #c2ccda;
+      background: #e8edf3;
+      color: #26384f;
+    }
+    .night-cell .person-list span.grade-two {
+      border-color: #91cbb1;
+      background: #dff3e9;
+      color: #14583d;
+    }
+    .night-cell .person-list span.grade-one {
+      border-color: #d9b666;
+      background: #f9edc9;
+      color: #684606;
+    }
+    .empty-cell { color: #c3cbd5; font-size: 12px; }
+    .week-gap { height: 14px; }
+    .week-gap td {
+      height: 14px;
+      padding: 0;
+      border-right: 0;
+      border-bottom: 1px solid #c5d0dc;
+      background: var(--canvas);
+    }
+    @media (max-width: 820px) {
+      .app-shell { padding: 20px 14px 32px; }
+      .page-header { align-items: stretch; flex-direction: column; }
+      .period-card { width: 100%; }
+      .summary { margin-left: 0; width: 100%; }
+      .statistics-header { padding: 14px; align-items: flex-start; flex-direction: column; }
     }
   </style>
 </head>
 <body>
   <main class="app-shell">
-    <header>
-      <div>
-        <h1>科室排班总览</h1>
-        <div class="meta" id="meta"></div>
+    <header class="page-header">
+      <div class="heading-block">
+        <h1>排班总览</h1>
+      </div>
+      <div class="period-card" aria-label="排班周期">
+        <strong id="periodLabel">2026.08.31 — 09.27</strong>
+        <span id="versionLabel">第9版</span>
       </div>
     </header>
 
-    <section class="panel" aria-label="热力图">
-      <h2>每日排班热力图</h2>
-      <div class="legend">
-        <span><i style="background:rgba(0,144,242,.56)"></i>白班</span>
-        <span><i style="background:rgba(15,66,148,.88)"></i>夜班</span>
-        <span><i style="background:rgba(215,175,0,.5)"></i>年假/其它</span>
-        <span><i style="background:rgba(247,249,252,.42)"></i>无排班</span>
-        <span><i style="background:rgba(100,116,139,.42)"></i>上一周已上班</span>
-        <span>标记：年 / 休 / 拓 / 管 / 无 / 待</span>
-      </div>
-      <div class="scroll">
-        <table class="heatmap" id="heatmap"></table>
+    <section class="toolbar" aria-label="排班摘要">
+      <div class="summary" aria-label="当前排班摘要">
+        <div><span>人员</span><strong id="staffCount">—</strong></div>
+        <div><span>工种</span><strong id="shiftCount">—</strong></div>
+        <div><span>天数</span><strong id="dayCount">—</strong></div>
       </div>
     </section>
 
-    <section class="panel" aria-label="排班总表">
-      <h2>排班总表</h2>
-      <div class="scroll">
-        <table class="schedule" id="schedule"></table>
+    <p class="save-state" id="statusLine">只读发布页 · 第9版排班快照</p>
+
+    <section class="statistics-panel" aria-label="全员排班热力图">
+      <header class="statistics-header">
+        <h2>每日排班热力图</h2>
+        <div class="heatmap-header-tools">
+          <div class="heatmap-legend" aria-label="排班类型颜色说明">
+            <span><i class="legend-day"></i>白班</span>
+            <span><i class="legend-night"></i>夜班</span>
+            <span><i class="legend-other"></i>年假/其它</span>
+            <span><i class="legend-none"></i>无排班</span>
+            <span><i class="legend-previous"></i>上一周已上班</span>
+            <span><i class="legend-rest">休</i>普通休息</span>
+            <span><i class="legend-expansion">拓</i>拓展白班</span>
+            <span><i class="legend-management">管</i>管理白班</span>
+            <span><i class="legend-no-night">无</i>当日无夜班</span>
+          </div>
+        </div>
+      </header>
+      <div class="heatmap-scroll">
+        <div class="heatmap-chart-frame">
+          <div id="heatmapChart" class="highcharts-heatmap-chart" role="img" aria-label="全员每日排班热力图"></div>
+        </div>
       </div>
     </section>
 
-    <p class="note">只读发布页 · 数据来自第 9 版排班快照，不含在线编辑与生成功能。</p>
+    <section class="schedule-panel" aria-label="排班总表">
+      <div class="schedule-heading"><h2>排班总表</h2></div>
+      <div class="table-scroll is-compact">
+        <table class="schedule-table" id="scheduleTable"></table>
+      </div>
+    </section>
   </main>
 
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/heatmap.js"></script>
   <script src="./schedule-data.js"></script>
   <script>
     const data = window.SCHEDULE_V9;
     const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
-    const colors = {
+    const staff = ["马萌", "江蓝", "王兆雪", "冯军利", "张若邈"];
+    const secondGradeStaff = ["付诗懿", "冯芷珊", "刘亦婷", "于丛爽", "戴睿", "袁芳"];
+    const allFirstGradeStaff = ["彭竻川", "张伊雯", "徐李祥瑞", "林雨睿", "梁思思", "沈烨"];
+    const seniorAssistantStaff = ["张明扬", "杨思琪", "赵家慧", "刘越", "王成龙", "赵家琳", "路萌", "马析淳"];
+    const allStaff = data.allStaff;
+    const heatmapCellSize = 30;
+    const heatmapGroupGap = 0.45;
+    const heatmapGroupBoundaries = [
+      staff.length,
+      staff.length + secondGradeStaff.length,
+      staff.length + secondGradeStaff.length + allFirstGradeStaff.length,
+      staff.length + secondGradeStaff.length + allFirstGradeStaff.length + seniorAssistantStaff.length,
+    ];
+    const heatmapYPositions = allStaff.map((_, personIndex) => (
+      personIndex
+      + heatmapGroupBoundaries.filter((boundary) => personIndex >= boundary).length * heatmapGroupGap
+    ));
+    const heatmapPersonByY = new Map(
+      heatmapYPositions.map((position, personIndex) => [position, allStaff[personIndex]]),
+    );
+    const heatmapMarginTop = 68;
+    const heatmapMarginBottom = 28;
+    const heatmapChartHeight = heatmapMarginTop
+      + heatmapMarginBottom
+      + allStaff.length * heatmapCellSize
+      + heatmapGroupBoundaries.length * heatmapGroupGap * heatmapCellSize
+      + 16;
+    const heatmapColors = {
       day: "rgba(0, 144, 242, 0.56)",
       night: "rgba(15, 66, 148, 0.88)",
       other: "rgba(215, 175, 0, 0.50)",
@@ -205,25 +442,27 @@
       none: "rgba(247, 249, 252, 0.42)",
     };
     const columns = [
-      ["xray-report", "X线报告"],
-      ["xray-teaching", "X线带教"],
-      ["xray-shooting", "X线拍摄"],
-      ["ct-review", "CT/MRI审核"],
-      ["ct-report", "CT/MRI报告"],
-      ["ct-scan-teaching", "CT/MRI扫查带教"],
-      ["ct-scan", "CT/MRI扫查"],
-      ["us-final-review", "超声总审核"],
-      ["us-independent", "超声独立扫查"],
-      ["us-non-independent", "超声非独立扫查"],
-      ["us-report", "超声报告"],
-      ["us-coordination-teaching", "超声统筹带教"],
-      ["us-new-coordination", "超声新人统筹"],
-      ["management", "管理"],
-      ["expansion", "拓展"],
-      ["night", "夜班"],
-      ["annual-leave", "年假"],
+      { id: "xray-report", label: "X线报告", group: "白班" },
+      { id: "xray-teaching", label: "X线带教", group: "白班" },
+      { id: "xray-shooting", label: "X线拍摄", group: "白班" },
+      { id: "ct-review", label: "CT/MRI审核", group: "白班" },
+      { id: "ct-report", label: "CT/MRI报告", group: "白班" },
+      { id: "ct-scan-teaching", label: "CT/MRI扫查带教", group: "白班" },
+      { id: "ct-scan", label: "CT/MRI扫查", group: "白班" },
+      { id: "us-final-review", label: "超声总审核", group: "白班" },
+      { id: "us-independent", label: "超声独立扫查", group: "白班" },
+      { id: "us-non-independent", label: "超声非独立扫查", group: "白班" },
+      { id: "us-report", label: "超声报告", group: "白班" },
+      { id: "us-coordination-teaching", label: "超声统筹带教", group: "白班" },
+      { id: "us-new-coordination", label: "超声新人统筹", group: "白班" },
+      { id: "management", label: "管理", group: "白班" },
+      { id: "expansion", label: "拓展", group: "白班" },
+      { id: "night", label: "夜班", group: "夜班" },
+      { id: "annual-leave", label: "年假", group: "白班" },
     ];
-    const displayColumns = columns.filter(([id]) => id !== "annual-leave" && id !== "expansion");
+    const displayColumns = columns.filter((column) => (
+      column.id !== "annual-leave" && column.id !== "expansion"
+    ));
 
     function dateKey(date) {
       const y = date.getFullYear();
@@ -235,76 +474,205 @@
       const [y, m, d] = key.split("-").map(Number);
       return new Date(y, m - 1, d);
     }
+    function personGradeClass(name) {
+      if (allFirstGradeStaff.includes(name)) return "grade-one";
+      if (secondGradeStaff.includes(name)) return "grade-two";
+      return "grade-three";
+    }
 
-    document.getElementById("meta").innerHTML =
-      `<span><strong>第${data.versionNumber}版</strong></span>` +
-      `<span>周期 ${data.periodLabel}</span>` +
-      `<span>保存于 ${data.createdAt}</span>`;
+    document.getElementById("periodLabel").textContent = data.periodLabel;
+    document.getElementById("versionLabel").textContent = `第${data.versionNumber}版`;
+    document.getElementById("statusLine").textContent =
+      `只读发布页 · 第${data.versionNumber}版排班快照 · 保存于 ${data.createdAt}`;
+    document.getElementById("staffCount").textContent = String(allStaff.length);
+    document.getElementById("shiftCount").textContent = String(displayColumns.length);
+    document.getElementById("dayCount").textContent = String(Object.keys(data.schedule).length);
 
     const dates = Object.keys(data.schedule).sort().map(parseKey);
     const heatmapDates = [
       ...Object.keys(data.previousWeekStaffByDate).sort().map(parseKey),
       ...dates,
     ];
+    const axisCategories = heatmapDates.flatMap((date, dateIndex) => (
+      dateIndex > 0 && dateIndex % 7 === 0
+        ? ["", String(date.getDate())]
+        : [String(date.getDate())]
+    ));
 
-    function cellInfo(person, date) {
-      const key = dateKey(date);
-      const prev = data.previousWeekStaffByDate[key];
-      if (prev) {
-        const worked = prev.includes(person);
+    const heatmapPoints = allStaff.flatMap((person, personIndex) => (
+      heatmapDates.map((date, dateIndex) => {
+        const dayKey = dateKey(date);
+        const x = dateIndex + Math.floor(dateIndex / 7);
+        const y = heatmapYPositions[personIndex];
+        const previous = data.previousWeekStaffByDate[dayKey];
+        if (previous) {
+          const worked = previous.includes(person);
+          return {
+            x,
+            y,
+            value: 1,
+            color: worked ? heatmapColors.previous : heatmapColors.none,
+            custom: {
+              person,
+              dateLabel: `${date.getMonth() + 1}月${date.getDate()}日 周${weekdays[date.getDay()]}`,
+              shifts: worked ? "上一周：已上班" : "上一周：无排班",
+              marker: "",
+            },
+          };
+        }
+        const daySchedule = data.schedule[dayKey] || {};
+        const assignedColumns = columns.filter((column) => (daySchedule[column.id] || []).includes(person));
+        const preference = data.preferences[`${person}::${dayKey}`];
+        const restHonored = preference === "rest" && assignedColumns.length === 0;
+        const shiftIds = assignedColumns.map((column) => column.id);
+        let category = "none";
+        if (shiftIds.includes("night")) category = "night";
+        else if (shiftIds.some((shiftId) => (
+          shiftId.startsWith("xray-") || shiftId.startsWith("ct-") || shiftId.startsWith("us-")
+        ))) category = "day";
+        else if (shiftIds.length) category = "other";
+        const labels = assignedColumns.map((column) => column.label).join("、");
         return {
-          marker: "",
-          color: worked ? colors.previous : colors.none,
-          title: worked ? "上一周：已上班" : "上一周：无排班",
+          x,
+          y,
+          value: 1,
+          color: heatmapColors[category],
+          custom: {
+            person,
+            dateLabel: `${date.getMonth() + 1}月${date.getDate()}日 周${weekdays[date.getDay()]}`,
+            shifts: preference === "rest"
+              ? (restHonored ? "普通休息（已满足）" : `${labels}；普通休息未满足`)
+              : preference === "expansion"
+                ? (assignedColumns.some((column) => column.id === "expansion")
+                  ? "拓展（已计入白班，当日禁止夜班）"
+                  : "拓展")
+              : preference === "management"
+                ? (assignedColumns.some((column) => column.id === "management")
+                  ? "管理（已计入白班）"
+                  : "管理")
+              : preference === "no-night"
+                ? `${labels || "无白班"}；当日无夜班`
+              : (labels || "无排班"),
+            marker: preference === "annual-leave" ? "年"
+              : preference === "expansion" ? "拓"
+              : preference === "management" ? "管"
+              : preference === "no-night" ? "无"
+              : preference === "rest" ? (restHonored ? "休" : "待")
+              : "",
+          },
         };
-      }
-      const day = data.schedule[key] || {};
-      const assigned = columns.filter(([id]) => (day[id] || []).includes(person));
-      const pref = data.preferences[`${person}::${key}`];
-      const restHonored = pref === "rest" && assigned.length === 0;
-      const shiftIds = assigned.map(([id]) => id);
-      let category = "none";
-      if (shiftIds.includes("night")) category = "night";
-      else if (shiftIds.some((id) => id.startsWith("xray-") || id.startsWith("ct-") || id.startsWith("us-"))) category = "day";
-      else if (shiftIds.length) category = "other";
-      const marker = pref === "annual-leave" ? "年"
-        : pref === "expansion" ? "拓"
-        : pref === "management" ? "管"
-        : pref === "no-night" ? "无"
-        : pref === "rest" ? (restHonored ? "休" : "待")
-        : "";
-      const labels = assigned.map(([, label]) => label).join("、") || "无排班";
-      return {
-        marker,
-        color: colors[category],
-        title: `${person}｜${date.getMonth() + 1}月${date.getDate()}日 周${weekdays[date.getDay()]}｜${labels}`,
-      };
-    }
+      })
+    ));
 
-    const heatmap = document.getElementById("heatmap");
-    const columnsForDates = [];
-    heatmapDates.forEach((date, dateIndex) => {
-      if (dateIndex > 0 && dateIndex % 7 === 0) columnsForDates.push({ type: "gap" });
-      columnsForDates.push({ type: "day", date });
+    Highcharts.chart("heatmapChart", {
+      chart: {
+        type: "heatmap",
+        height: heatmapChartHeight,
+        backgroundColor: "transparent",
+        animation: false,
+        spacing: [0, 0, 0, 0],
+        marginTop: heatmapMarginTop,
+        marginRight: 16,
+        marginBottom: heatmapMarginBottom,
+        marginLeft: 86,
+        alignTicks: false,
+      },
+      title: { text: undefined },
+      accessibility: { enabled: false },
+      credits: { enabled: false },
+      legend: { enabled: false },
+      xAxis: {
+        type: "linear",
+        opposite: true,
+        offset: 14,
+        min: -0.5,
+        max: axisCategories.length - 0.5,
+        startOnTick: false,
+        endOnTick: false,
+        tickPositions: axisCategories.map((_, index) => index),
+        minPadding: 0,
+        maxPadding: 0,
+        lineWidth: 0,
+        tickLength: 0,
+        labels: {
+          y: -8,
+          overflow: "allow",
+          formatter() {
+            const index = this.value;
+            if (!Number.isInteger(index) || index < 0) return "";
+            return axisCategories[index] || "";
+          },
+          style: { color: "#344054", fontSize: "11px", fontWeight: "600" },
+        },
+      },
+      yAxis: {
+        type: "linear",
+        reversed: true,
+        offset: 4,
+        min: -0.5,
+        max: heatmapYPositions.at(-1) + 0.5,
+        startOnTick: false,
+        endOnTick: false,
+        tickPositions: heatmapYPositions,
+        minPadding: 0,
+        maxPadding: 0,
+        lineWidth: 0,
+        tickLength: 0,
+        gridLineWidth: 0,
+        labels: {
+          x: -6,
+          overflow: "allow",
+          reserveSpace: true,
+          formatter() {
+            return heatmapPersonByY.get(this.value) || "";
+          },
+          style: { color: "#26384f", fontSize: "12px", fontWeight: "600" },
+        },
+      },
+      tooltip: {
+        headerFormat: "",
+        pointFormat: "<b>{point.custom.person}</b><br>{point.custom.dateLabel}<br>{point.custom.shifts}",
+        backgroundColor: "#ffffff",
+        borderColor: "#cad4e0",
+        borderRadius: 8,
+      },
+      plotOptions: {
+        series: { animation: false, states: { inactive: { opacity: 1 } } },
+        heatmap: { clip: false, turboThreshold: 0, pointPadding: 0 },
+      },
+      series: [{
+        name: "排班",
+        type: "heatmap",
+        borderWidth: 1,
+        borderColor: "rgba(0, 0, 0, 0.38)",
+        nullColor: heatmapColors.none,
+        colsize: 1,
+        rowsize: 1,
+        data: heatmapPoints,
+        dataLabels: {
+          enabled: true,
+          format: "{point.custom.marker}",
+          style: {
+            color: "#27364a",
+            fontSize: "11px",
+            fontWeight: "700",
+            textOutline: "none",
+          },
+        },
+        states: {
+          hover: {
+            brightness: 0.06,
+            borderColor: "rgba(0, 0, 0, 0.56)",
+            borderWidth: 1,
+          },
+        },
+      }],
     });
-    heatmap.innerHTML =
-      `<thead><tr><th class="name"></th>${columnsForDates.map((col) => (
-        col.type === "gap"
-          ? `<th class="week-gap"></th>`
-          : `<th title="${col.date.getMonth() + 1}月${col.date.getDate()}日">${col.date.getDate()}</th>`
-      )).join("")}</tr></thead>` +
-      `<tbody>${data.allStaff.map((person) => (
-        `<tr><th class="name" scope="row">${person}</th>${columnsForDates.map((col) => {
-          if (col.type === "gap") return `<td class="week-gap"></td>`;
-          const info = cellInfo(person, col.date);
-          return `<td style="background:${info.color}" title="${info.title.replaceAll('"', "&quot;")}">${info.marker}</td>`;
-        }).join("")}</tr>`
-      )).join("")}</tbody>`;
 
-    const scheduleTable = document.getElementById("schedule");
+    const scheduleTable = document.getElementById("scheduleTable");
     scheduleTable.innerHTML =
-      `<thead><tr><th>日期</th>${displayColumns.map(([, label]) => (
-        `<th${label === "夜班" ? ' class="night-cell"' : ""}>${label}</th>`
+      `<thead><tr class="shift-row"><th class="date-head">日期</th>${displayColumns.map((column) => (
+        `<th class="shift-head${column.group === "夜班" ? " night-head" : ""}">${column.label}</th>`
       )).join("")}</tr></thead>` +
       `<tbody>${dates.map((date, index) => {
         const key = dateKey(date);
@@ -314,9 +682,14 @@
         const row =
           `<tr class="${weekend ? "weekend-row" : ""}">` +
           `<th class="date-cell" scope="row"><span>${date.getMonth() + 1}月${date.getDate()}日</span><small>周${weekdays[date.getDay()]}</small></th>` +
-          displayColumns.map(([id, label]) => {
-            const names = (day[id] || []).join("、") || "—";
-            return `<td${label === "夜班" ? ' class="night-cell"' : ""}>${names}</td>`;
+          displayColumns.map((column) => {
+            const names = day[column.id] || [];
+            const body = names.length
+              ? `<div class="person-list">${names.map((name) => (
+                  `<span class="${personGradeClass(name)}">${name}</span>`
+                )).join("")}</div>`
+              : `<span class="empty-cell">—</span>`;
+            return `<td class="${column.group === "夜班" ? "night-cell" : ""}">${body}</td>`;
           }).join("") +
           `</tr>`;
         return gap
