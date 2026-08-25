@@ -5,6 +5,7 @@
     "changelog": "legacy-current",
     "echocardiography": "v5.1.2",
     "my-docs": "v1.1.0",
-    "queue_demo": "v0.0.0"
+    "queue_demo": "v0.0.0",
+    "schedule": "v9"
   }
 }

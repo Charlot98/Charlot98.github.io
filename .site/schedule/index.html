@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>科室排班第9版 · 2026.08.31—09.27</title>
+  <style>
+    :root {
+      --blue-950: #0b1f3a;
+      --blue-900: #10335e;
+      --blue-700: #175ea8;
+      --line: #d9e1ea;
+      --ink: #111827;
+      --muted: #667085;
+      --surface: #ffffff;
+      --canvas: #f4f7fa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .app-shell { padding: 28px 30px 48px; }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      margin: 0;
+      color: var(--blue-950);
+      font-size: clamp(24px, 3vw, 34px);
+      letter-spacing: -0.03em;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .meta strong { color: var(--blue-900); }
+    .panel {
+      margin-bottom: 22px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .panel h2 {
+      margin: 0;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      color: var(--blue-950);
+      font-size: 16px;
+    }
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 14px;
+      padding: 10px 18px;
+      border-bottom: 1px solid var(--line);
+      color: #475467;
+      font-size: 12px;
+    }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i {
+      width: 13px;
+      height: 13px;
+      border: 1px solid rgb(16 51 94 / 12%);
+      border-radius: 3px;
+    }
+    .scroll { overflow-x: auto; padding: 12px; }
+    table {
+      border-collapse: collapse;
+      min-width: 100%;
+    }
+    .schedule th,
+    .schedule td {
+      border: 1px solid #dde5ef;
+      padding: 8px 10px;
+      font-size: 12px;
+      vertical-align: top;
+    }
+    .schedule thead th {
+      position: sticky;
+      top: 0;
+      background: #f7fbff;
+      color: #344054;
+      white-space: nowrap;
+    }
+    .schedule .date-cell {
+      white-space: nowrap;
+      background: #fff;
+      color: var(--blue-950);
+      font-weight: 700;
+    }
+    .schedule .date-cell small {
+      display: block;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .schedule .weekend-row td,
+    .schedule .weekend-row .date-cell { background: #f7fafc; }
+    .schedule .night-cell { color: #0f4294; font-weight: 700; }
+    .schedule .week-gap td {
+      height: 10px;
+      border: 0;
+      background: transparent;
+    }
+    .heatmap th,
+    .heatmap td {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border: 1px solid rgba(0, 0, 0, 0.28);
+      text-align: center;
+      vertical-align: middle;
+      font-size: 11px;
+      font-weight: 700;
+      color: #27364a;
+    }
+    .heatmap thead th {
+      background: #fff;
+      color: #344054;
+      font-weight: 600;
+    }
+    .heatmap .name {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      width: 82px;
+      min-width: 82px;
+      padding: 0 8px 0 0;
+      border-color: transparent;
+      background: #fff;
+      color: #26384f;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: right;
+    }
+    .heatmap thead .name { z-index: 3; }
+    .heatmap .week-gap {
+      width: 12px;
+      min-width: 12px;
+      border: 0;
+      background: transparent;
+    }
+    .note {
+      margin: 0;
+      padding: 0 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header>
+      <div>
+        <h1>科室排班总览</h1>
+        <div class="meta" id="meta"></div>
+      </div>
+    </header>
+
+    <section class="panel" aria-label="热力图">
+      <h2>每日排班热力图</h2>
+      <div class="legend">
+        <span><i style="background:rgba(0,144,242,.56)"></i>白班</span>
+        <span><i style="background:rgba(15,66,148,.88)"></i>夜班</span>
+        <span><i style="background:rgba(215,175,0,.5)"></i>年假/其它</span>
+        <span><i style="background:rgba(247,249,252,.42)"></i>无排班</span>
+        <span><i style="background:rgba(100,116,139,.42)"></i>上一周已上班</span>
+        <span>标记：年 / 休 / 拓 / 管 / 无 / 待</span>
+      </div>
+      <div class="scroll">
+        <table class="heatmap" id="heatmap"></table>
+      </div>
+    </section>
+
+    <section class="panel" aria-label="排班总表">
+      <h2>排班总表</h2>
+      <div class="scroll">
+        <table class="schedule" id="schedule"></table>
+      </div>
+    </section>
+
+    <p class="note">只读发布页 · 数据来自第 9 版排班快照，不含在线编辑与生成功能。</p>
+  </main>
+
+  <script src="./schedule-data.js"></script>
+  <script>
+    const data = window.SCHEDULE_V9;
+    const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+    const colors = {
+      day: "rgba(0, 144, 242, 0.56)",
+      night: "rgba(15, 66, 148, 0.88)",
+      other: "rgba(215, 175, 0, 0.50)",
+      previous: "rgba(100, 116, 139, 0.42)",
+      none: "rgba(247, 249, 252, 0.42)",
+    };
+    const columns = [
+      ["xray-report", "X线报告"],
+      ["xray-teaching", "X线带教"],
+      ["xray-shooting", "X线拍摄"],
+      ["ct-review", "CT/MRI审核"],
+      ["ct-report", "CT/MRI报告"],
+      ["ct-scan-teaching", "CT/MRI扫查带教"],
+      ["ct-scan", "CT/MRI扫查"],
+      ["us-final-review", "超声总审核"],
+      ["us-independent", "超声独立扫查"],
+      ["us-non-independent", "超声非独立扫查"],
+      ["us-report", "超声报告"],
+      ["us-coordination-teaching", "超声统筹带教"],
+      ["us-new-coordination", "超声新人统筹"],
+      ["management", "管理"],
+      ["expansion", "拓展"],
+      ["night", "夜班"],
+      ["annual-leave", "年假"],
+    ];
+    const displayColumns = columns.filter(([id]) => id !== "annual-leave" && id !== "expansion");
+
+    function dateKey(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+    function parseKey(key) {
+      const [y, m, d] = key.split("-").map(Number);
+      return new Date(y, m - 1, d);
+    }
+
+    document.getElementById("meta").innerHTML =
+      `<span><strong>第${data.versionNumber}版</strong></span>` +
+      `<span>周期 ${data.periodLabel}</span>` +
+      `<span>保存于 ${data.createdAt}</span>`;
+
+    const dates = Object.keys(data.schedule).sort().map(parseKey);
+    const heatmapDates = [
+      ...Object.keys(data.previousWeekStaffByDate).sort().map(parseKey),
+      ...dates,
+    ];
+
+    function cellInfo(person, date) {
+      const key = dateKey(date);
+      const prev = data.previousWeekStaffByDate[key];
+      if (prev) {
+        const worked = prev.includes(person);
+        return {
+          marker: "",
+          color: worked ? colors.previous : colors.none,
+          title: worked ? "上一周：已上班" : "上一周：无排班",
+        };
+      }
+      const day = data.schedule[key] || {};
+      const assigned = columns.filter(([id]) => (day[id] || []).includes(person));
+      const pref = data.preferences[`${person}::${key}`];
+      const restHonored = pref === "rest" && assigned.length === 0;
+      const shiftIds = assigned.map(([id]) => id);
+      let category = "none";
+      if (shiftIds.includes("night")) category = "night";
+      else if (shiftIds.some((id) => id.startsWith("xray-") || id.startsWith("ct-") || id.startsWith("us-"))) category = "day";
+      else if (shiftIds.length) category = "other";
+      const marker = pref === "annual-leave" ? "年"
+        : pref === "expansion" ? "拓"
+        : pref === "management" ? "管"
+        : pref === "no-night" ? "无"
+        : pref === "rest" ? (restHonored ? "休" : "待")
+        : "";
+      const labels = assigned.map(([, label]) => label).join("、") || "无排班";
+      return {
+        marker,
+        color: colors[category],
+        title: `${person}｜${date.getMonth() + 1}月${date.getDate()}日 周${weekdays[date.getDay()]}｜${labels}`,
+      };
+    }
+
+    const heatmap = document.getElementById("heatmap");
+    const columnsForDates = [];
+    heatmapDates.forEach((date, dateIndex) => {
+      if (dateIndex > 0 && dateIndex % 7 === 0) columnsForDates.push({ type: "gap" });
+      columnsForDates.push({ type: "day", date });
+    });
+    heatmap.innerHTML =
+      `<thead><tr><th class="name"></th>${columnsForDates.map((col) => (
+        col.type === "gap"
+          ? `<th class="week-gap"></th>`
+          : `<th title="${col.date.getMonth() + 1}月${col.date.getDate()}日">${col.date.getDate()}</th>`
+      )).join("")}</tr></thead>` +
+      `<tbody>${data.allStaff.map((person) => (
+        `<tr><th class="name" scope="row">${person}</th>${columnsForDates.map((col) => {
+          if (col.type === "gap") return `<td class="week-gap"></td>`;
+          const info = cellInfo(person, col.date);
+          return `<td style="background:${info.color}" title="${info.title.replaceAll('"', "&quot;")}">${info.marker}</td>`;
+        }).join("")}</tr>`
+      )).join("")}</tbody>`;
+
+    const scheduleTable = document.getElementById("schedule");
+    scheduleTable.innerHTML =
+      `<thead><tr><th>日期</th>${displayColumns.map(([, label]) => (
+        `<th${label === "夜班" ? ' class="night-cell"' : ""}>${label}</th>`
+      )).join("")}</tr></thead>` +
+      `<tbody>${dates.map((date, index) => {
+        const key = dateKey(date);
+        const day = data.schedule[key] || {};
+        const weekend = date.getDay() === 0 || date.getDay() === 6;
+        const gap = date.getDay() === 0 && index < dates.length - 1;
+        const row =
+          `<tr class="${weekend ? "weekend-row" : ""}">` +
+          `<th class="date-cell" scope="row"><span>${date.getMonth() + 1}月${date.getDate()}日</span><small>周${weekdays[date.getDay()]}</small></th>` +
+          displayColumns.map(([id, label]) => {
+            const names = (day[id] || []).join("、") || "—";
+            return `<td${label === "夜班" ? ' class="night-cell"' : ""}>${names}</td>`;
+          }).join("") +
+          `</tr>`;
+        return gap
+          ? `${row}<tr class="week-gap" aria-hidden="true"><td colspan="${displayColumns.length + 1}"></td></tr>`
+          : row;
+      }).join("")}</tbody>`;
+  </script>
+</body>
+</html>
