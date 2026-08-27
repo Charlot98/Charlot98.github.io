@@ -217,15 +217,12 @@ YPE html>
       <div class="heading-block"><h1>排班总览</h1></div>
       <div class="period-card" aria-label="排班周期">
         <strong id="periodLabel">2026.08.31 — 09.27</strong>
-        <span id="versionLabel">第5版</span>
+        <span id="versionLabel">第7版</span>
       </div>
     </header>
 
     <section class="toolbar" aria-label="排班摘要">
-      <div class="version-switch" aria-label="历史版本">
-        <button type="button" id="version4Btn" aria-pressed="false">第4版</button>
-        <button type="button" id="version5Btn" aria-pressed="true">第5版</button>
-      </div>
+      <div class="version-switch" id="versionSwitch" aria-label="历史版本"></div>
       <div class="summary" aria-label="当前排班摘要">
         <div><span>人员</span><strong id="staffCount">—</strong></div>
         <div><span>工种</span><strong id="shiftCount">—</strong></div>
@@ -426,8 +423,12 @@ YPE html>
       document.getElementById("staffCount").textContent = String(heatmapStaff.length);
       document.getElementById("shiftCount").textContent = String(displayColumns.length);
       document.getElementById("dayCount").textContent = String(Object.keys(data.schedule).length);
-      document.getElementById("version4Btn").setAttribute("aria-pressed", String(currentVersion === 4));
-      document.getElementById("version5Btn").setAttribute("aria-pressed", String(currentVersion === 5));
+      document.querySelectorAll("#versionSwitch button").forEach((button) => {
+        button.setAttribute(
+          "aria-pressed",
+          String(Number(button.dataset.version) === currentVersion),
+        );
+      });
       document.getElementById("shiftLabelToggle").setAttribute("aria-pressed", String(showShiftLabels));
 
       const dates = Object.keys(data.schedule).sort().map(parseKey);
@@ -581,14 +582,22 @@ YPE html>
         }).join("")}</tbody>`;
     }
 
-    document.getElementById("version4Btn").addEventListener("click", () => {
-      currentVersion = 4;
-      render();
-    });
-    document.getElementById("version5Btn").addEventListener("click", () => {
-      currentVersion = 5;
-      render();
-    });
+    const versionSwitch = document.getElementById("versionSwitch");
+    Object.keys(pub.versions)
+      .map(Number)
+      .sort((left, right) => left - right)
+      .forEach((versionNumber) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.dataset.version = String(versionNumber);
+        button.textContent = `第${versionNumber}版`;
+        button.setAttribute("aria-pressed", String(versionNumber === currentVersion));
+        button.addEventListener("click", () => {
+          currentVersion = versionNumber;
+          render();
+        });
+        versionSwitch.appendChild(button);
+      });
     document.getElementById("shiftLabelToggle").addEventListener("click", () => {
       showShiftLabels = !showShiftLabels;
       render();
