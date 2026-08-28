@@ -44,7 +44,7 @@ let query = "";
 let heatmapChart = null;
 let showShiftLabels = false;
 let tableMoveSource = null;
-let tableStatus = "拖动姓名调整岗位或夜班日期";
+let tableStatus = "拖动姓名调整岗位或夜班日期，单元格内拖动可调整顺序";
 let heatmapSwapSource = null;
 let heatmapSwapStatus = "点击热力格选择换班，再点击蓝框候选格完成互换";
 
@@ -149,6 +149,45 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   heatmapSwapStatus = "排班已调整，可重新选择热力图换班";
   renderTable();
   renderHeatmap();
+}
+
+function canReorderWithinCell(source, chip) {
+  return Boolean(source
+    && chip
+    && chip.dataset.date === source.dateKey
+    && chip.dataset.column === source.columnId
+    && chip.dataset.person !== source.person);
+}
+
+function placeAfterChip(chip, clientX) {
+  const rect = chip.getBoundingClientRect();
+  return clientX > rect.left + rect.width / 2;
+}
+
+function updateReorderHighlight(chip = null, placeAfter = false) {
+  document.querySelectorAll("#schedule-table .person-chip").forEach((item) => {
+    item.classList.toggle("is-reorder-before", item === chip && !placeAfter);
+    item.classList.toggle("is-reorder-after", item === chip && placeAfter);
+  });
+}
+
+function reorderAssignment(source, targetPerson, placeAfter) {
+  const names = schedule[source.dateKey]?.[source.columnId];
+  if (!names || !names.includes(source.person)) return;
+  const rest = names.filter((person) => person !== source.person);
+  const anchor = rest.indexOf(targetPerson);
+  if (anchor < 0) return;
+  const next = [...rest];
+  next.splice(placeAfter ? anchor + 1 : anchor, 0, source.person);
+  const columnLabel = columns.find(([id]) => id === source.columnId)?.[1] || source.columnId;
+  if (next.join("\u0000") !== names.join("\u0000")) {
+    schedule[source.dateKey][source.columnId] = next;
+    tableStatus = `${dateLabel(source.dateKey).day}${columnLabel}已调整${source.person}的顺序`;
+  } else {
+    tableStatus = `${source.person}顺序未变化`;
+  }
+  tableMoveSource = null;
+  renderTable();
 }
 
 function updateDropHighlights(activeCell = null) {
@@ -739,9 +778,8 @@ function makeCloudMeta(version, payload = null) {
 async function fetchCloudVersions() {
   if (!globalThis.ScheduleApi) return [];
   const session = await ScheduleApi.checkSession();
-  if (!session.authenticated && !ScheduleApi.hasToken()) return [];
+  if (!session.authenticated) return [];
   try {
-    if (!session.authenticated) await ScheduleApi.ensureAccess();
     const result = await ScheduleApi.listVersions();
     return (result.versions || []).map((item) => makeCloudMeta(item));
   } catch {
@@ -872,7 +910,7 @@ async function loadVersion(versionId) {
   currentVersion = meta;
   currentPeriodKey = payload.periodKey || meta.periodKey || "";
   tableMoveSource = null;
-  tableStatus = "拖动姓名调整岗位或夜班日期";
+  tableStatus = "拖动姓名调整岗位或夜班日期，单元格内拖动可调整顺序";
   heatmapSwapSource = null;
   heatmapSwapStatus = "点击热力格选择换班，再点击蓝框候选格完成互换";
   document.querySelector("#period-label").textContent = formatPeriod(payload.periodKey || currentPeriodKey);
@@ -923,6 +961,14 @@ scheduleTable.addEventListener("dragstart", (event) => {
   requestAnimationFrame(() => updateDropHighlights());
 });
 scheduleTable.addEventListener("dragover", (event) => {
+  const chip = event.target.closest(".person-chip");
+  if (canReorderWithinCell(tableMoveSource, chip)) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    updateReorderHighlight(chip, placeAfterChip(chip, event.clientX));
+    return;
+  }
+  updateReorderHighlight();
   const cell = event.target.closest("td[data-date]");
   if (!cell || !canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column)) return;
   event.preventDefault();
@@ -931,15 +977,26 @@ scheduleTable.addEventListener("dragover", (event) => {
 });
 scheduleTable.addEventListener("dragleave", (event) => {
   if (!event.target.closest("td[data-date]")) return;
+  updateReorderHighlight();
   updateDropHighlights();
 });
 scheduleTable.addEventListener("drop", (event) => {
+  const chip = event.target.closest(".person-chip");
+  if (canReorderWithinCell(tableMoveSource, chip)) {
+    event.preventDefault();
+    const placeAfter = placeAfterChip(chip, event.clientX);
+    const person = chip.dataset.person;
+    updateReorderHighlight();
+    reorderAssignment(tableMoveSource, person, placeAfter);
+    return;
+  }
   const cell = event.target.closest("td[data-date]");
   if (!cell) return;
   event.preventDefault();
   moveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column);
 });
 scheduleTable.addEventListener("dragend", () => {
+  updateReorderHighlight();
   if (tableMoveSource) {
     tableMoveSource = null;
     updateDropHighlights();
@@ -956,7 +1013,9 @@ scheduleTable.addEventListener("click", (event) => {
       && tableMoveSource.columnId === nextSource.columnId
       ? null
       : nextSource;
-    tableStatus = tableMoveSource ? `已选择${tableMoveSource.person}，蓝框为可移动位置` : "拖动姓名调整岗位或夜班日期";
+    tableStatus = tableMoveSource
+      ? `已选择${tableMoveSource.person}，蓝框为可移动位置；在本格内拖到其他姓名可调整顺序`
+      : "拖动姓名调整岗位或夜班日期，单元格内拖动可调整顺序";
     renderTable();
     return;
   }

@@ -80,6 +80,8 @@ tbody tr.week-end td, tbody tr.week-end th { border-bottom: 9px solid var(--canv
 .person-chip.resident { background: #edf8f3; color: #276c55; }
 .person-chip.assistant { background: #fff4e6; color: #8b5b20; }
 .person-chip.is-conflict { background: #ffe3e3; color: #a51010; box-shadow: inset 0 0 0 1px #e54848; font-weight: 800; }
+.person-chip.is-reorder-before { box-shadow: -3px 0 0 rgb(0 144 242 / 85%); }
+.person-chip.is-reorder-after { box-shadow: 3px 0 0 rgb(0 144 242 / 85%); }
 .empty-cell { color: #bac4cf; }
 tbody td.is-drop-eligible { background: #edf7ff; box-shadow: inset 0 0 0 2px rgb(0 144 242 / 58%); cursor: pointer; }
 tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0 144 242 / 82%); }
