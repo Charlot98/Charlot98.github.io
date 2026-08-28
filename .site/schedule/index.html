@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=8" />
+    <link rel="stylesheet" href="./assets/styles.css?v=11" />
   </head>
   <body>
     <main class="app-shell">
@@ -73,6 +73,18 @@
         </div>
       </section>
 
+      <section class="panel" id="room-chart-view" aria-label="超声三号屋与四号屋统计">
+        <header class="panel-header">
+          <div>
+            <h2>超声三号屋 / 四号屋人次</h2>
+            <p>统计中高级医师与住院医每人在本期三号屋、四号屋的排班天数</p>
+          </div>
+        </header>
+        <div class="room-chart-scroll">
+          <div id="room-chart"></div>
+        </div>
+      </section>
+
     </main>
     <div class="loading-screen" id="loading-screen" aria-live="polite">正在载入排班数据…</div>
     <script src="./assets/highcharts.js"></script>
@@ -80,6 +92,6 @@
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
     <script src="./assets/schedule-api.js"></script>
-    <script type="module" src="./assets/app.js?v=16"></script>
+    <script type="module" src="./assets/app.js?v=18"></script>
   </body>
 </html>

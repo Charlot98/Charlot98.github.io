@@ -33,6 +33,14 @@ const thirdGrade = new Set(groups[2][1]);
 const residents = new Set([...groups[3][1], ...groups[4][1]]);
 const assistants = new Set([...groups[5][1], ...groups[6][1]]);
 const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+const roomChartGroupNames = ["高级医师", "中级医师", "三年级", "二年级", "一年级"];
+const roomChartPeople = groups
+  .filter(([group]) => roomChartGroupNames.includes(group))
+  .flatMap(([, names]) => names);
+const roomChartRooms = [
+  ["us-room-3", "超声三号屋", "rgba(0, 144, 242, 0.78)"],
+  ["us-room-4", "超声四号屋", "rgba(221, 40, 122, 0.7)"],
+];
 const LOCAL_VERSIONS_KEY = "department-schedule.local-versions.v1";
 const LOCAL_DRAFT_KEY = "department-schedule.local-draft.v1";
 let schedule = {};
@@ -42,6 +50,7 @@ let currentVersion = null;
 let currentPeriodKey = "";
 let query = "";
 let heatmapChart = null;
+let roomChart = null;
 let showShiftLabels = false;
 let tableMoveSource = null;
 let tableStatus = "拖动姓名调整岗位或夜班日期，单元格内拖动可调整顺序";
@@ -74,7 +83,7 @@ function renderTable() {
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
       return `<td data-date="${dateKey}" data-column="${id}" class="${id === "night" ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? names.map((name) => `<span draggable="true" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`).join("") : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
-    return `<tr class="${weekend ? "weekend" : ""} ${weekEnd ? "week-end" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
+    return `<tr class="${weekend ? "weekend" : ""} ${index % 2 ? "row-alt" : ""} ${weekEnd ? "week-end" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
   }).join("");
   const status = document.querySelector("#table-filter-state");
   const conflictMessage = conflictKeys.size ? ` · ${conflictKeys.size}处同日多白班冲突` : "";
@@ -149,6 +158,7 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   heatmapSwapStatus = "排班已调整，可重新选择热力图换班";
   renderTable();
   renderHeatmap();
+  renderRoomChart();
 }
 
 function canReorderWithinCell(source, chip) {
@@ -334,6 +344,7 @@ function swapHeatmapAssignments(target) {
   heatmapSwapSource = null;
   renderTable();
   renderHeatmap();
+  renderRoomChart();
 }
 
 function handleHeatmapSwapClick(custom) {
@@ -731,6 +742,80 @@ async function exportExcel() {
   }
 }
 
+function roomCountsByPerson() {
+  const counts = new Map(roomChartPeople.map((person) => [person, { "us-room-3": 0, "us-room-4": 0 }]));
+  Object.values(schedule).forEach((day) => {
+    roomChartRooms.forEach(([roomId]) => {
+      (day[roomId] || []).forEach((person) => {
+        const entry = counts.get(person);
+        if (entry) entry[roomId] += 1;
+      });
+    });
+  });
+  return counts;
+}
+
+function renderRoomChart() {
+  const host = document.querySelector("#room-chart");
+  if (!host || !window.Highcharts) return;
+  const counts = roomCountsByPerson();
+  const groupBoundaries = roomChartPeople
+    .map((person, index) => (index > 0 && groupByPerson.get(person) !== groupByPerson.get(roomChartPeople[index - 1])
+      ? index - 0.5
+      : null))
+    .filter((value) => value !== null);
+  if (roomChart) roomChart.destroy();
+  roomChart = window.Highcharts.chart(host, {
+    chart: { type: "column", backgroundColor: "transparent", spacing: [12, 8, 4, 8] },
+    title: { text: undefined },
+    accessibility: { enabled: false },
+    credits: { enabled: false },
+    legend: { align: "right", verticalAlign: "top", itemStyle: { fontSize: "11px", fontWeight: "700" } },
+    xAxis: {
+      categories: roomChartPeople,
+      labels: { rotation: -60, style: { fontSize: "10px", color: "#26384f" } },
+      lineColor: "#dce4ed",
+      tickLength: 0,
+      plotLines: groupBoundaries.map((value) => ({ value, color: "#c9d6e4", width: 1, dashStyle: "Dash" })),
+    },
+    yAxis: {
+      min: 0,
+      allowDecimals: false,
+      title: { text: "天数", style: { fontSize: "11px", color: "#667085" } },
+      gridLineColor: "#eef2f7",
+      stackLabels: { enabled: true, style: { fontSize: "10px", fontWeight: "800", color: "#0b2440", textOutline: "none" } },
+    },
+    tooltip: {
+      shared: true,
+      formatter() {
+        const rows = this.points.map((point) => `${point.series.name}：${point.y}天`).join("<br>");
+        const total = this.points.reduce((sum, point) => sum + point.y, 0);
+        return `<b>${this.x}</b>（${groupByPerson.get(this.x) || ""}）<br>${rows}<br>合计：${total}天`;
+      },
+    },
+    plotOptions: {
+      column: {
+        stacking: "normal",
+        borderWidth: 0,
+        maxPointWidth: 26,
+        animation: false,
+        dataLabels: {
+          enabled: true,
+          style: { fontSize: "10px", fontWeight: "700", textOutline: "none" },
+          formatter() {
+            return this.y ? this.y : null;
+          },
+        },
+      },
+    },
+    series: roomChartRooms.map(([roomId, name, color]) => ({
+      name,
+      color,
+      data: roomChartPeople.map((person) => counts.get(person)[roomId]),
+    })),
+  });
+}
+
 function formatPeriod(periodKey) {
   const [start, end] = String(periodKey || "").split("_");
   if (!start || !end) return "2026.08.31 — 09.27";
@@ -919,6 +1004,7 @@ async function loadVersion(versionId) {
   document.querySelector("#version-select").value = meta.id;
   renderTable();
   renderHeatmap();
+  renderRoomChart();
   loading.classList.add("is-hidden");
 }
 
