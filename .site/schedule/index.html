@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=13" />
+    <link rel="stylesheet" href="./assets/styles.css?v=14" />
   </head>
   <body>
     <main class="app-shell">
@@ -45,7 +45,7 @@
         <header class="panel-header heatmap-header">
           <div>
             <h2>人员每日排班</h2>
-            <p id="heatmap-swap-status">点击热力格选择换班，再点击蓝框候选格完成互换</p>
+            <p id="heatmap-swap-status">点击热力格选择换班，再点击蓝框候选格完成互换；白班只换白班，仅夜班格可与其他有夜班的格互换</p>
             <div class="streak-legend" aria-label="连续工作提示">
               <span><i class="streak-six"></i>连续6天</span>
               <span><i class="streak-over"></i>超过6天</span>
@@ -93,6 +93,6 @@
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
     <script src="./assets/schedule-api.js"></script>
-    <script type="module" src="./assets/app.js?v=20"></script>
+    <script type="module" src="./assets/app.js?v=24"></script>
   </body>
 </html>

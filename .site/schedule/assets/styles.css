@@ -61,20 +61,16 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(27px, 3vw, 39px); letter-sp
 .heatmap-scroll { position: relative; overflow: auto; max-height: calc(100vh - 300px); background: #fff; }
 table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
 th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-thead th { position: sticky; top: 0; z-index: 4; min-width: 106px; padding: 10px 8px; background: #eff5fb; color: var(--navy); font-size: 11px; white-space: nowrap; }
-thead th.date-head { left: 0; z-index: 6; min-width: 94px; background: #e6f0fa; }
+thead th { position: sticky; top: 0; z-index: 4; min-width: 106px; padding: 10px 8px; background: var(--blue); color: #fff; font-size: 11px; white-space: nowrap; }
+thead th.date-head { left: 0; z-index: 6; min-width: 94px; background: var(--navy); }
 tbody th { position: sticky; left: 0; z-index: 3; width: 94px; padding: 8px 10px; text-align: left; white-space: nowrap; }
 tbody th strong { display: block; color: var(--navy); font-size: 12px; }
 tbody th span { color: var(--muted); font-size: 10px; }
 tbody td { min-width: 106px; height: 44px; padding: 5px 6px; vertical-align: top; }
 tbody tr { --row-bg: #ffffff; }
-tbody tr.row-alt { --row-bg: #f5f8fc; }
 tbody tr.weekend { --row-bg: var(--weekend); }
-tbody tr.weekend.row-alt { --row-bg: #e2ebf6; }
 tbody th, tbody td { background: var(--row-bg); }
 tbody tr.week-gap td { height: 22px; padding: 0; border-right: 0; background: var(--canvas); }
-.night-head { background: #e7eef8; color: #173f78; }
-tbody td.night-cell { background-color: var(--row-bg); background-image: linear-gradient(rgb(23 63 120 / 6%), rgb(23 63 120 / 6%)); }
 .person-chip { display: inline-block; margin: 1px 2px 1px 0; padding: 1px 4px; border: 1px solid rgb(15 45 80 / 10%); border-radius: 5px; background: #edf3f8; color: #23374c; line-height: 1.35; white-space: nowrap; }
 .person-chip[draggable="true"] { cursor: grab; user-select: none; }
 .person-chip[draggable="true"]:active { cursor: grabbing; }

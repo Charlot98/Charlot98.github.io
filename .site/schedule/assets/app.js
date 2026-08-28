@@ -55,7 +55,7 @@ let showShiftLabels = false;
 let tableMoveSource = null;
 let tableStatus = "拖动姓名调整岗位或夜班日期，单元格内拖动可调整顺序";
 let heatmapSwapSource = null;
-let heatmapSwapStatus = "点击热力格选择换班，再点击蓝框候选格完成互换";
+let heatmapSwapStatus = "点击热力格选择换班，再点击蓝框候选格完成互换；白班只换白班，仅夜班格可与其他有夜班的格互换";
 
 const dateLabel = (dateKey) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -83,7 +83,7 @@ function renderTable() {
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
       return `<td data-date="${dateKey}" data-column="${id}" class="${id === "night" ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? names.map((name) => `<span draggable="true" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`).join("") : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
-    const row = `<tr class="${weekend ? "weekend" : ""} ${index % 2 ? "row-alt" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
+    const row = `<tr class="${weekend ? "weekend" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
     return weekEnd
       ? `${row}<tr class="week-gap"><td colspan="${columns.length + 1}"></td></tr>`
       : row;
@@ -253,6 +253,9 @@ function parsePreference(raw) {
   return { content, tone };
 }
 
+const swapCategoryLabels = { xray: "X线报告", ct: "CT/MRI", us: "超声", night: "夜班" };
+const shiftLabelById = Object.fromEntries(columns);
+
 function dominantModality(shifts) {
   if (shifts.some((shift) => shift.startsWith("xray-"))) return "xray";
   if (shifts.some((shift) => shift.startsWith("ct-"))) return "ct";
@@ -260,7 +263,18 @@ function dominantModality(shifts) {
   return null;
 }
 
+function hasNightShift(person, dateKey) {
+  return (schedule[dateKey]?.night || []).includes(person);
+}
+
+function swapCategoryFor(person, dateKey) {
+  const modality = dominantModality(whiteShiftIdsFor(person, dateKey));
+  if (modality) return modality;
+  return hasNightShift(person, dateKey) ? "night" : null;
+}
+
 function shiftIdsForSwapCategory(person, dateKey, category) {
+  if (category === "night") return hasNightShift(person, dateKey) ? ["night"] : [];
   return whiteShiftIdsFor(person, dateKey).filter((shiftId) => (
     category === "xray" ? shiftId.startsWith("xray-")
       : category === "ct" ? shiftId.startsWith("ct-")
@@ -274,11 +288,21 @@ function isExclusiveRestPreference(person, dateKey) {
     .includes(parsePreference(preferences[`${person}::${dateKey}`]).content);
 }
 
-function canReceiveSwapDay(person, dateKey, movesNight) {
+function canReceiveSwapDay(person, dateKey, receivesNight) {
   const parsed = parsePreference(preferences[`${person}::${dateKey}`]);
   return shiftsFor(person, dateKey).length === 0
     && !isExclusiveRestPreference(person, dateKey)
-    && !(movesNight && parsed.content === "no-night");
+    && !(receivesNight && parsed.content === "no-night");
+}
+
+function isNightOnlyCell(person, dateKey) {
+  return hasNightShift(person, dateKey) && whiteShiftIdsFor(person, dateKey).length === 0;
+}
+
+function canReceiveNight(person, dateKey) {
+  return !hasNightShift(person, dateKey)
+    && !isExclusiveRestPreference(person, dateKey)
+    && parsePreference(preferences[`${person}::${dateKey}`]).content !== "no-night";
 }
 
 function isHeatmapSwapCandidate(person, dateKey, category) {
@@ -286,22 +310,28 @@ function isHeatmapSwapCandidate(person, dateKey, category) {
   const source = heatmapSwapSource;
   if (person === source.person
     || dateKey === source.dateKey
-    || groupByPerson.get(person) !== source.group
-    || category !== source.category) return false;
+    || groupByPerson.get(person) !== source.group) return false;
+  if (source.category === "night") {
+    return isNightOnlyCell(source.person, source.dateKey)
+      && hasNightShift(person, dateKey)
+      && canReceiveNight(person, source.dateKey)
+      && canReceiveNight(source.person, dateKey);
+  }
+  if (category !== source.category) return false;
   const sourceShiftIds = shiftIdsForSwapCategory(source.person, source.dateKey, source.category).sort();
   const targetShiftIds = shiftIdsForSwapCategory(person, dateKey, category).sort();
   const sourceHasOnlySelectedShift = whiteShiftIdsFor(source.person, source.dateKey).length === sourceShiftIds.length;
   const targetHasOnlySelectedShift = whiteShiftIdsFor(person, dateKey).length === targetShiftIds.length;
-  const sameConcreteShifts = sourceShiftIds.length > 0
-    && sourceShiftIds.length === targetShiftIds.length
+  const sameLength = sourceShiftIds.length > 0 && sourceShiftIds.length === targetShiftIds.length;
+  const sameConcreteShifts = sameLength
     && sourceShiftIds.every((shiftId, index) => shiftId === targetShiftIds[index]);
-  const sourceMovesNight = (schedule[source.dateKey].night || []).includes(source.person);
-  const targetMovesNight = (schedule[dateKey].night || []).includes(person);
+  const crossUsRooms = sameLength
+    && [sourceShiftIds, targetShiftIds].every((ids) => ids.every((shiftId) => shiftId.startsWith("us-room-")));
   return sourceHasOnlySelectedShift
     && targetHasOnlySelectedShift
-    && sameConcreteShifts
-    && canReceiveSwapDay(person, source.dateKey, targetMovesNight)
-    && canReceiveSwapDay(source.person, dateKey, sourceMovesNight);
+    && (sameConcreteShifts || crossUsRooms)
+    && canReceiveSwapDay(person, source.dateKey, false)
+    && canReceiveSwapDay(source.person, dateKey, false);
 }
 
 function updateHeatmapSwapStatus() {
@@ -315,7 +345,7 @@ function swapHeatmapAssignments(target) {
   const source = heatmapSwapSource;
   if (!source || !isHeatmapSwapCandidate(target.person, target.dateKey, target.category)) return;
   const sourceShiftIds = shiftIdsForSwapCategory(source.person, source.dateKey, source.category);
-  const targetShiftIds = shiftIdsForSwapCategory(target.person, target.dateKey, target.category);
+  const targetShiftIds = shiftIdsForSwapCategory(target.person, target.dateKey, source.category);
   const affectedSlots = new Map();
   sourceShiftIds.forEach((shiftId) => affectedSlots.set(`${source.dateKey}::${shiftId}`, { dateKey: source.dateKey, shiftId }));
   targetShiftIds.forEach((shiftId) => affectedSlots.set(`${target.dateKey}::${shiftId}`, { dateKey: target.dateKey, shiftId }));
@@ -329,20 +359,22 @@ function swapHeatmapAssignments(target) {
     }))];
   });
 
-  if (source.dateKey !== target.dateKey) {
-    const sourceHadNight = (schedule[source.dateKey].night || []).includes(source.person);
-    const targetHadNight = (schedule[target.dateKey].night || []).includes(target.person);
-    schedule[source.dateKey].night = (schedule[source.dateKey].night || []).filter((person) => person !== source.person);
-    schedule[target.dateKey].night = (schedule[target.dateKey].night || []).filter((person) => person !== target.person);
-    if (targetHadNight) schedule[source.dateKey].night = [...new Set([...(schedule[source.dateKey].night || []), target.person])];
-    if (sourceHadNight) schedule[target.dateKey].night = [...new Set([...(schedule[target.dateKey].night || []), source.person])];
-  }
-
-  const categoryLabels = { xray: "X线报告", ct: "CT/MRI", us: "超声" };
+  const keptNights = source.category === "night" ? [] : [
+    hasNightShift(source.person, source.dateKey) ? source.person : "",
+    hasNightShift(target.person, target.dateKey) ? target.person : "",
+  ].filter(Boolean);
   const sourceRestWasUnmet = parsePreference(preferences[`${source.person}::${source.dateKey}`]).content === "rest";
-  heatmapSwapStatus = sourceRestWasUnmet
-    ? `${source.person}与${target.person}的同种${categoryLabels[source.category]}班已互换，${source.person}的指定休息已满足；可点“保存到云端”`
-    : `${source.person}与${target.person}的同种${categoryLabels[source.category]}班已互换；可点“保存到云端”`;
+  const describeShifts = (shiftIds) => shiftIds.map((shiftId) => shiftLabelById[shiftId] || shiftId).join("、");
+  const sourceShiftLabel = describeShifts(sourceShiftIds);
+  const targetShiftLabel = describeShifts(targetShiftIds);
+  const swapSummary = source.category === "night"
+    ? `${source.person}与${target.person}的夜班已互换，白班留在原日期`
+    : sourceShiftLabel === targetShiftLabel
+      ? `${source.person}与${target.person}的同种${swapCategoryLabels[source.category]}已互换`
+      : `${source.person}的${sourceShiftLabel}与${target.person}的${targetShiftLabel}已互换`;
+  const keptNightNote = keptNights.length ? `，${keptNights.join("、")}的原夜班保留在原日期` : "";
+  const restNote = sourceRestWasUnmet ? `，${source.person}的指定休息已满足` : "";
+  heatmapSwapStatus = `${swapSummary}${keptNightNote}${restNote}；可点“保存到云端”`;
   tableStatus = heatmapSwapStatus;
   heatmapSwapSource = null;
   renderTable();
@@ -353,7 +385,7 @@ function swapHeatmapAssignments(target) {
 function handleHeatmapSwapClick(custom) {
   if (!custom?.swappable) {
     heatmapSwapSource = null;
-    heatmapSwapStatus = "该单元格没有可交换的X线、CT/MRI或超声白班";
+    heatmapSwapStatus = "该单元格没有可交换的白班，也不是仅夜班单元格";
     renderHeatmap();
     return;
   }
@@ -364,11 +396,13 @@ function handleHeatmapSwapClick(custom) {
       category: custom.category,
       group: groupByPerson.get(custom.person),
     };
-    const categoryLabels = { xray: "X线报告", ct: "CT/MRI", us: "超声" };
     const isUnmetRest = parsePreference(preferences[`${custom.person}::${custom.dateKey}`]).content === "rest";
-    heatmapSwapStatus = isUnmetRest
-      ? `已选择${custom.person} ${custom.dateLabel}未满足的指定休息，蓝框为同等级、同班种且双方日期均可休息的换班人员`
-      : `已选择${custom.person} ${custom.dateLabel} ${categoryLabels[custom.category]}，蓝框为同等级、同班种且双方日期均可休息的换班人员`;
+    const matchNote = custom.category === "us" ? "同班种（超声屋可跨屋互换）" : "同班种";
+    heatmapSwapStatus = custom.category === "night"
+      ? `已选择${custom.person} ${custom.dateLabel} 夜班，蓝框为同等级、当日有夜班且双方均可接夜班的人员，白班留在原日期`
+      : isUnmetRest
+        ? `已选择${custom.person} ${custom.dateLabel}未满足的指定休息，蓝框为同等级、${matchNote}且双方日期均可休息的换班人员，夜班保留在原日期`
+        : `已选择${custom.person} ${custom.dateLabel} ${swapCategoryLabels[custom.category]}，蓝框为同等级、${matchNote}且双方日期均可休息的换班人员，夜班保留在原日期`;
     renderHeatmap();
     return;
   }
@@ -382,8 +416,11 @@ function handleHeatmapSwapClick(custom) {
     swapHeatmapAssignments(custom);
     return;
   }
+  const wasNightSelection = heatmapSwapSource?.category === "night";
   heatmapSwapSource = null;
-  heatmapSwapStatus = "所选单元格不满足同等级、同班种及双方休息日互换条件，已取消选择";
+  heatmapSwapStatus = wasNightSelection
+    ? "所选单元格不满足同等级、当日有夜班且双方均可接夜班的互换条件，已取消选择"
+    : "所选单元格不满足同等级、同班种及双方当日空闲的互换条件，已取消选择";
   renderHeatmap();
 }
 
@@ -436,7 +473,7 @@ function getNightStreakByCell(currentDates) {
       const hasDateGap = previousDateKey
         && (new Date(`${dateKey}T00:00:00`) - new Date(`${previousDateKey}T00:00:00`)) !== 86400000;
       if (hasDateGap) flushRun();
-      if ((schedule[dateKey]?.night || []).includes(person)) run.push(dateKey);
+      if (hasNightShift(person, dateKey)) run.push(dateKey);
       else flushRun();
     });
     flushRun();
@@ -462,6 +499,10 @@ function mainHeatmapCategory(preference, shifts) {
   return "none";
 }
 
+function heatmapLabelColor(category, hasWhiteConflict) {
+  return hasWhiteConflict || category === "night" ? "#ffffff" : "#27364a";
+}
+
 function mainHeatmapMarker(preference, shifts, restHonored) {
   const parsed = parsePreference(preference);
   if (parsed.content === "annual-leave") return "年";
@@ -472,6 +513,7 @@ function mainHeatmapMarker(preference, shifts, restHonored) {
   if (parsed.content === "xray") return "X";
   if (parsed.content === "ct") return "CT";
   if (parsed.content === "us") return "US";
+  if (shifts.includes("night") && !shifts.some((shift) => shift !== "night")) return "夜";
   if (parsed.tone) return "";
   if (!showShiftLabels) return "";
   const modality = dominantModality(shifts);
@@ -526,7 +568,7 @@ function renderHeatmap() {
     const restHonored = parsed.content === "rest" && shifts.length === 0;
     const category = mainHeatmapCategory(preference, shifts);
     const isUnscheduledNoNight = parsed.content === "no-night" && shifts.length === 0;
-    const swapCategory = dominantModality(shifts);
+    const swapCategory = swapCategoryFor(person, dateKey);
     const isSwapSelected = Boolean(heatmapSwapSource
       && person === heatmapSwapSource.person
       && dateKey === heatmapSwapSource.dateKey);
@@ -557,6 +599,7 @@ function renderHeatmap() {
         : isUnscheduledNoNight ? "transparent"
           : colors[category],
       className: pointClassName,
+      dataLabels: { color: heatmapLabelColor(category, hasWhiteConflict) },
       custom: {
         person,
         dateKey,
@@ -1025,7 +1068,7 @@ async function loadVersion(versionId) {
   tableMoveSource = null;
   tableStatus = "拖动姓名调整岗位或夜班日期，单元格内拖动可调整顺序";
   heatmapSwapSource = null;
-  heatmapSwapStatus = "点击热力格选择换班，再点击蓝框候选格完成互换";
+  heatmapSwapStatus = "点击热力格选择换班，再点击蓝框候选格完成互换；白班与夜班分开互换";
   document.querySelector("#period-label").textContent = formatPeriod(payload.periodKey || currentPeriodKey);
   document.querySelector("#version-status").textContent = `${meta.label} · ${meta.status}`;
   document.querySelector("#day-count").textContent = Object.keys(schedule).length;
