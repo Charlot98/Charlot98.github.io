@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=11" />
+    <link rel="stylesheet" href="./assets/styles.css?v=13" />
   </head>
   <body>
     <main class="app-shell">
@@ -49,6 +49,7 @@
             <div class="streak-legend" aria-label="连续工作提示">
               <span><i class="streak-six"></i>连续6天</span>
               <span><i class="streak-over"></i>超过6天</span>
+              <span><i class="night-streak"></i>连续夜班3天及以上</span>
             </div>
           </div>
           <button class="shift-label-toggle" id="shift-label-toggle" type="button" aria-pressed="false">显示标签</button>
@@ -92,6 +93,6 @@
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
     <script src="./assets/schedule-api.js"></script>
-    <script type="module" src="./assets/app.js?v=18"></script>
+    <script type="module" src="./assets/app.js?v=20"></script>
   </body>
 </html>

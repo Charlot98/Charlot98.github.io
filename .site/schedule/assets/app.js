@@ -83,7 +83,10 @@ function renderTable() {
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
       return `<td data-date="${dateKey}" data-column="${id}" class="${id === "night" ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? names.map((name) => `<span draggable="true" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`).join("") : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
-    return `<tr class="${weekend ? "weekend" : ""} ${index % 2 ? "row-alt" : ""} ${weekEnd ? "week-end" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
+    const row = `<tr class="${weekend ? "weekend" : ""} ${index % 2 ? "row-alt" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
+    return weekEnd
+      ? `${row}<tr class="week-gap"><td colspan="${columns.length + 1}"></td></tr>`
+      : row;
   }).join("");
   const status = document.querySelector("#table-filter-state");
   const conflictMessage = conflictKeys.size ? ` · ${conflictKeys.size}处同日多白班冲突` : "";
@@ -420,6 +423,27 @@ function getStreakSeverityByCell(currentDates) {
   return severity;
 }
 
+function getNightStreakByCell(currentDates) {
+  const streaks = new Map();
+  people.forEach((person) => {
+    let run = [];
+    const flushRun = () => {
+      if (run.length >= 3) run.forEach((dateKey) => streaks.set(`${person}::${dateKey}`, run.length));
+      run = [];
+    };
+    currentDates.forEach((dateKey, index) => {
+      const previousDateKey = currentDates[index - 1];
+      const hasDateGap = previousDateKey
+        && (new Date(`${dateKey}T00:00:00`) - new Date(`${previousDateKey}T00:00:00`)) !== 86400000;
+      if (hasDateGap) flushRun();
+      if ((schedule[dateKey]?.night || []).includes(person)) run.push(dateKey);
+      else flushRun();
+    });
+    flushRun();
+  });
+  return streaks;
+}
+
 function mainHeatmapCategory(preference, shifts) {
   const parsed = parsePreference(preference);
   if (["annual-leave", "expansion", "management"].includes(parsed.content)) return "other";
@@ -459,6 +483,7 @@ function renderHeatmap() {
   const currentDates = Object.keys(schedule).sort();
   const heatmapDates = currentDates;
   const streakSeverityByCell = getStreakSeverityByCell(currentDates);
+  const nightStreakByCell = getNightStreakByCell(currentDates);
   const axisCategories = heatmapDates.flatMap((dateKey, dateIndex) => (
     dateIndex > 0 && dateIndex % 7 === 0
       ? ["", String(new Date(`${dateKey}T00:00:00`).getDate())]
@@ -507,6 +532,7 @@ function renderHeatmap() {
       && dateKey === heatmapSwapSource.dateKey);
     const isSwapCandidate = isHeatmapSwapCandidate(person, dateKey, swapCategory);
     const streakSeverity = streakSeverityByCell.get(`${person}::${dateKey}`);
+    const nightStreakLength = nightStreakByCell.get(`${person}::${dateKey}`);
     const hasWhiteConflict = whiteShiftIdsFor(person, dateKey).length > 1;
     const labels = shifts.map((shift) => shiftLabels[shift] || shift);
     const { day, weekday } = dateLabel(dateKey);
@@ -515,12 +541,13 @@ function renderHeatmap() {
       : labels.length ? labels.join("、") : "无排班";
     const streakDescription = streakSeverity === "streak-six" ? "；连续工作6天"
       : streakSeverity === "streak-over" ? "；连续工作超过6天" : "";
+    const nightStreakDescription = nightStreakLength ? `；连续夜班${nightStreakLength}天` : "";
     const pointClassName = isSwapSelected ? "heatmap-swap-selected"
       : isSwapCandidate ? "heatmap-swap-candidate"
         : [
           swapCategory ? "heatmap-swap-ready" : "",
           isUnscheduledNoNight ? "heatmap-no-night-empty" : "",
-          streakSeverity || "",
+          nightStreakLength ? "night-streak" : streakSeverity || "",
         ].filter(Boolean).join(" ");
     return {
       x,
@@ -534,13 +561,14 @@ function renderHeatmap() {
         person,
         dateKey,
         dateLabel: `${day} ${weekday}`,
-        shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}`,
+        shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}${nightStreakDescription}`,
         marker: mainHeatmapMarker(preference, shifts, restHonored),
         noNight: parsed.content === "no-night",
         conflict: hasWhiteConflict,
         category: swapCategory,
         swappable: Boolean(swapCategory),
         streakSeverity,
+        nightStreakLength,
       },
     };
   }));

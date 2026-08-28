@@ -72,7 +72,7 @@ tbody tr.row-alt { --row-bg: #f5f8fc; }
 tbody tr.weekend { --row-bg: var(--weekend); }
 tbody tr.weekend.row-alt { --row-bg: #e2ebf6; }
 tbody th, tbody td { background: var(--row-bg); }
-tbody tr.week-end td, tbody tr.week-end th { border-bottom: 14px solid var(--canvas); box-shadow: inset 0 -1px 0 var(--line); }
+tbody tr.week-gap td { height: 22px; padding: 0; border-right: 0; background: var(--canvas); }
 .night-head { background: #e7eef8; color: #173f78; }
 tbody td.night-cell { background-color: var(--row-bg); background-image: linear-gradient(rgb(23 63 120 / 6%), rgb(23 63 120 / 6%)); }
 .person-chip { display: inline-block; margin: 1px 2px 1px 0; padding: 1px 4px; border: 1px solid rgb(15 45 80 / 10%); border-radius: 5px; background: #edf3f8; color: #23374c; line-height: 1.35; white-space: nowrap; }
@@ -101,6 +101,7 @@ tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0
 .streak-legend i { width: 13px; height: 9px; border: 2px solid; border-radius: 2px; background: #fff; }
 .streak-legend .streak-six { border-color: #e0a800; }
 .streak-legend .streak-over { border-color: #dc2626; }
+.streak-legend .night-streak { border-color: #b30021; border-width: 3px; }
 .shift-label-toggle { height: 32px; padding: 0 12px; border: 1px solid #7da4cc; border-radius: 6px; background: rgb(244 249 255 / 90%); color: var(--navy); font-size: 12px; font-weight: 750; white-space: nowrap; }
 .shift-label-toggle:hover { border-color: var(--blue); background: var(--blue-soft); }
 .shift-label-toggle[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: #fff; }
@@ -120,6 +121,7 @@ tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0
 .highcharts-point.heatmap-swap-selected { cursor: pointer; stroke: rgb(0, 75, 145) !important; stroke-width: 4px !important; }
 .highcharts-point.streak-six { stroke: #e0a800 !important; stroke-width: 3px !important; }
 .highcharts-point.streak-over { stroke: #dc2626 !important; stroke-width: 3px !important; }
+.highcharts-point.night-streak { stroke: #b30021 !important; stroke-width: 4px !important; }
 .highcharts-scrolling-parent { scrollbar-gutter: stable both-edges; }
 .highcharts-scrolling { overscroll-behavior: contain; }
 .no-results { padding: 34px; color: var(--muted); text-align: center; }
