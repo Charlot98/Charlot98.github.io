@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=2" />
+    <link rel="stylesheet" href="./assets/styles.css?v=7" />
   </head>
   <body>
     <main class="app-shell">
@@ -17,25 +17,44 @@
         </div>
         <div class="period-card" aria-label="当前排班周期">
           <span>排班周期</span>
-          <strong>2026.08.31 — 09.27</strong>
-          <em>第27版 · 已确认</em>
+          <strong id="period-label">2026.08.31 — 09.27</strong>
+          <em id="version-status">正在载入版本…</em>
         </div>
       </header>
 
       <section class="toolbar" aria-label="页面工具">
-        <div class="view-tabs" role="tablist" aria-label="视图切换">
-          <button class="view-tab is-active" type="button" data-view="table" role="tab" aria-selected="true">排班总表</button>
-          <button class="view-tab" type="button" data-view="heatmap" role="tab" aria-selected="false">人员热力图</button>
-        </div>
+        <label class="version-field">
+          <span>排班版本</span>
+          <select id="version-select" aria-label="选择排班版本"></select>
+        </label>
         <label class="search-field">
           <span>查找人员</span>
           <input id="person-search" type="search" placeholder="输入姓名" autocomplete="off" />
         </label>
+        <button class="secondary-button draft-button" id="draft-button" type="button">暂存</button>
+        <button class="secondary-button save-button" id="save-version-button" type="button">保存到云端</button>
         <button class="secondary-button export-button" id="export-button" type="button">导出 Excel</button>
         <div class="summary" aria-label="排班摘要">
           <div><span>人员</span><strong id="people-count">45</strong></div>
           <div><span>工种</span><strong>15</strong></div>
-          <div><span>天数</span><strong>28</strong></div>
+          <div><span>天数</span><strong id="day-count">28</strong></div>
+        </div>
+      </section>
+
+      <section class="panel" id="heatmap-view" aria-label="人员排班热力图">
+        <header class="panel-header heatmap-header">
+          <div>
+            <h2>人员每日排班</h2>
+            <p id="heatmap-swap-status">点击热力格选择换班，再点击蓝框候选格完成互换</p>
+            <div class="streak-legend" aria-label="连续工作提示">
+              <span><i class="streak-six"></i>连续6天</span>
+              <span><i class="streak-over"></i>超过6天</span>
+            </div>
+          </div>
+          <button class="shift-label-toggle" id="shift-label-toggle" type="button" aria-pressed="false">显示标签</button>
+        </header>
+        <div class="heatmap-scroll">
+          <div id="heatmap"></div>
         </div>
       </section>
 
@@ -54,23 +73,13 @@
         </div>
       </section>
 
-      <section class="panel is-hidden" id="heatmap-view" aria-label="人员排班热力图">
-        <header class="panel-header heatmap-header">
-          <div>
-            <h2>人员每日排班</h2>
-          </div>
-          <button class="shift-label-toggle" id="shift-label-toggle" type="button" aria-pressed="false">显示标签</button>
-        </header>
-        <div class="heatmap-scroll">
-          <div id="heatmap"></div>
-        </div>
-      </section>
-
     </main>
     <div class="loading-screen" id="loading-screen" aria-live="polite">正在载入排班数据…</div>
     <script src="./assets/highcharts.js"></script>
     <script src="./assets/heatmap.js"></script>
     <script src="./assets/exceljs.min.js"></script>
-    <script type="module" src="./assets/app.js?v=3"></script>
+    <script src="./assets/supabase-config.js"></script>
+    <script src="./assets/schedule-api.js"></script>
+    <script type="module" src="./assets/app.js?v=15"></script>
   </body>
 </html>

@@ -33,15 +33,17 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(27px, 3vw, 39px); letter-sp
 .period-card em { grid-column: 1 / -1; justify-self: end; color: var(--blue); font-size: 11px; font-style: normal; font-weight: 800; }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); box-shadow: 0 6px 20px rgb(16 51 94 / 5%); }
-.view-tabs { display: flex; padding: 3px; border: 1px solid #cbd8e7; border-radius: 9px; background: #f5f8fb; }
-.view-tab { height: 34px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; color: #4b5d72; font-size: 13px; font-weight: 750; }
-.view-tab.is-active { background: var(--navy); color: #fff; box-shadow: 0 3px 10px rgb(11 36 64 / 18%); }
-.search-field { display: grid; gap: 5px; }
-.search-field span { color: var(--muted); font-size: 11px; font-weight: 700; }
-.search-field input { width: 180px; height: 35px; padding: 0 11px; border: 1px solid #cbd8e7; border-radius: 7px; color: var(--ink); outline: 0; }
+.search-field, .version-field { display: grid; gap: 5px; }
+.search-field span, .version-field span { color: var(--muted); font-size: 11px; font-weight: 700; }
+.search-field input, .version-field select { height: 35px; padding: 0 11px; border: 1px solid #cbd8e7; border-radius: 7px; background: #fff; color: var(--ink); outline: 0; }
+.search-field input { width: 180px; }
+.version-field select { min-width: 116px; }
 .search-field input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb(23 102 170 / 12%); }
+.version-field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb(23 102 170 / 12%); }
 .secondary-button { height: 35px; padding: 0 13px; border: 1px solid #8ca9c4; border-radius: 7px; background: #fff; color: var(--navy); font-size: 12px; font-weight: 750; }
 .secondary-button:hover { background: var(--blue-soft); border-color: var(--blue); }
+.save-button { border-color: var(--navy); background: var(--navy); color: #fff; }
+.save-button:hover { border-color: var(--blue); background: var(--blue); }
 .export-button { border-color: var(--blue); background: var(--blue); color: #fff; }
 .export-button:hover { background: var(--navy); border-color: var(--navy); }
 .summary { display: flex; gap: 8px; margin-left: auto; }
@@ -54,6 +56,7 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(27px, 3vw, 39px); letter-sp
 .panel-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
 .panel-header h2 { margin: 0; color: var(--navy); font-size: 18px; }
 .panel-header > p { margin: 0; color: var(--muted); font-size: 11px; }
+.panel-header > p.has-conflicts { color: #c62828; font-weight: 800; }
 .table-scroll { overflow: auto; max-height: calc(100vh - 285px); }
 .heatmap-scroll { position: relative; overflow: auto; max-height: calc(100vh - 300px); background: #fff; }
 table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
@@ -76,11 +79,19 @@ tbody tr.week-end td, tbody tr.week-end th { border-bottom: 9px solid var(--canv
 .person-chip.third { background: #eaf4ff; color: #145f9d; }
 .person-chip.resident { background: #edf8f3; color: #276c55; }
 .person-chip.assistant { background: #fff4e6; color: #8b5b20; }
+.person-chip.is-conflict { background: #ffe3e3; color: #a51010; box-shadow: inset 0 0 0 1px #e54848; font-weight: 800; }
 .empty-cell { color: #bac4cf; }
 tbody td.is-drop-eligible { background: #edf7ff; box-shadow: inset 0 0 0 2px rgb(0 144 242 / 58%); cursor: pointer; }
 tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0 144 242 / 82%); }
 
 .heatmap-header { align-items: flex-end; }
+.heatmap-header p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+.heatmap-header p.is-active { color: var(--blue); font-weight: 800; }
+.streak-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 7px; color: var(--muted); font-size: 10px; }
+.streak-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.streak-legend i { width: 13px; height: 9px; border: 2px solid; border-radius: 2px; background: #fff; }
+.streak-legend .streak-six { border-color: #e0a800; }
+.streak-legend .streak-over { border-color: #dc2626; }
 .shift-label-toggle { height: 32px; padding: 0 12px; border: 1px solid #7da4cc; border-radius: 6px; background: rgb(244 249 255 / 90%); color: var(--navy); font-size: 12px; font-weight: 750; white-space: nowrap; }
 .shift-label-toggle:hover { border-color: var(--blue); background: var(--blue-soft); }
 .shift-label-toggle[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: #fff; }
@@ -94,11 +105,66 @@ tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0
 .highcharts-container { font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif !important; }
 .highcharts-tooltip-container { z-index: 30 !important; }
 .highcharts-data-label text { pointer-events: none; }
+.highcharts-point.heatmap-swap-ready { cursor: pointer; }
+.highcharts-point.heatmap-no-night-empty { fill: transparent !important; }
+.highcharts-point.heatmap-swap-candidate { cursor: pointer; stroke: rgb(0, 122, 214) !important; stroke-width: 3px !important; }
+.highcharts-point.heatmap-swap-selected { cursor: pointer; stroke: rgb(0, 75, 145) !important; stroke-width: 4px !important; }
+.highcharts-point.streak-six { stroke: #e0a800 !important; stroke-width: 3px !important; }
+.highcharts-point.streak-over { stroke: #dc2626 !important; stroke-width: 3px !important; }
 .highcharts-scrolling-parent { scrollbar-gutter: stable both-edges; }
 .highcharts-scrolling { overscroll-behavior: contain; }
 .no-results { padding: 34px; color: var(--muted); text-align: center; }
 .loading-screen { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--canvas); color: var(--navy); font-size: 14px; font-weight: 750; }
 .loading-screen.is-hidden { display: none; }
+
+body.schedule-auth-open { overflow: hidden; }
+.schedule-auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  padding: 20px;
+  display: grid;
+  place-items: center;
+  background: rgba(11, 36, 64, .42);
+  backdrop-filter: blur(5px);
+}
+.schedule-auth-panel {
+  width: min(360px, calc(100vw - 40px));
+  padding: 24px;
+  border: 1px solid #dce4ed;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 22px 70px rgba(11, 36, 64, .22);
+}
+.schedule-auth-panel h2 { margin: 0 0 18px; color: var(--navy); font-size: 19px; text-align: center; }
+.schedule-auth-form input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid #cbd8e7;
+  border-radius: 9px;
+  outline: 0;
+  color: var(--ink);
+  background: #f7fafc;
+  font-size: 16px;
+}
+.schedule-auth-form input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgb(23 102 170 / 12%); }
+.schedule-auth-hint { margin: 8px 2px 0; color: var(--muted); font-size: 11px; }
+.schedule-auth-error { min-height: 16px; margin: 5px 2px 0; color: #b64e4e; font-size: 11px; }
+.schedule-auth-actions { margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px; }
+.schedule-auth-actions button {
+  min-width: 76px;
+  height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  color: #5f6c66;
+  background: #eef3f0;
+  cursor: pointer;
+}
+.schedule-auth-actions button.primary { color: #fff; background: var(--navy); }
+.schedule-auth-actions button:hover { filter: brightness(.97); }
 
 @media (max-width: 780px) {
   .app-shell { padding: 18px 14px 30px; }
@@ -106,7 +172,7 @@ tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0
   .period-card { min-width: 0; }
   .summary { width: 100%; margin-left: 0; }
   .summary div { flex: 1; text-align: center; }
-  .search-field, .search-field input { width: 100%; }
+  .search-field, .search-field input, .version-field, .version-field select { width: 100%; }
   .table-scroll { max-height: calc(100vh - 330px); }
   .heatmap-scroll { max-height: calc(100vh - 330px); }
   .panel-header { align-items: flex-start; flex-direction: column; }

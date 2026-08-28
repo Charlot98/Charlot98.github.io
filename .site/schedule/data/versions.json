@@ -1,0 +1,26 @@
+{
+  "defaultVersion": "v29",
+  "versions": [
+    {
+      "id": "v29",
+      "label": "第29版",
+      "status": "已确认",
+      "file": "schedule-v29.json",
+      "versionNumber": 29
+    },
+    {
+      "id": "v28",
+      "label": "第28版",
+      "status": "Excel导入",
+      "file": "schedule-v28.json",
+      "versionNumber": 28
+    },
+    {
+      "id": "v27",
+      "label": "第27版",
+      "status": "已确认",
+      "file": "schedule-v27.json",
+      "versionNumber": 27
+    }
+  ]
+}
