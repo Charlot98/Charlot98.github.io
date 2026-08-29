@@ -85,11 +85,12 @@ function updateAccessModeUI() {
   badge.textContent = canEdit ? "管理账号" : "游客账号 · 只读";
   badge.classList.toggle("is-editor", canEdit);
   accessButton.textContent = canEdit ? "退出管理" : "管理员登录";
-  ["#draft-button", "#save-version-button"].forEach((selector) => {
-    const button = document.querySelector(selector);
-    button.disabled = !canEdit;
-    button.title = canEdit ? "" : "游客账号仅可查看，不能修改或保存排班";
-  });
+  const draftButton = document.querySelector("#draft-button");
+  draftButton.disabled = !canEdit;
+  draftButton.title = canEdit ? "" : "游客账号仅可查看，不能暂存排班";
+  const saveButton = document.querySelector("#save-version-button");
+  saveButton.disabled = false;
+  saveButton.title = canEdit ? "" : "点击后登录管理员账号并保存到云端";
   document.querySelectorAll("#annotation-buttons button").forEach((button) => {
     button.disabled = !canEdit;
   });
@@ -113,6 +114,18 @@ async function initializeAccessMode() {
   updateAccessModeUI();
 }
 
+async function enterEditorMode() {
+  if (canEdit) return;
+  if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
+  await globalThis.ScheduleApi.ensureAccess();
+  const session = await globalThis.ScheduleApi.checkSession();
+  if (!session?.authenticated) throw new Error("管理员登录失败");
+  canEdit = true;
+  annotationMode = "";
+  updateAccessModeUI();
+  updateAnnotationToolbar();
+}
+
 async function toggleAccessMode() {
   const button = document.querySelector("#access-mode-button");
   const originalText = button.textContent;
@@ -123,10 +136,7 @@ async function toggleAccessMode() {
       canEdit = false;
     } else {
       button.textContent = "登录中…";
-      await globalThis.ScheduleApi?.ensureAccess();
-      const session = await globalThis.ScheduleApi?.checkSession();
-      if (!session?.authenticated) throw new Error("管理员登录失败");
-      canEdit = true;
+      await enterEditorMode();
     }
     annotationMode = "";
     updateAccessModeUI();
@@ -1407,11 +1417,15 @@ async function saveDraft() {
 }
 
 async function saveAsNewVersion() {
-  if (!canEdit) return;
   const button = document.querySelector("#save-version-button");
   const originalText = button.textContent;
   try {
     button.disabled = true;
+    if (!canEdit) {
+      button.textContent = "等待登录…";
+      await enterEditorMode();
+      button.disabled = true;
+    }
     button.textContent = "保存中…";
     if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
     const versionNumbers = versions.map((item) => versionNumberOf(item));
@@ -1445,7 +1459,9 @@ async function saveAsNewVersion() {
     tableStatus = `换班结果已保存为${cloudVersion.label}（云端）`;
     renderTable();
   } catch (error) {
-    tableStatus = `保存失败：${error.message || "云端不可用"}`;
+    tableStatus = error.message === "已取消设备配对"
+      ? "已取消管理员登录，本次未保存"
+      : `保存失败：${error.message || "云端不可用"}`;
     renderTable();
   } finally {
     button.disabled = false;
