@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=14" />
+    <link rel="stylesheet" href="./assets/styles.css?v=16" />
   </head>
   <body>
     <main class="app-shell">
@@ -31,12 +31,17 @@
           <span>查找人员</span>
           <input id="person-search" type="search" placeholder="输入姓名" autocomplete="off" />
         </label>
+        <label class="version-field">
+          <span>个人日历</span>
+          <select id="ics-person-select" aria-label="选择导出日历的人员"></select>
+        </label>
         <button class="secondary-button draft-button" id="draft-button" type="button">暂存</button>
         <button class="secondary-button save-button" id="save-version-button" type="button">保存到云端</button>
         <button class="secondary-button export-button" id="export-button" type="button">导出 Excel</button>
+        <button class="secondary-button ics-button" id="ics-export-button" type="button">导出个人日历</button>
         <div class="summary" aria-label="排班摘要">
           <div><span>人员</span><strong id="people-count">45</strong></div>
-          <div><span>工种</span><strong>15</strong></div>
+          <div><span>工种</span><strong>17</strong></div>
           <div><span>天数</span><strong id="day-count">28</strong></div>
         </div>
       </section>
@@ -45,15 +50,35 @@
         <header class="panel-header heatmap-header">
           <div>
             <h2>人员每日排班</h2>
-            <p id="heatmap-swap-status">点击热力格选择换班，再点击蓝框候选格完成互换；白班只换白班，仅夜班格可与其他有夜班的格互换</p>
+            <p id="heatmap-swap-status">点格换班</p>
             <div class="streak-legend" aria-label="连续工作提示">
-              <span><i class="streak-six"></i>连续6天</span>
-              <span><i class="streak-over"></i>超过6天</span>
-              <span><i class="night-streak"></i>连续夜班3天及以上</span>
+              <span><i class="streak-six"></i>连上6天</span>
+              <span><i class="streak-over"></i>连上&gt;6天</span>
+              <span><i class="night-streak"></i>连夜≥3天</span>
             </div>
           </div>
           <button class="shift-label-toggle" id="shift-label-toggle" type="button" aria-pressed="false">显示标签</button>
         </header>
+        <div class="annotation-toolbar" aria-label="热力图标注工具">
+          <div class="annotation-heading">
+            <strong>标注排班</strong>
+            <span id="annotation-status" aria-live="polite">选标签，再点单元格</span>
+          </div>
+          <div class="annotation-buttons" id="annotation-buttons">
+            <button type="button" data-annotation="day">白班</button>
+            <button type="button" data-annotation="night">夜班</button>
+            <button type="button" data-annotation="xray">X线</button>
+            <button type="button" data-annotation="ct">CT/MRI</button>
+            <button type="button" data-annotation="us">超声</button>
+            <button type="button" data-annotation="outpatient">门诊</button>
+            <button type="button" data-annotation="annual-leave">年假</button>
+            <button type="button" data-annotation="rest">普休</button>
+            <button type="button" data-annotation="expansion">拓展</button>
+            <button type="button" data-annotation="no-night">不夜</button>
+            <button type="button" data-annotation="management">管理</button>
+            <button type="button" class="annotation-cancel" data-annotation="cancel">取消指定</button>
+          </div>
+        </div>
         <div class="heatmap-scroll">
           <div id="heatmap"></div>
         </div>
@@ -64,7 +89,7 @@
           <div>
             <h2>每日岗位安排</h2>
           </div>
-          <p id="table-filter-state">拖动姓名调整岗位或夜班日期</p>
+          <p id="table-filter-state">拖动姓名换班</p>
         </header>
         <div class="table-scroll">
           <table id="schedule-table">
@@ -78,7 +103,6 @@
         <header class="panel-header">
           <div>
             <h2>超声三号屋 / 四号屋人次</h2>
-            <p>统计中高级医师与住院医每人在本期三号屋、四号屋的排班天数</p>
           </div>
         </header>
         <div class="room-chart-scroll">
@@ -93,6 +117,6 @@
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
     <script src="./assets/schedule-api.js"></script>
-    <script type="module" src="./assets/app.js?v=24"></script>
+    <script type="module" src="./assets/app.js?v=29"></script>
   </body>
 </html>

@@ -6,6 +6,7 @@ const columns = [
   ["us-room-3", "超声三号屋"], ["us-room-4", "超声四号屋"],
   ["us-report", "超声报告"], ["us-coordination-teaching", "超声统筹带教"],
   ["us-new-coordination", "超声新人统筹"], ["night", "夜班"],
+  ["outpatient", "门诊"], ["management", "管理"],
 ];
 
 const groups = [
@@ -53,9 +54,13 @@ let heatmapChart = null;
 let roomChart = null;
 let showShiftLabels = false;
 let tableMoveSource = null;
-let tableStatus = "拖动姓名调整岗位或夜班日期，单元格内拖动可调整顺序";
+let tableStatus = "拖动姓名换班";
 let heatmapSwapSource = null;
-let heatmapSwapStatus = "点击热力格选择换班，再点击蓝框候选格完成互换；白班只换白班，仅夜班格可与其他有夜班的格互换";
+let heatmapSwapStatus = "点格换班";
+let annotationMode = "";
+let annotationStatus = "选标签，再点单元格";
+let annotationSaveQueue = Promise.resolve();
+let annotationSaveRevision = 0;
 
 const dateLabel = (dateKey) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -103,7 +108,7 @@ function weekNumber(dateKey) {
 function hasWhiteShift(person, dateKey) {
   return Object.entries(schedule[dateKey] || {}).some(([shiftId, names]) => (
     shiftId !== "night"
-    && !["annual-leave", "expansion", "management"].includes(shiftId)
+    && !["annual-leave", "expansion"].includes(shiftId)
     && names.includes(person)
   ));
 }
@@ -232,6 +237,7 @@ function cellStyle(shifts) {
   if (shifts.includes("annual-leave")) return { category: "other", marker: "年", hasNight, label: "年假" };
   if (shifts.includes("expansion")) return { category: "other", marker: "拓", hasNight, label: "拓展" };
   if (shifts.includes("management")) return { category: "other", marker: "管", hasNight, label: "管理" };
+  if (shifts.includes("outpatient")) return { category: "other", marker: "门", hasNight, label: "门诊" };
   if (operational.some((shift) => shift.startsWith("xray"))) return { category: "xray", marker: "X", hasNight, label: "X线" };
   if (operational.some((shift) => shift.startsWith("ct"))) return { category: "ct", marker: "CT", hasNight, label: "CT/MRI" };
   if (operational.some((shift) => shift.startsWith("us"))) return { category: "us", marker: "US", hasNight, label: "超声" };
@@ -240,8 +246,8 @@ function cellStyle(shifts) {
 
 function parsePreference(raw) {
   if (!raw) return {};
-  const contentValues = new Set(["annual-leave", "rest", "xray", "ct", "us", "expansion", "no-night", "management"]);
-  const exclusiveValues = new Set(["annual-leave", "rest", "expansion", "management"]);
+  const contentValues = new Set(["annual-leave", "rest", "xray", "ct", "us", "outpatient", "expansion", "no-night", "management"]);
+  const exclusiveValues = new Set(["annual-leave", "rest", "expansion"]);
   let content;
   let tone;
   raw.split("+").map((part) => part === "work" ? "day" : part).forEach((part) => {
@@ -251,6 +257,119 @@ function parsePreference(raw) {
   if (exclusiveValues.has(content)) return { content };
   if (content === "no-night" && tone === "night") tone = undefined;
   return { content, tone };
+}
+
+const annotationLabels = {
+  day: "白班", night: "夜班", xray: "X线", ct: "CT/MRI", us: "超声",
+  outpatient: "门诊", "annual-leave": "年假", rest: "普休",
+  expansion: "拓展", "no-night": "不夜", management: "管理", cancel: "取消指定",
+};
+
+function serializePreference({ content, tone }) {
+  return [content, tone].filter(Boolean).join("+");
+}
+
+function nextPreference(raw, action) {
+  if (action === "cancel") return "";
+  const parsed = parsePreference(raw);
+  if (action === "day" || action === "night") {
+    if (parsed.tone === action) return serializePreference({ content: parsed.content });
+  } else if (parsed.content === action) {
+    return serializePreference({ tone: parsed.tone });
+  }
+  if (["annual-leave", "rest", "expansion"].includes(action)) return action;
+  const result = {
+    content: ["annual-leave", "rest", "expansion"].includes(parsed.content)
+      ? undefined
+      : parsed.content,
+    tone: parsed.tone,
+  };
+  if (action === "day" || action === "night") {
+    result.tone = action;
+    if (action === "night" && result.content === "no-night") result.content = undefined;
+  } else {
+    result.content = action;
+    if (action === "no-night" && result.tone === "night") result.tone = undefined;
+  }
+  return serializePreference(result);
+}
+
+function describePreference(raw) {
+  const parsed = parsePreference(raw);
+  const labels = [];
+  if (parsed.content) labels.push(annotationLabels[parsed.content] || parsed.content);
+  if (parsed.tone) labels.push(annotationLabels[parsed.tone] || parsed.tone);
+  return labels.join("+");
+}
+
+function annotationVersionKey() {
+  return String(currentVersion?.id || "").replace(/[^A-Za-z0-9._:-]/g, "-").slice(0, 100);
+}
+
+function updateAnnotationToolbar() {
+  document.querySelectorAll("#annotation-buttons [data-annotation]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.annotation === annotationMode);
+    button.setAttribute("aria-pressed", String(button.dataset.annotation === annotationMode));
+  });
+  const status = document.querySelector("#annotation-status");
+  if (status) status.textContent = annotationStatus;
+}
+
+function queueAnnotationSave() {
+  const revision = ++annotationSaveRevision;
+  const versionKey = annotationVersionKey();
+  const periodKey = currentPeriodKey;
+  const snapshot = cloneData(preferences);
+  annotationStatus = "正在保存标注到云端…";
+  updateAnnotationToolbar();
+  annotationSaveQueue = annotationSaveQueue.catch(() => {}).then(async () => {
+    if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
+    await ScheduleApi.saveAnnotations(versionKey, periodKey, snapshot);
+    if (revision === annotationSaveRevision) {
+      annotationStatus = `云端已保存 · ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
+      updateAnnotationToolbar();
+    }
+  }).catch((error) => {
+    if (revision === annotationSaveRevision) {
+      annotationStatus = `云端保存失败：${error.message || "请稍后重试"}`;
+      updateAnnotationToolbar();
+    }
+  });
+  return annotationSaveQueue;
+}
+
+function applyHeatmapAnnotation(person, dateKey) {
+  const key = `${person}::${dateKey}`;
+  const before = preferences[key] || "";
+  const value = nextPreference(preferences[key], annotationMode);
+  if (value) preferences[key] = value;
+  else delete preferences[key];
+  heatmapSwapSource = null;
+  const removed = annotationMode === "cancel" || (before && value !== before && (
+    (annotationMode === "day" || annotationMode === "night")
+      ? parsePreference(before).tone === annotationMode
+      : parsePreference(before).content === annotationMode
+  ));
+  heatmapSwapStatus = annotationMode === "cancel"
+    ? `${person} ${dateLabel(dateKey).day}已取消全部指定`
+    : `${person} ${dateLabel(dateKey).day}${removed ? "已取消" : "已标注为"}“${annotationLabels[annotationMode]}”`;
+  renderHeatmap();
+  queueAnnotationSave();
+}
+
+async function handleHeatmapAnnotationClick(person, dateKey) {
+  try {
+    annotationStatus = "正在确认修改权限…";
+    updateAnnotationToolbar();
+    if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
+    await ScheduleApi.ensureAccess();
+    applyHeatmapAnnotation(person, dateKey);
+  } catch (error) {
+    annotationStatus = error.message === "已取消设备配对"
+      ? "已取消标注"
+      : `无法标注：${error.message || "登录失败"}`;
+    updateAnnotationToolbar();
+  }
 }
 
 const swapCategoryLabels = { xray: "X线报告", ct: "CT/MRI", us: "超声", night: "夜班" };
@@ -284,7 +403,7 @@ function shiftIdsForSwapCategory(person, dateKey, category) {
 }
 
 function isExclusiveRestPreference(person, dateKey) {
-  return ["annual-leave", "rest", "expansion", "management"]
+  return ["annual-leave", "rest", "outpatient", "expansion", "management"]
     .includes(parsePreference(preferences[`${person}::${dateKey}`]).content);
 }
 
@@ -428,7 +547,7 @@ function isWorkDay(person, dateKey) {
   if (previousWeekStaffByDate[dateKey]) return previousWeekStaffByDate[dateKey].includes(person);
   const parsed = parsePreference(preferences[`${person}::${dateKey}`]);
   return shiftsFor(person, dateKey).length > 0
-    || ["annual-leave", "expansion", "management"].includes(parsed.content)
+    || ["annual-leave", "outpatient", "expansion", "management"].includes(parsed.content)
     || parsed.tone === "day"
     || parsed.tone === "night";
 }
@@ -483,7 +602,8 @@ function getNightStreakByCell(currentDates) {
 
 function mainHeatmapCategory(preference, shifts) {
   const parsed = parsePreference(preference);
-  if (["annual-leave", "expansion", "management"].includes(parsed.content)) return "other";
+  if (parsed.content === "management" && parsed.tone === "night") return "night";
+  if (["annual-leave", "expansion", "management", "outpatient"].includes(parsed.content)) return "other";
   if (parsed.tone === "night") return "night";
   if (parsed.tone === "day") return "day";
   if (parsed.content === "no-night") {
@@ -508,6 +628,7 @@ function mainHeatmapMarker(preference, shifts, restHonored) {
   if (parsed.content === "annual-leave") return "年";
   if (parsed.content === "expansion") return "拓";
   if (parsed.content === "management") return "管";
+  if (parsed.content === "outpatient") return "门";
   if (parsed.content === "rest") return restHonored ? "休" : "待";
   if (parsed.content === "no-night") return "白";
   if (parsed.content === "xray") return "X";
@@ -559,7 +680,7 @@ function renderHeatmap() {
     conflict: "rgba(220, 38, 38, 0.78)",
   };
   const shiftLabels = Object.fromEntries(columns);
-  Object.assign(shiftLabels, { "annual-leave": "年假", expansion: "拓展", management: "管理" });
+  Object.assign(shiftLabels, { "annual-leave": "年假", expansion: "拓展", outpatient: "门诊", management: "管理" });
   const points = visiblePeople.flatMap((person, personIndex) => heatmapDates.map((dateKey, dateIndex) => {
     const x = dateIndex + Math.floor(dateIndex / 7);
     const shifts = shiftsFor(person, dateKey);
@@ -578,9 +699,13 @@ function renderHeatmap() {
     const hasWhiteConflict = whiteShiftIdsFor(person, dateKey).length > 1;
     const labels = shifts.map((shift) => shiftLabels[shift] || shift);
     const { day, weekday } = dateLabel(dateKey);
-    const shiftDescription = parsed.content === "rest"
+    const baseShiftDescription = parsed.content === "rest"
       ? restHonored ? "普通休息（已满足）" : `${labels.join("、")}；普通休息未满足`
       : labels.length ? labels.join("、") : "无排班";
+    const preferenceDescription = describePreference(preference);
+    const shiftDescription = preferenceDescription
+      ? `${baseShiftDescription}；标注：${preferenceDescription}`
+      : baseShiftDescription;
     const streakDescription = streakSeverity === "streak-six" ? "；连续工作6天"
       : streakSeverity === "streak-over" ? "；连续工作超过6天" : "";
     const nightStreakDescription = nightStreakLength ? `；连续夜班${nightStreakLength}天` : "";
@@ -712,7 +837,10 @@ function renderHeatmap() {
         animation: false,
         clip: false,
         states: { inactive: { opacity: 1 } },
-        point: { events: { click() { handleHeatmapSwapClick(this.options.custom); } } },
+        point: { events: { click() {
+          if (annotationMode) handleHeatmapAnnotationClick(this.options.custom.person, this.options.custom.dateKey);
+          else handleHeatmapSwapClick(this.options.custom);
+        } } },
       },
       heatmap: { clip: false, turboThreshold: 0, pointPadding: 0 },
     },
@@ -811,6 +939,131 @@ async function exportExcel() {
     button.disabled = false;
     button.textContent = "导出 Excel";
   }
+}
+
+const icsShiftTimes = { white: [[8, 10], [17, 0]], night: [[17, 0], [21, 30]] };
+const icsAllDayLabels = { "annual-leave": "年假", expansion: "拓展", management: "管理" };
+
+function icsEscape(text) {
+  return String(text)
+    .replace(/\\/g, "\\\\")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,")
+    .replace(/\r?\n/g, "\\n");
+}
+
+function icsFold(line) {
+  const encoder = new TextEncoder();
+  if (encoder.encode(line).length <= 74) return line;
+  const chunks = [];
+  let current = "";
+  let bytes = 0;
+  let limit = 74;
+  for (const char of line) {
+    const size = encoder.encode(char).length;
+    if (bytes + size > limit) {
+      chunks.push(current);
+      current = "";
+      bytes = 0;
+      limit = 73;
+    }
+    current += char;
+    bytes += size;
+  }
+  chunks.push(current);
+  return chunks.join("\r\n ");
+}
+
+function icsUtcStamp(dateKey, [hour, minute]) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day, hour - 8, minute))
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
+}
+
+function icsDateValue(dateKey, offsetDays = 0) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + offsetDays))
+    .toISOString()
+    .slice(0, 10)
+    .replace(/-/g, "");
+}
+
+function personCalendarEvents(person) {
+  const events = [];
+  Object.keys(schedule).sort().forEach((dateKey) => {
+    const whiteLabels = whiteShiftIdsFor(person, dateKey).map((shiftId) => shiftLabelById[shiftId] || shiftId);
+    if (whiteLabels.length) events.push({ kind: "white", dateKey, summary: whiteLabels.join("、") });
+    if (hasNightShift(person, dateKey)) events.push({ kind: "night", dateKey, summary: "夜班" });
+    const restLabel = icsAllDayLabels[parsePreference(preferences[`${person}::${dateKey}`]).content];
+    if (restLabel) events.push({ kind: "allday", dateKey, summary: restLabel });
+  });
+  return events;
+}
+
+function buildPersonCalendar(person, events) {
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const versionLabel = currentVersion?.label || "当前版本";
+  const personIndex = Math.max(people.indexOf(person), 0);
+  const lines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//VetVault//科室排班//CN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    `X-WR-CALNAME:${icsEscape(`${person} 排班 ${versionLabel}`)}`,
+    "X-WR-TIMEZONE:Asia/Shanghai",
+  ];
+  events.forEach(({ kind, dateKey, summary }) => {
+    const timeRange = kind === "night" ? "17:00-21:30" : kind === "white" ? "08:10-17:00" : "全天";
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${dateKey.replace(/-/g, "")}-${kind}-${personIndex}@vetvault-schedule`,
+      `DTSTAMP:${stamp}`,
+      ...(kind === "allday"
+        ? [`DTSTART;VALUE=DATE:${icsDateValue(dateKey)}`, `DTEND;VALUE=DATE:${icsDateValue(dateKey, 1)}`]
+        : [`DTSTART:${icsUtcStamp(dateKey, icsShiftTimes[kind][0])}`, `DTEND:${icsUtcStamp(dateKey, icsShiftTimes[kind][1])}`]),
+      `SUMMARY:${icsEscape(summary)}`,
+      `DESCRIPTION:${icsEscape(`${person}｜${timeRange}｜${versionLabel}`)}`,
+      "TRANSP:OPAQUE",
+      "END:VEVENT",
+    );
+  });
+  lines.push("END:VCALENDAR");
+  return `${lines.map(icsFold).join("\r\n")}\r\n`;
+}
+
+function exportPersonCalendar() {
+  const select = document.querySelector("#ics-person-select");
+  const person = select?.value;
+  if (!person) return;
+  const events = personCalendarEvents(person);
+  if (!events.length) {
+    tableStatus = `${person}在本期没有排班，未生成日历文件`;
+    renderTable();
+    return;
+  }
+  const url = URL.createObjectURL(new Blob([buildPersonCalendar(person, events)], { type: "text/calendar;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${person}_排班_${currentVersion?.label || "当前版本"}.ics`;
+  link.click();
+  URL.revokeObjectURL(url);
+  const nightCount = events.filter((event) => event.kind === "night").length;
+  const whiteCount = events.filter((event) => event.kind === "white").length;
+  tableStatus = `已导出${person}的日历文件（白班${whiteCount}天、夜班${nightCount}天），可导入 Google 日历等应用`;
+  renderTable();
+}
+
+function populateCalendarPeople() {
+  const select = document.querySelector("#ics-person-select");
+  if (!select) return;
+  const previous = select.value;
+  select.innerHTML = groups.map(([group, names]) => (
+    `<optgroup label="${group}">${names.map((name) => `<option value="${name}">${name}</option>`).join("")}</optgroup>`
+  )).join("");
+  if (previous && people.includes(previous)) select.value = previous;
 }
 
 function roomCountsByPerson() {
@@ -933,8 +1186,6 @@ function makeCloudMeta(version, payload = null) {
 
 async function fetchCloudVersions() {
   if (!globalThis.ScheduleApi) return [];
-  const session = await ScheduleApi.checkSession();
-  if (!session.authenticated) return [];
   try {
     const result = await ScheduleApi.listVersions();
     return (result.versions || []).map((item) => makeCloudMeta(item));
@@ -1065,10 +1316,23 @@ async function loadVersion(versionId) {
   preferences = cloneData(payload.preferences || {});
   currentVersion = meta;
   currentPeriodKey = payload.periodKey || meta.periodKey || "";
+  try {
+    if (globalThis.ScheduleApi) {
+      const annotationResult = await ScheduleApi.getAnnotations(annotationVersionKey());
+      if (annotationResult.found) {
+        preferences = cloneData(annotationResult.annotations?.preferences || {});
+        annotationStatus = "已载入该版本的云端标注";
+      } else {
+        annotationStatus = "选标签，再点单元格";
+      }
+    }
+  } catch {
+    annotationStatus = "云端标注暂时无法读取，当前显示版本内已有标注";
+  }
   tableMoveSource = null;
-  tableStatus = "拖动姓名调整岗位或夜班日期，单元格内拖动可调整顺序";
+  tableStatus = "拖动姓名换班";
   heatmapSwapSource = null;
-  heatmapSwapStatus = "点击热力格选择换班，再点击蓝框候选格完成互换；白班与夜班分开互换";
+  heatmapSwapStatus = "点格换班";
   document.querySelector("#period-label").textContent = formatPeriod(payload.periodKey || currentPeriodKey);
   document.querySelector("#version-status").textContent = `${meta.label} · ${meta.status}`;
   document.querySelector("#day-count").textContent = Object.keys(schedule).length;
@@ -1076,6 +1340,7 @@ async function loadVersion(versionId) {
   renderTable();
   renderHeatmap();
   renderRoomChart();
+  updateAnnotationToolbar();
   loading.classList.add("is-hidden");
 }
 
@@ -1172,7 +1437,7 @@ scheduleTable.addEventListener("click", (event) => {
       : nextSource;
     tableStatus = tableMoveSource
       ? `已选择${tableMoveSource.person}，蓝框为可移动位置；在本格内拖到其他姓名可调整顺序`
-      : "拖动姓名调整岗位或夜班日期，单元格内拖动可调整顺序";
+      : "拖动姓名换班";
     renderTable();
     return;
   }
@@ -1182,6 +1447,7 @@ scheduleTable.addEventListener("click", (event) => {
   }
 });
 document.querySelector("#export-button").addEventListener("click", exportExcel);
+document.querySelector("#ics-export-button").addEventListener("click", exportPersonCalendar);
 document.querySelector("#draft-button").addEventListener("click", saveDraft);
 document.querySelector("#save-version-button").addEventListener("click", saveAsNewVersion);
 document.querySelector("#version-select").addEventListener("change", async (event) => {
@@ -1196,6 +1462,19 @@ document.querySelector("#shift-label-toggle").addEventListener("click", (event) 
   event.currentTarget.setAttribute("aria-pressed", String(showShiftLabels));
   renderHeatmap();
 });
+document.querySelector("#annotation-buttons").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-annotation]");
+  if (!button) return;
+  const action = button.dataset.annotation;
+  annotationMode = annotationMode === action ? "" : action;
+  annotationStatus = annotationMode
+    ? `已选择“${annotationLabels[annotationMode]}”，请点击需要标注的人员日期`
+    : "已退出标注模式；点击热力图可继续换班";
+  heatmapSwapSource = null;
+  updateAnnotationToolbar();
+  renderHeatmap();
+});
+populateCalendarPeople();
 let heatmapResizeTimer;
 window.addEventListener("resize", () => {
   clearTimeout(heatmapResizeTimer);

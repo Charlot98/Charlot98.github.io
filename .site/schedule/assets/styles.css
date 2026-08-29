@@ -46,6 +46,9 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(27px, 3vw, 39px); letter-sp
 .save-button:hover { border-color: var(--blue); background: var(--blue); }
 .export-button { border-color: var(--blue); background: var(--blue); color: #fff; }
 .export-button:hover { background: var(--navy); border-color: var(--navy); }
+.ics-button { border-color: var(--blue); color: var(--blue); }
+.ics-button:hover { background: var(--blue-soft); }
+.ics-button:disabled { opacity: .55; }
 .summary { display: flex; gap: 8px; margin-left: auto; }
 .summary div { min-width: 62px; padding: 6px 10px; border-left: 1px solid var(--line); text-align: right; }
 .summary span { display: block; color: var(--muted); font-size: 10px; }
@@ -101,6 +104,16 @@ tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0
 .shift-label-toggle { height: 32px; padding: 0 12px; border: 1px solid #7da4cc; border-radius: 6px; background: rgb(244 249 255 / 90%); color: var(--navy); font-size: 12px; font-weight: 750; white-space: nowrap; }
 .shift-label-toggle:hover { border-color: var(--blue); background: var(--blue-soft); }
 .shift-label-toggle[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: #fff; }
+.annotation-toolbar { display: flex; align-items: center; gap: 14px; padding: 10px 18px; border-bottom: 1px solid var(--line); background: #f8fbfe; }
+.annotation-heading { display: grid; flex: 0 0 auto; gap: 2px; min-width: 225px; }
+.annotation-heading strong { color: var(--navy); font-size: 12px; }
+.annotation-heading span { color: var(--muted); font-size: 10px; }
+.annotation-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.annotation-buttons button { height: 29px; padding: 0 10px; border: 1px solid #b7c8d9; border-radius: 6px; background: #fff; color: #34475c; font-size: 11px; font-weight: 700; }
+.annotation-buttons button:hover { border-color: var(--blue); background: var(--blue-soft); }
+.annotation-buttons button.is-active { border-color: var(--blue); background: var(--blue); color: #fff; box-shadow: 0 0 0 2px rgb(0 144 242 / 14%); }
+.annotation-buttons button.annotation-cancel { border-color: #d5b36c; color: #745614; }
+.annotation-buttons button.annotation-cancel.is-active { border-color: #b18319; background: #b18319; color: #fff; }
 #heatmap { width: max-content; min-width: 100%; background: #fff; }
 .heatmap-stage { position: relative; background: #fff; }
 .heatmap-chart-host { position: absolute; inset: 0; z-index: 1; }
@@ -183,6 +196,8 @@ body.schedule-auth-open { overflow: hidden; }
   .table-scroll { max-height: calc(100vh - 330px); }
   .heatmap-scroll { max-height: calc(100vh - 330px); }
   .panel-header { align-items: flex-start; flex-direction: column; }
+  .annotation-toolbar { align-items: stretch; flex-direction: column; }
+  .annotation-heading { min-width: 0; }
 }
 
 @media print {

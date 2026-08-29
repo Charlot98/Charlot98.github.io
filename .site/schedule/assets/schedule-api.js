@@ -194,6 +194,20 @@
     return payload;
   }
 
+  async function publicFetch(resource) {
+    let response;
+    try {
+      response = await nativeFetch(apiUrl(resource), {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        credentials: 'omit',
+      });
+    } catch {
+      throw new Error('无法连接排班云端服务');
+    }
+    return response;
+  }
+
   async function checkSession() {
     const token = readToken();
     if (!token) return { authenticated: false };
@@ -216,12 +230,12 @@
   }
 
   async function listVersions() {
-    const response = await apiFetch('versions');
+    const response = await publicFetch('versions');
     return readJson(response, '读取云端排班版本失败');
   }
 
   async function getVersion(id) {
-    const response = await apiFetch(`versions/${id}`);
+    const response = await publicFetch(`versions/${encodeURIComponent(id)}`);
     return readJson(response, '读取云端排班详情失败');
   }
 
@@ -234,6 +248,20 @@
     return readJson(response, '保存云端排班失败');
   }
 
+  async function getAnnotations(versionKey) {
+    const response = await publicFetch(`annotations/${encodeURIComponent(versionKey)}`);
+    return readJson(response, '读取云端热力图标注失败');
+  }
+
+  async function saveAnnotations(versionKey, periodKey, preferences) {
+    const response = await apiFetch(`annotations/${encodeURIComponent(versionKey)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ periodKey, preferences }),
+    });
+    return readJson(response, '保存云端热力图标注失败');
+  }
+
   global.ScheduleApi = {
     fetch: apiFetch,
     ensureAccess,
@@ -242,6 +270,8 @@
     listVersions,
     getVersion,
     createVersion,
+    getAnnotations,
+    saveAnnotations,
     endpoint: apiUrl,
     hasToken: () => Boolean(readToken()),
   };
