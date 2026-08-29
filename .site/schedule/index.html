@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=16" />
+    <link rel="stylesheet" href="./assets/styles.css?v=17" />
   </head>
   <body>
     <main class="app-shell">
@@ -31,10 +31,6 @@
           <span>查找人员</span>
           <input id="person-search" type="search" placeholder="输入姓名" autocomplete="off" />
         </label>
-        <label class="version-field">
-          <span>个人日历</span>
-          <select id="ics-person-select" aria-label="选择导出日历的人员"></select>
-        </label>
         <button class="secondary-button draft-button" id="draft-button" type="button">暂存</button>
         <button class="secondary-button save-button" id="save-version-button" type="button">保存到云端</button>
         <button class="secondary-button export-button" id="export-button" type="button">导出 Excel</button>
@@ -43,6 +39,21 @@
           <div><span>人员</span><strong id="people-count">45</strong></div>
           <div><span>工种</span><strong>17</strong></div>
           <div><span>天数</span><strong id="day-count">28</strong></div>
+        </div>
+      </section>
+
+      <section class="panel" id="table-view" aria-label="排班总表">
+        <header class="panel-header">
+          <div>
+            <h2>每日岗位安排</h2>
+          </div>
+          <p id="table-filter-state">拖动姓名换班</p>
+        </header>
+        <div class="table-scroll">
+          <table id="schedule-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
         </div>
       </section>
 
@@ -84,21 +95,6 @@
         </div>
       </section>
 
-      <section class="panel" id="table-view" aria-label="排班总表">
-        <header class="panel-header">
-          <div>
-            <h2>每日岗位安排</h2>
-          </div>
-          <p id="table-filter-state">拖动姓名换班</p>
-        </header>
-        <div class="table-scroll">
-          <table id="schedule-table">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
-
       <section class="panel" id="room-chart-view" aria-label="超声三号屋与四号屋统计">
         <header class="panel-header">
           <div>
@@ -117,6 +113,6 @@
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
     <script src="./assets/schedule-api.js"></script>
-    <script type="module" src="./assets/app.js?v=29"></script>
+    <script type="module" src="./assets/app.js?v=31"></script>
   </body>
 </html>

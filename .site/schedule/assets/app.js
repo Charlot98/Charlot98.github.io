@@ -303,7 +303,7 @@ function describePreference(raw) {
 }
 
 function annotationVersionKey() {
-  return String(currentVersion?.id || "").replace(/[^A-Za-z0-9._:-]/g, "-").slice(0, 100);
+  return `period:${currentPeriodKey}`.replace(/[^A-Za-z0-9._:-]/g, "-").slice(0, 100);
 }
 
 function updateAnnotationToolbar() {
@@ -1034,9 +1034,7 @@ function buildPersonCalendar(person, events) {
   return `${lines.map(icsFold).join("\r\n")}\r\n`;
 }
 
-function exportPersonCalendar() {
-  const select = document.querySelector("#ics-person-select");
-  const person = select?.value;
+function exportPersonCalendar(person) {
   if (!person) return;
   const events = personCalendarEvents(person);
   if (!events.length) {
@@ -1056,14 +1054,60 @@ function exportPersonCalendar() {
   renderTable();
 }
 
-function populateCalendarPeople() {
-  const select = document.querySelector("#ics-person-select");
-  if (!select) return;
-  const previous = select.value;
-  select.innerHTML = groups.map(([group, names]) => (
-    `<optgroup label="${group}">${names.map((name) => `<option value="${name}">${name}</option>`).join("")}</optgroup>`
-  )).join("");
-  if (previous && people.includes(previous)) select.value = previous;
+function calendarDefaultPerson() {
+  const searched = query.trim();
+  if (!searched) return people[0];
+  const exact = people.find((person) => person === searched);
+  if (exact) return exact;
+  const matches = people.filter((person) => person.includes(searched));
+  return matches.length === 1 ? matches[0] : people[0];
+}
+
+function openCalendarExportDialog() {
+  const overlay = document.createElement("div");
+  overlay.className = "calendar-dialog-overlay";
+  const panel = document.createElement("section");
+  panel.className = "calendar-dialog";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "calendarDialogTitle");
+  panel.innerHTML = `
+    <h2 id="calendarDialogTitle">导出个人日历</h2>
+    <form>
+      <label for="calendar-person-select">选择人员</label>
+      <select id="calendar-person-select">${groups.map(([group, names]) => (
+        `<optgroup label="${group}">${names.map((name) => `<option value="${name}">${name}</option>`).join("")}</optgroup>`
+      )).join("")}</select>
+      <div class="calendar-dialog-actions">
+        <button type="button" data-calendar-cancel>取消</button>
+        <button type="submit" class="primary">导出</button>
+      </div>
+    </form>`;
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  document.body.classList.add("calendar-dialog-open");
+  const select = panel.querySelector("select");
+  select.value = calendarDefaultPerson();
+  const cleanup = () => {
+    document.removeEventListener("keydown", handleKeydown);
+    document.body.classList.remove("calendar-dialog-open");
+    overlay.remove();
+  };
+  const handleKeydown = (event) => {
+    if (event.key === "Escape") cleanup();
+  };
+  panel.querySelector("form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const person = select.value;
+    cleanup();
+    exportPersonCalendar(person);
+  });
+  panel.querySelector("[data-calendar-cancel]").addEventListener("click", cleanup);
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) cleanup();
+  });
+  document.addEventListener("keydown", handleKeydown);
+  select.focus();
 }
 
 function roomCountsByPerson() {
@@ -1294,6 +1338,7 @@ async function saveAsNewVersion() {
 }
 
 async function loadVersion(versionId) {
+  await annotationSaveQueue.catch(() => {});
   const meta = versions.find((item) => item.id === versionId);
   if (!meta) throw new Error("未找到排班版本");
   const loading = document.querySelector("#loading-screen");
@@ -1321,7 +1366,7 @@ async function loadVersion(versionId) {
       const annotationResult = await ScheduleApi.getAnnotations(annotationVersionKey());
       if (annotationResult.found) {
         preferences = cloneData(annotationResult.annotations?.preferences || {});
-        annotationStatus = "已载入该版本的云端标注";
+        annotationStatus = "已同步本周期云端标注";
       } else {
         annotationStatus = "选标签，再点单元格";
       }
@@ -1447,7 +1492,7 @@ scheduleTable.addEventListener("click", (event) => {
   }
 });
 document.querySelector("#export-button").addEventListener("click", exportExcel);
-document.querySelector("#ics-export-button").addEventListener("click", exportPersonCalendar);
+document.querySelector("#ics-export-button").addEventListener("click", openCalendarExportDialog);
 document.querySelector("#draft-button").addEventListener("click", saveDraft);
 document.querySelector("#save-version-button").addEventListener("click", saveAsNewVersion);
 document.querySelector("#version-select").addEventListener("change", async (event) => {
@@ -1474,7 +1519,6 @@ document.querySelector("#annotation-buttons").addEventListener("click", (event) 
   updateAnnotationToolbar();
   renderHeatmap();
 });
-populateCalendarPeople();
 let heatmapResizeTimer;
 window.addEventListener("resize", () => {
   clearTimeout(heatmapResizeTimer);
