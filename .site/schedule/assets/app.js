@@ -61,6 +61,10 @@ let annotationMode = "";
 let annotationStatus = "选标签，再点单元格";
 let annotationSaveQueue = Promise.resolve();
 let annotationSaveRevision = 0;
+let versionLoadRevision = 0;
+let heatmapLayoutKey = "";
+let canEdit = false;
+const annotationsByPeriod = new Map();
 
 const dateLabel = (dateKey) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -72,6 +76,68 @@ function personClass(person) {
   if (residents.has(person)) return "resident";
   if (assistants.has(person)) return "assistant";
   return "physician";
+}
+
+function updateAccessModeUI() {
+  document.body.classList.toggle("is-guest", !canEdit);
+  const badge = document.querySelector("#access-mode-badge");
+  const accessButton = document.querySelector("#access-mode-button");
+  badge.textContent = canEdit ? "管理账号" : "游客账号 · 只读";
+  badge.classList.toggle("is-editor", canEdit);
+  accessButton.textContent = canEdit ? "退出管理" : "管理员登录";
+  ["#draft-button", "#save-version-button"].forEach((selector) => {
+    const button = document.querySelector(selector);
+    button.disabled = !canEdit;
+    button.title = canEdit ? "" : "游客账号仅可查看，不能修改或保存排班";
+  });
+  document.querySelectorAll("#annotation-buttons button").forEach((button) => {
+    button.disabled = !canEdit;
+  });
+  tableMoveSource = null;
+  heatmapSwapSource = null;
+  tableStatus = canEdit ? "拖动姓名换班" : "游客账号 · 只读查看";
+  heatmapSwapStatus = canEdit ? "点格换班" : "游客账号 · 只读查看";
+  if (Object.keys(schedule).length) {
+    renderTable();
+    renderHeatmap();
+  }
+}
+
+async function initializeAccessMode() {
+  try {
+    const session = await globalThis.ScheduleApi?.checkSession();
+    canEdit = Boolean(session?.authenticated);
+  } catch {
+    canEdit = false;
+  }
+  updateAccessModeUI();
+}
+
+async function toggleAccessMode() {
+  const button = document.querySelector("#access-mode-button");
+  const originalText = button.textContent;
+  try {
+    button.disabled = true;
+    if (canEdit) {
+      globalThis.ScheduleApi?.clearAccess();
+      canEdit = false;
+    } else {
+      button.textContent = "登录中…";
+      await globalThis.ScheduleApi?.ensureAccess();
+      const session = await globalThis.ScheduleApi?.checkSession();
+      if (!session?.authenticated) throw new Error("管理员登录失败");
+      canEdit = true;
+    }
+    annotationMode = "";
+    updateAccessModeUI();
+    updateAnnotationToolbar();
+  } catch (error) {
+    annotationStatus = error.message === "已取消设备配对" ? "已取消管理员登录" : `登录失败：${error.message || "请稍后重试"}`;
+    updateAnnotationToolbar();
+  } finally {
+    button.disabled = false;
+    if (button.textContent === "登录中…") button.textContent = originalText;
+  }
 }
 
 function renderTable() {
@@ -86,7 +152,7 @@ function renderTable() {
     const cells = columns.map(([id]) => {
       const names = (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query));
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
-      return `<td data-date="${dateKey}" data-column="${id}" class="${id === "night" ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? names.map((name) => `<span draggable="true" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`).join("") : `<span class="empty-cell">—</span>`}</td>`;
+      return `<td data-date="${dateKey}" data-column="${id}" class="${id === "night" ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? names.map((name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`).join("") : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
     const row = `<tr class="${weekend ? "weekend" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
     return weekEnd
@@ -130,7 +196,7 @@ function getWhiteShiftConflictKeys() {
 }
 
 function canMoveAssignment(source, targetDateKey, targetColumnId) {
-  if (!source || !schedule[targetDateKey]) return false;
+  if (!canEdit || !source || !schedule[targetDateKey]) return false;
   if ((schedule[targetDateKey][targetColumnId] || []).includes(source.person)) return false;
   if (source.columnId === "night") {
     return targetColumnId === "night"
@@ -310,16 +376,19 @@ function updateAnnotationToolbar() {
   document.querySelectorAll("#annotation-buttons [data-annotation]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.annotation === annotationMode);
     button.setAttribute("aria-pressed", String(button.dataset.annotation === annotationMode));
+    button.disabled = !canEdit;
   });
   const status = document.querySelector("#annotation-status");
   if (status) status.textContent = annotationStatus;
 }
 
 function queueAnnotationSave() {
+  if (!canEdit) return Promise.resolve();
   const revision = ++annotationSaveRevision;
   const versionKey = annotationVersionKey();
   const periodKey = currentPeriodKey;
   const snapshot = cloneData(preferences);
+  annotationsByPeriod.set(periodKey, cloneData(snapshot));
   annotationStatus = "正在保存标注到云端…";
   updateAnnotationToolbar();
   annotationSaveQueue = annotationSaveQueue.catch(() => {}).then(async () => {
@@ -358,6 +427,11 @@ function applyHeatmapAnnotation(person, dateKey) {
 }
 
 async function handleHeatmapAnnotationClick(person, dateKey) {
+  if (!canEdit) {
+    annotationStatus = "游客账号仅可查看，不能修改云端标注";
+    updateAnnotationToolbar();
+    return;
+  }
   try {
     annotationStatus = "正在确认修改权限…";
     updateAnnotationToolbar();
@@ -425,7 +499,7 @@ function canReceiveNight(person, dateKey) {
 }
 
 function isHeatmapSwapCandidate(person, dateKey, category) {
-  if (!heatmapSwapSource || !category) return false;
+  if (!canEdit || !heatmapSwapSource || !category) return false;
   const source = heatmapSwapSource;
   if (person === source.person
     || dateKey === source.dateKey
@@ -502,6 +576,12 @@ function swapHeatmapAssignments(target) {
 }
 
 function handleHeatmapSwapClick(custom) {
+  if (!canEdit) {
+    heatmapSwapSource = null;
+    heatmapSwapStatus = "游客账号仅可查看排班";
+    renderHeatmap();
+    return;
+  }
   if (!custom?.swappable) {
     heatmapSwapSource = null;
     heatmapSwapStatus = "该单元格没有可交换的白班，也不是仅夜班单元格";
@@ -712,7 +792,7 @@ function renderHeatmap() {
     const pointClassName = isSwapSelected ? "heatmap-swap-selected"
       : isSwapCandidate ? "heatmap-swap-candidate"
         : [
-          swapCategory ? "heatmap-swap-ready" : "",
+          canEdit && swapCategory ? "heatmap-swap-ready" : "",
           isUnscheduledNoNight ? "heatmap-no-night-empty" : "",
           nightStreakLength ? "night-streak" : streakSeverity || "",
         ].filter(Boolean).join(" ");
@@ -734,7 +814,7 @@ function renderHeatmap() {
         noNight: parsed.content === "no-night",
         conflict: hasWhiteConflict,
         category: swapCategory,
-        swappable: Boolean(swapCategory),
+        swappable: canEdit && Boolean(swapCategory),
         streakSeverity,
         nightStreakLength,
       },
@@ -742,8 +822,14 @@ function renderHeatmap() {
   }));
   const chartHeight = 48 + 28 + (yPositions.at(-1) + 1.1) * heatmapCellSize;
   const chartWidth = chartHorizontalMargins + axisCategories.length * heatmapCellSize;
+  const nextLayoutKey = JSON.stringify([heatmapDates, visiblePeople, heatmapCellSize]);
   container.style.height = `${chartHeight}px`;
   container.style.width = `${chartWidth}px`;
+  if (heatmapChart && heatmapLayoutKey === nextLayoutKey && container.querySelector(".heatmap-chart-host")) {
+    heatmapChart.series[0].setData(points, false, false, false);
+    heatmapChart.redraw(false);
+    return;
+  }
   container.innerHTML = "";
   if (heatmapChart) heatmapChart.destroy();
   const stage = document.createElement("div");
@@ -864,6 +950,7 @@ function renderHeatmap() {
       },
     }],
   });
+  heatmapLayoutKey = nextLayoutKey;
   const yAxis = heatmapChart.yAxis[0];
   [...frozenYAxis.children].forEach((label, index) => {
     label.style.top = `${yAxis.toPixels(yPositions[index], false)}px`;
@@ -1132,7 +1219,13 @@ function renderRoomChart() {
       ? index - 0.5
       : null))
     .filter((value) => value !== null);
-  if (roomChart) roomChart.destroy();
+  if (roomChart) {
+    roomChartRooms.forEach(([roomId], index) => {
+      roomChart.series[index].setData(roomChartPeople.map((person) => counts.get(person)[roomId]), false);
+    });
+    roomChart.redraw(false);
+    return;
+  }
   roomChart = window.Highcharts.chart(host, {
     chart: { type: "column", backgroundColor: "transparent", spacing: [12, 8, 4, 8] },
     title: { text: undefined },
@@ -1238,6 +1331,27 @@ async function fetchCloudVersions() {
   }
 }
 
+async function prefetchCloudVersionPayloads() {
+  if (!globalThis.ScheduleApi) return;
+  const pending = versions.filter((item) => item.cloud && !item.payload);
+  for (const meta of pending) {
+    try {
+      const result = await ScheduleApi.getVersion(meta.id);
+      meta.payload = cloneData(result.version.payload);
+      meta.versionNumber = result.version.versionNumber;
+      meta.periodKey = result.version.periodKey;
+    } catch {
+      // 预加载失败不影响用户稍后按需打开该版本。
+    }
+  }
+}
+
+function scheduleCloudVersionPrefetch() {
+  const start = () => prefetchCloudVersionPayloads();
+  if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 1500 });
+  else window.setTimeout(start, 300);
+}
+
 function currentPayload(versionNumber, label) {
   const dates = Object.keys(schedule).sort();
   return {
@@ -1268,6 +1382,7 @@ function makeDraftMeta(payload) {
 }
 
 async function saveDraft() {
+  if (!canEdit) return;
   const button = document.querySelector("#draft-button");
   const originalText = button.textContent;
   try {
@@ -1292,6 +1407,7 @@ async function saveDraft() {
 }
 
 async function saveAsNewVersion() {
+  if (!canEdit) return;
   const button = document.querySelector("#save-version-button");
   const originalText = button.textContent;
   try {
@@ -1338,16 +1454,19 @@ async function saveAsNewVersion() {
 }
 
 async function loadVersion(versionId) {
-  await annotationSaveQueue.catch(() => {});
+  const revision = ++versionLoadRevision;
   const meta = versions.find((item) => item.id === versionId);
   if (!meta) throw new Error("未找到排班版本");
   const loading = document.querySelector("#loading-screen");
   loading.textContent = `正在载入${meta.label}…`;
-  loading.classList.remove("is-hidden");
+  const loadingTimer = window.setTimeout(() => {
+    if (revision === versionLoadRevision) loading.classList.remove("is-hidden");
+  }, 120);
   let payload;
   if (meta.payload) payload = cloneData(meta.payload);
   else if (meta.cloud) {
     const result = await ScheduleApi.getVersion(meta.id);
+    if (revision !== versionLoadRevision) return;
     payload = cloneData(result.version.payload);
     meta.payload = payload;
     meta.versionNumber = result.version.versionNumber;
@@ -1357,27 +1476,36 @@ async function loadVersion(versionId) {
     if (!response.ok) throw new Error(`${meta.label}数据读取失败`);
     payload = await response.json();
   }
+  if (revision !== versionLoadRevision) return;
   schedule = cloneData(payload.schedule);
   preferences = cloneData(payload.preferences || {});
   currentVersion = meta;
   currentPeriodKey = payload.periodKey || meta.periodKey || "";
-  try {
-    if (globalThis.ScheduleApi) {
-      const annotationResult = await ScheduleApi.getAnnotations(annotationVersionKey());
-      if (annotationResult.found) {
-        preferences = cloneData(annotationResult.annotations?.preferences || {});
-        annotationStatus = "已同步本周期云端标注";
-      } else {
-        annotationStatus = "选标签，再点单元格";
+  if (annotationsByPeriod.has(currentPeriodKey)) {
+    preferences = cloneData(annotationsByPeriod.get(currentPeriodKey));
+    annotationStatus = "已载入本周期标注";
+  } else {
+    try {
+      if (globalThis.ScheduleApi) {
+        const annotationResult = await ScheduleApi.getAnnotations(annotationVersionKey());
+        if (revision !== versionLoadRevision) return;
+        if (annotationResult.found) {
+          preferences = cloneData(annotationResult.annotations?.preferences || {});
+          annotationStatus = "已同步本周期云端标注";
+        } else {
+          annotationStatus = "选标签，再点单元格";
+        }
       }
+    } catch {
+      annotationStatus = "云端标注暂时无法读取，当前显示版本内已有标注";
     }
-  } catch {
-    annotationStatus = "云端标注暂时无法读取，当前显示版本内已有标注";
+    annotationsByPeriod.set(currentPeriodKey, cloneData(preferences));
   }
+  if (revision !== versionLoadRevision) return;
   tableMoveSource = null;
-  tableStatus = "拖动姓名换班";
+  tableStatus = canEdit ? "拖动姓名换班" : "游客账号 · 只读查看";
   heatmapSwapSource = null;
-  heatmapSwapStatus = "点格换班";
+  heatmapSwapStatus = canEdit ? "点格换班" : "游客账号 · 只读查看";
   document.querySelector("#period-label").textContent = formatPeriod(payload.periodKey || currentPeriodKey);
   document.querySelector("#version-status").textContent = `${meta.label} · ${meta.status}`;
   document.querySelector("#day-count").textContent = Object.keys(schedule).length;
@@ -1386,6 +1514,7 @@ async function loadVersion(versionId) {
   renderHeatmap();
   renderRoomChart();
   updateAnnotationToolbar();
+  window.clearTimeout(loadingTimer);
   loading.classList.add("is-hidden");
 }
 
@@ -1408,6 +1537,7 @@ async function init() {
     await loadVersion(draftPayload
       ? "local-draft"
       : cloudVersions[0]?.id || savedVersions[0]?.id || manifest.defaultVersion || versions[0]?.id);
+    scheduleCloudVersionPrefetch();
   } catch (error) {
     document.querySelector("#loading-screen").textContent = `${error.message}，请通过本地预览地址打开。`;
   }
@@ -1420,6 +1550,10 @@ document.querySelector("#person-search").addEventListener("input", (event) => {
 });
 const scheduleTable = document.querySelector("#schedule-table");
 scheduleTable.addEventListener("dragstart", (event) => {
+  if (!canEdit) {
+    event.preventDefault();
+    return;
+  }
   const chip = event.target.closest(".person-chip");
   if (!chip) return;
   tableMoveSource = { person: chip.dataset.person, dateKey: chip.dataset.date, columnId: chip.dataset.column };
@@ -1470,6 +1604,7 @@ scheduleTable.addEventListener("dragend", () => {
   }
 });
 scheduleTable.addEventListener("click", (event) => {
+  if (!canEdit) return;
   const chip = event.target.closest(".person-chip");
   if (chip) {
     event.stopPropagation();
@@ -1495,6 +1630,7 @@ document.querySelector("#export-button").addEventListener("click", exportExcel);
 document.querySelector("#ics-export-button").addEventListener("click", openCalendarExportDialog);
 document.querySelector("#draft-button").addEventListener("click", saveDraft);
 document.querySelector("#save-version-button").addEventListener("click", saveAsNewVersion);
+document.querySelector("#access-mode-button").addEventListener("click", toggleAccessMode);
 document.querySelector("#version-select").addEventListener("change", async (event) => {
   try {
     await loadVersion(event.target.value);
@@ -1508,6 +1644,7 @@ document.querySelector("#shift-label-toggle").addEventListener("click", (event) 
   renderHeatmap();
 });
 document.querySelector("#annotation-buttons").addEventListener("click", (event) => {
+  if (!canEdit) return;
   const button = event.target.closest("[data-annotation]");
   if (!button) return;
   const action = button.dataset.annotation;
@@ -1526,4 +1663,4 @@ window.addEventListener("resize", () => {
     if (!document.querySelector("#heatmap-view").classList.contains("is-hidden")) renderHeatmap();
   }, 120);
 });
-init();
+initializeAccessMode().finally(init);

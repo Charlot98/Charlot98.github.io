@@ -27,6 +27,12 @@ button { cursor: pointer; }
 .app-shell { min-height: 100vh; padding: 28px 32px 42px; }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 28px; margin-bottom: 20px; }
 h1 { margin: 0; color: var(--navy); font-size: clamp(27px, 3vw, 39px); letter-spacing: -.035em; }
+.header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+.access-card { display: flex; align-items: center; gap: 8px; padding: 8px 9px 8px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: 0 6px 20px rgb(16 51 94 / 5%); }
+.access-card span { color: #5b6f84; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.access-card span.is-editor { color: var(--blue); }
+.access-card button { height: 29px; padding: 0 10px; border: 1px solid #9db3c8; border-radius: 7px; background: #f8fbfe; color: var(--navy); font-size: 11px; font-weight: 750; }
+.access-card button:hover { border-color: var(--blue); background: var(--blue-soft); }
 .period-card { display: grid; grid-template-columns: auto auto; align-items: center; gap: 4px 16px; min-width: 280px; padding: 14px 17px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); box-shadow: 0 8px 26px rgb(16 51 94 / 8%); }
 .period-card span { color: var(--muted); font-size: 11px; font-weight: 700; }
 .period-card strong { color: var(--navy); font-size: 15px; }
@@ -42,6 +48,8 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(27px, 3vw, 39px); letter-sp
 .version-field select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb(23 102 170 / 12%); }
 .secondary-button { height: 35px; padding: 0 13px; border: 1px solid #8ca9c4; border-radius: 7px; background: #fff; color: var(--navy); font-size: 12px; font-weight: 750; }
 .secondary-button:hover { background: var(--blue-soft); border-color: var(--blue); }
+.secondary-button:disabled { cursor: not-allowed; opacity: .46; filter: grayscale(.25); }
+.secondary-button:disabled:hover { background: inherit; border-color: inherit; }
 .save-button { border-color: var(--navy); background: var(--navy); color: #fff; }
 .save-button:hover { border-color: var(--blue); background: var(--blue); }
 .export-button { border-color: var(--blue); background: var(--blue); color: #fff; }
@@ -114,6 +122,9 @@ tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0
 .annotation-buttons button.is-active { border-color: var(--blue); background: var(--blue); color: #fff; box-shadow: 0 0 0 2px rgb(0 144 242 / 14%); }
 .annotation-buttons button.annotation-cancel { border-color: #d5b36c; color: #745614; }
 .annotation-buttons button.annotation-cancel.is-active { border-color: #b18319; background: #b18319; color: #fff; }
+.annotation-buttons button:disabled { cursor: not-allowed; opacity: .42; }
+body.is-guest .annotation-toolbar { display: none; }
+body.is-guest .person-chip { cursor: default !important; user-select: text; }
 #heatmap { width: max-content; min-width: 100%; background: #fff; }
 .heatmap-stage { position: relative; background: #fff; }
 .heatmap-chart-host { position: absolute; inset: 0; z-index: 1; }
@@ -217,6 +228,8 @@ body.calendar-dialog-open { overflow: hidden; }
 @media (max-width: 780px) {
   .app-shell { padding: 18px 14px 30px; }
   .page-header { align-items: stretch; flex-direction: column; }
+  .header-actions { align-items: stretch; flex-direction: column; }
+  .access-card { justify-content: space-between; }
   .period-card { min-width: 0; }
   .summary { width: 100%; margin-left: 0; }
   .summary div { flex: 1; text-align: center; }

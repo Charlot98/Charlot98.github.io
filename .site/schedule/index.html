@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=17" />
+    <link rel="stylesheet" href="./assets/styles.css?v=18" />
   </head>
   <body>
     <main class="app-shell">
@@ -15,10 +15,16 @@
         <div>
           <h1>排班总览</h1>
         </div>
-        <div class="period-card" aria-label="当前排班周期">
-          <span>排班周期</span>
-          <strong id="period-label">2026.08.31 — 09.27</strong>
-          <em id="version-status">正在载入版本…</em>
+        <div class="header-actions">
+          <div class="access-card" aria-label="当前访问账号">
+            <span id="access-mode-badge">游客账号</span>
+            <button id="access-mode-button" type="button">管理员登录</button>
+          </div>
+          <div class="period-card" aria-label="当前排班周期">
+            <span>排班周期</span>
+            <strong id="period-label">2026.08.31 — 09.27</strong>
+            <em id="version-status">正在载入版本…</em>
+          </div>
         </div>
       </header>
 
@@ -112,7 +118,7 @@
     <script src="./assets/heatmap.js"></script>
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
-    <script src="./assets/schedule-api.js"></script>
-    <script type="module" src="./assets/app.js?v=31"></script>
+    <script src="./assets/schedule-api.js?v=2"></script>
+    <script type="module" src="./assets/app.js?v=33"></script>
   </body>
 </html>
