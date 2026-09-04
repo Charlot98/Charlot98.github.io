@@ -180,6 +180,20 @@ function updateReferenceBasedInputColors() {
 }
 
 // 更新特殊逻辑参数的颜色（FS、EF、VPA、VAO、E）
+// EDV < ESV 时，在 EDV、ESV 标题旁显示红色感叹号
+function updateEdvEsvWarning() {
+    const edvInput = document.querySelector('input[data-param="EDV"]');
+    const esvInput = document.querySelector('input[data-param="ESV"]');
+    const edv = edvInput ? parseFloat(edvInput.value.trim().replace(',', '.')) : NaN;
+    const esv = esvInput ? parseFloat(esvInput.value.trim().replace(',', '.')) : NaN;
+    const abnormal = !isNaN(edv) && !isNaN(esv) && edv < esv;
+
+    ['edvWarning', 'esvWarning'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('is-visible', abnormal);
+    });
+}
+
 function updateSpecialLogicInputColors() {
     // FS: < 25 标蓝，> 55 标红
     const fsInput = document.querySelector('input[data-param="FS"]');
@@ -287,6 +301,8 @@ function updateSpecialLogicInputColors() {
 
     // TAPSE/Ao 显示区：与其它标红逻辑一并刷新（避免仅依赖 input 时偶发不同步）
     calculateTapseOverAo();
+
+    updateEdvEsvWarning();
 }
 
 // 更新所有输入框的颜色（兼容旧函数名）

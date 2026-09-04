@@ -126,6 +126,7 @@ function toggleRightHeartAdvancedInputs() {
     const vpaVaoWrap = document.getElementById('vpaVaoWrap');
     const tvTricuspidRow = document.getElementById('tvTricuspidRow');
     const gsFwsRow = document.getElementById('gsFwsRow');
+    const valuesOnlyBtn = document.getElementById('rightHeartValuesOnlyButton');
 
     if (rightHeartAdvancedEnabled) {
         if (tapseRow) {
@@ -142,7 +143,8 @@ function toggleRightHeartAdvancedInputs() {
         }
         if (vpaVaoWrap) vpaVaoWrap.classList.add('right-heart-advanced');
         if (tvTricuspidRow) tvTricuspidRow.style.display = 'grid';
-        if (gsFwsRow) gsFwsRow.style.display = 'flex';
+        if (gsFwsRow) gsFwsRow.style.display = 'grid';
+        if (valuesOnlyBtn) valuesOnlyBtn.style.display = '';
         updateReferenceValues();
     } else {
         if (tapseRow) tapseRow.style.display = 'none';
@@ -151,6 +153,14 @@ function toggleRightHeartAdvancedInputs() {
         if (vpaVaoWrap) vpaVaoWrap.classList.remove('right-heart-advanced');
         if (tvTricuspidRow) tvTricuspidRow.style.display = 'none';
         if (gsFwsRow) gsFwsRow.style.display = 'none';
+        // 关闭右心高阶时一并关闭「仅显示含数值」并隐藏按钮
+        rightHeartValuesOnlyEnabled = false;
+        delete parameters['仅显示含数值的参数'];
+        if (valuesOnlyBtn) {
+            valuesOnlyBtn.style.display = 'none';
+            valuesOnlyBtn.classList.remove('active');
+            valuesOnlyBtn.setAttribute('aria-pressed', 'false');
+        }
         // 关闭时仅隐藏区块，不清空输入与 parameters，便于再次开启时恢复原内容
     }
 }

@@ -3,6 +3,17 @@ function isHcmFeatureTagActive(tagName) {
     return !!(button && button.classList.contains('active'));
 }
 
+function isFalseChordaeTagActive() {
+    const button = document.querySelector('.valve-flow-tag-feature[data-tag="假腱索"]');
+    return !!(button && button.classList.contains('active'));
+}
+
+function clearFalseChordaeTag() {
+    document.querySelectorAll('.valve-flow-tag-feature[data-tag="假腱索"]').forEach(btn => {
+        btn.classList.remove('active');
+    });
+}
+
 function setDefaultHcmFeatureTags() {
     if (typeof selectedDiseaseType === 'undefined' || selectedDiseaseType !== 'HCM') return;
     const sam = document.querySelector('.valve-flow-tag-hcm[data-tag="SAM"]');
@@ -203,6 +214,7 @@ document.addEventListener('click', function(e) {
 
         // HCM 特征标签（SAM / 左心室流出道湍流）：不参与瓣口反流速输入框
         if (button.classList.contains('valve-flow-tag-hcm')) {
+            if (typeof selectedDiseaseType === 'undefined' || selectedDiseaseType !== 'HCM') return;
             const lvotBtn = document.querySelector('.valve-flow-tag-hcm[data-tag="左心室流出道湍流"]');
             if (tag === 'SAM') {
                 const wasActive = button.classList.contains('active');
@@ -214,6 +226,13 @@ document.addEventListener('click', function(e) {
             } else if (tag === '左心室流出道湍流') {
                 button.classList.toggle('active');
             }
+            generateTemplate();
+            return;
+        }
+
+        // 心肌特征标签（假腱索等）：仅切换激活态并刷新模板
+        if (button.classList.contains('valve-flow-tag-feature')) {
+            button.classList.toggle('active');
             generateTemplate();
             return;
         }

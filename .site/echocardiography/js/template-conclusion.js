@@ -66,12 +66,12 @@ function evaluateChamberSizeConclusion(get, referenceRange) {
 
 /**
  * 收缩/舒张功能结论一行（Normal / MMVD / HCM 等共用）
- * 猫 + EA融合 → 舒张功能评估受限；E/A、E/E'、ESVI 规则与健康结论一致
+ * 有 EA融合 → 舒张功能评估受限；E/A、E/E'、ESVI 规则与健康结论一致
  */
 function buildSystolicDiastolicFuncConclusionLine(get, referenceRange, diseaseType, lineIndex) {
     const eaFusion = get('EA融合', '');
     const isCatReference = referenceRange === '猫' || referenceRange === '猫（含体重）';
-    const hasEAFusion = isCatReference && eaFusion;
+    const hasEAFusion = !!((eaFusion || '').toString().trim());
 
     const eAValue = get('E/A', '') || '';
     const eOverEValue = get("E/E'", '') || '';
@@ -154,9 +154,8 @@ function buildSystolicOnlyFuncConclusionLine(get, referenceRange, lineIndex) {
 
 /** 单独评估舒张功能状态（供 buildLvStrainConclusionLine 使用） */
 function getDiastolicStatus(get, referenceRange) {
-    const isCatRef = referenceRange === '猫' || referenceRange === '猫（含体重）';
-    const eaFusion = get('EA融合', '');
-    if (isCatRef && eaFusion) return '评估受限';
+    const eaFusion = (get('EA融合', '') || '').toString().trim();
+    if (eaFusion) return '评估受限';
 
     const eAClean = (get('E/A', '') || '').replace(/[＜<]/g, '<').replace(/[＞>]/g, '>');
     if (eAClean.indexOf('>2') !== -1) return '失代偿';
@@ -235,16 +234,38 @@ function buildLvStrainConclusionLine(get, referenceRange, diseaseType, lineIndex
 /** 右心高阶开启时追加右心室应变结论行 */
 function appendRvStrainConclusionIfEnabled(conclusion) {
     if (!rightHeartAdvancedEnabled) return conclusion;
+    if (isRightHeartValuesOnlyMode()) {
+        const get = (key, defaultValue = '') => parameters[key] || defaultValue;
+        if (!hasRhParamValue(get, 'GS') && !hasRhParamValue(get, 'FWS')) {
+            return conclusion;
+        }
+    }
     const trimmed = (conclusion || '').trimEnd();
     const nextIndex = trimmed.split('\n').filter(l => /^\s*\d+\./.test(l)).length + 1;
     return `${trimmed}\n  ${nextIndex}.右心室收缩功能尚可，右心室各节段纵向应变尚可。\n`;
+}
+
+/** 假腱索标签激活时，在结论末尾单独编号追加 */
+function appendFalseChordaeConclusionIfEnabled(conclusion) {
+    if (typeof isFalseChordaeTagActive !== 'function' || !isFalseChordaeTagActive()) {
+        return conclusion;
+    }
+    const trimmed = (conclusion || '').trimEnd();
+    const nextIndex = trimmed.split('\n').filter(l => /^\s*\d+\./.test(l)).length + 1;
+    return `${trimmed}\n  ${nextIndex}.左心室假腱索。\n`;
+}
+
+function appendTrailingConclusions(conclusion) {
+    return appendFalseChordaeConclusionIfEnabled(appendRvStrainConclusionIfEnabled(conclusion));
 }
 
 function generateConclusionText(diseaseType, referenceRange, params) {
     const get = (key, defaultValue = '') => parameters[key] || defaultValue;
 
     if (leftHeartAdvancedOnlyEnabled) {
-        return buildLvStrainConclusionLine(get, referenceRange, diseaseType, 1, { systolicOnly: true }) + '\n';
+        return appendFalseChordaeConclusionIfEnabled(
+            buildLvStrainConclusionLine(get, referenceRange, diseaseType, 1, { systolicOnly: true }) + '\n'
+        );
     }
 
     // 获取参考数据
@@ -281,7 +302,7 @@ function generateConclusionText(diseaseType, referenceRange, params) {
         conclusion += (leftHeartAdvancedEnabled
             ? buildLvStrainConclusionLine(get, referenceRange, 'HCM', 3)
             : buildSystolicDiastolicFuncConclusionLine(get, referenceRange, 'HCM', 3)) + '\n';
-        return appendRvStrainConclusionIfEnabled(conclusion);
+        return appendTrailingConclusions(conclusion);
     }
 
     // PDA
@@ -299,7 +320,7 @@ function generateConclusionText(diseaseType, referenceRange, params) {
         } else {
             conclusion += '  3.左心室收缩功能下降，舒张功能尚可。\n';
         }
-        conclusion = appendRvStrainConclusionIfEnabled(conclusion);
+        conclusion = appendTrailingConclusions(conclusion);
         conclusion += '\n备注: 若进行手术/封堵治疗，建议术后当日、术后1个月、3个月、6个月、12个月各复查一次心超。\n';
         return conclusion;
     }
@@ -332,7 +353,7 @@ function generateConclusionText(diseaseType, referenceRange, params) {
         conclusion += (leftHeartAdvancedEnabled
             ? buildLvStrainConclusionLine(get, referenceRange, 'DCM', 3)
             : buildSystolicDiastolicFuncConclusionLine(get, referenceRange, 'DCM', 3)) + '\n';
-        return appendRvStrainConclusionIfEnabled(conclusion);
+        return appendTrailingConclusions(conclusion);
     }
 
     // =========================
@@ -479,6 +500,16 @@ function generateConclusionText(diseaseType, referenceRange, params) {
 
         // 容量/结构异常
         const chamber = evaluateChamberSizeConclusion(get, referenceRange);
+        if (chamber.hasAbnormality) {
+            // 前面的反流分支可能已写入默认“腔室大小未见异常”。
+            // 容量异常命中时删除该默认行，避免与容量过载结论重复或矛盾。
+            conclusion = conclusion
+                .replace(/^\s*\d+\.心脏各腔室大小未见明显异常。\n?/gm, '')
+                .replace(
+                    /^(\s*\d+\.)心脏各腔室大小、室壁厚度、各瓣口血流未见明显异常。/gm,
+                    '$1各室壁厚度、各瓣口血流未见明显异常。'
+                );
+        }
         const numberedLinesForIndex = conclusion.trimEnd().split('\n').filter(l => /^\s*\d+\./.test(l)).length;
         let idx = numberedLinesForIndex + 1;
 
@@ -507,12 +538,12 @@ function generateConclusionText(diseaseType, referenceRange, params) {
             }
         }
 
-        return appendRvStrainConclusionIfEnabled(conclusion);
+        return appendTrailingConclusions(conclusion);
     }
 
     // 兜底（正常/未选中用健康模板）
     if (diseaseType === 'Normal' || !diseaseType) {
-        return appendRvStrainConclusionIfEnabled(generateHealthConclusionFromTemplate(params));
+        return appendTrailingConclusions(generateHealthConclusionFromTemplate(params));
     }
 
     // 其余疾病类型兜底

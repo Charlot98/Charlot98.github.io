@@ -71,9 +71,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 默认不激活「右心高阶」
     rightHeartAdvancedEnabled = false;
+    rightHeartValuesOnlyEnabled = false;
     const rhInitBtn = document.getElementById('rightHeartAdvancedButton');
     if (rhInitBtn) rhInitBtn.classList.remove('active');
     delete parameters['右心高阶'];
+    delete parameters['仅显示含数值的参数'];
     toggleRightHeartAdvancedInputs();
 
     leftHeartAdvancedEnabled = false;

@@ -80,12 +80,8 @@ function setupRefreshButton() {
         if (rhythmBtn) rhythmBtn.classList.remove('active');
         delete parameters['节律不齐'];
         handleDiseaseTypeChange('Normal');
-        const dpdtShowBtn = document.querySelector('#dpdtInputItem button[data-param="dp/dt显示"][data-value="显示"]');
-        if (dpdtShowBtn) dpdtShowBtn.classList.remove('active');
-        delete parameters['dp/dt显示'];
+        if (typeof clearFalseChordaeTag === 'function') clearFalseChordaeTag();
 
-        const laVolumeShowBtn = document.querySelector('#laVolumeInputItem button[data-param="LA Volume显示"][data-value="显示"]');
-        if (laVolumeShowBtn) laVolumeShowBtn.classList.remove('active');
         delete parameters['LA Volume显示'];
 
         calculateLAVi();
@@ -101,9 +97,11 @@ function setupRefreshButton() {
         toggleSimpsonInputs();
 
         rightHeartAdvancedEnabled = false;
+        rightHeartValuesOnlyEnabled = false;
         const rightHeartBtn = document.getElementById('rightHeartAdvancedButton');
         if (rightHeartBtn) rightHeartBtn.classList.remove('active');
         delete parameters['右心高阶'];
+        delete parameters['仅显示含数值的参数'];
         toggleRightHeartAdvancedInputs();
 
         leftHeartAdvancedEnabled = false;

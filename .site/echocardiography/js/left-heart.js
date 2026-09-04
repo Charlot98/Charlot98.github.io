@@ -165,6 +165,7 @@ function toggleLeftHeartAdvancedInputs() {
     const active = leftHeartAdvancedEnabled || leftHeartAdvancedOnlyEnabled;
     if (panel) {
         panel.classList.toggle('lv-strain-panel--inactive', !active);
+        panel.classList.toggle('lv-strain-panel--toggle-off', !!leftHeartAdvancedEnabled);
         panel.setAttribute('aria-hidden', active ? 'false' : 'true');
     }
     const onlyToggle = document.getElementById('lvStrainOnlyToggle');
@@ -195,6 +196,22 @@ function activateLeftHeartAdvanced() {
     if (typeof generateTemplate === 'function') generateTemplate();
 }
 
+function deactivateLeftHeartAdvanced() {
+    if (!leftHeartAdvancedEnabled) return;
+    leftHeartAdvancedEnabled = false;
+    const btn = document.getElementById('leftHeartAdvancedButton');
+    if (btn) btn.classList.remove('active');
+    delete parameters['左心高阶'];
+    toggleLeftHeartAdvancedInputs();
+    if (typeof generateTemplate === 'function') generateTemplate();
+}
+
+function isLvStrainInteractiveTarget(target) {
+    return !!(target && target.closest(
+        '.lv-strain-only-toggle, input, button, .lv-strain-seg, .lv-strain-eraser-btn, .gs-fws-input-wrap'
+    ));
+}
+
 function bindLvStrainOnlyToggle() {
     const toggle = document.getElementById('lvStrainOnlyToggle');
     if (!toggle || toggle.dataset.lvStrainOnlyBound === '1') return;
@@ -213,9 +230,14 @@ function bindLvStrainPanelActivate() {
     if (!panel || panel.dataset.lvStrainActivateBound === '1') return;
     panel.dataset.lvStrainActivateBound = '1';
     panel.addEventListener('click', function(e) {
-        if (e.target.closest('.lv-strain-only-toggle')) return;
-        if (!panel.classList.contains('lv-strain-panel--inactive')) return;
-        activateLeftHeartAdvanced();
+        if (isLvStrainInteractiveTarget(e.target)) return;
+        if (panel.classList.contains('lv-strain-panel--inactive')) {
+            activateLeftHeartAdvanced();
+            return;
+        }
+        if (leftHeartAdvancedEnabled) {
+            deactivateLeftHeartAdvanced();
+        }
     });
 }
 

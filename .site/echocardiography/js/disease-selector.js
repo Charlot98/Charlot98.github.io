@@ -6,26 +6,21 @@ function isMitralRegurgTagActive() {
     return !!(mitralBtn && mitralBtn.classList.contains('active'));
 }
 
-// dp/dt：MMVD 或「二尖瓣反流」激活时显示；二尖瓣反流激活时自动点亮“显示”
+// dp/dt：MMVD 或「二尖瓣反流」激活时显示输入框；有数值才写入所见
 function updateDpdtVisibilityByMitralRegurg() {
     const dpdtItem = document.getElementById('dpdtInputItem');
     if (!dpdtItem) return;
 
     const mitralActive = isMitralRegurgTagActive();
     const shouldShowField = selectedDiseaseType === 'MMVD' || mitralActive;
-    const dpdtShowBtn = dpdtItem.querySelector('button[data-param="dp/dt显示"][data-value="显示"]');
 
     if (shouldShowField) {
         dpdtItem.style.display = 'flex';
-        const shouldShow = parameters['dp/dt显示'] === '显示';
-        if (dpdtShowBtn) dpdtShowBtn.classList.toggle('active', shouldShow);
     } else {
         dpdtItem.style.display = 'none';
         delete parameters['dp/dt'];
-        delete parameters['dp/dt显示'];
         const dpdtInput = dpdtItem.querySelector('input[data-param="dp/dt"]');
         if (dpdtInput) dpdtInput.value = '';
-        if (dpdtShowBtn) dpdtShowBtn.classList.remove('active');
     }
     updateSpecialLogicInputColors();
 }
@@ -34,35 +29,16 @@ function updateDpdtVisibilityByMitralRegurg() {
 function handleDiseaseTypeChange(diseaseType) {
     saveSimpsonDataToCache();
     unlockRightSidebarTemplateText();
-    selectedDiseaseType = diseaseType;
+    // 再次点击当前疾病标签表示取消选择；无疾病选择时回到「正常」。
+    const isDeselecting = selectedDiseaseType === diseaseType && diseaseType !== 'Normal';
+    selectedDiseaseType = isDeselecting ? 'Normal' : diseaseType;
 
-    // 移除所有按钮的激活状态
-        document.querySelectorAll('.disease-tag').forEach(btn => {
-            btn.classList.remove('active');
-        });
-
-    // 移除下拉框的激活状态
-    const moreDiseaseSelect = document.getElementById('moreDiseaseSelect');
-    if (moreDiseaseSelect) {
-        moreDiseaseSelect.classList.remove('active');
-    }
-
-    // 激活对应的按钮（如果在顶栏）
-    const activeButton = document.querySelector(`.disease-tag[data-value="${diseaseType}"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
-        // 如果是从顶栏按钮选择的，重置下拉框
-        if (moreDiseaseSelect) {
-            moreDiseaseSelect.value = '';
-            moreDiseaseSelect.classList.remove('active');
-        }
-    } else {
-        // 如果不在顶栏按钮中，说明是从下拉框选择的，激活下拉框
-        if (moreDiseaseSelect && (diseaseType === 'HCM' || diseaseType === 'PDA' || diseaseType === 'DCM' || diseaseType === 'RCM' || diseaseType === 'TOF')) {
-            moreDiseaseSelect.value = diseaseType;
-            moreDiseaseSelect.classList.add('active');
-        }
-    }
+    // 移除所有按钮的激活状态，再激活当前或兜底的「正常」标签。
+    document.querySelectorAll('.disease-tag').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeButton = document.querySelector(`.disease-tag[data-value="${selectedDiseaseType}"]`);
+    if (activeButton) activeButton.classList.add('active');
 
         // 根据疾病类型自动选择参考范围
         const referenceRangeSelect = document.getElementById('referenceRangeSelect');
@@ -163,15 +139,13 @@ function handleDiseaseTypeChange(diseaseType) {
             }
         }
 
-        // HCM 特征标签行
-        const hcmInputs = document.getElementById('hcmSpecificInputs');
-        if (hcmInputs) {
-            if (selectedDiseaseType === 'HCM') {
-                hcmInputs.style.display = 'block';
-            } else {
-                hcmInputs.style.display = 'none';
-                clearHcmFeatureTags();
-            }
+        // HCM 特征标签：仅在 HCM 模型下显示；切离 HCM 时一并清除激活态。
+        const myocardiumFeatureTagRow = document.getElementById('myocardiumFeatureTagRow');
+        if (myocardiumFeatureTagRow) {
+            myocardiumFeatureTagRow.classList.toggle('hcm-features-visible', selectedDiseaseType === 'HCM');
+        }
+        if (selectedDiseaseType !== 'HCM') {
+            if (typeof clearHcmFeatureTags === 'function') clearHcmFeatureTags();
         }
 
         // DCM：EPSS / SI（球形指数）
@@ -206,86 +180,46 @@ function handleDiseaseTypeChange(diseaseType) {
         updateReferenceValues();
 
         // 根据疾病类型自动勾选瓣口血流标签
-        setDefaultValveFlowTags(diseaseType);
-        if (selectedDiseaseType === 'HCM') {
-            setDefaultHcmFeatureTags();
-        }
+        setDefaultValveFlowTags(selectedDiseaseType);
         updateDpdtVisibilityByMitralRegurg();
 
         generateTemplate();
 }
 
-// 根据疾病类型自动勾选瓣口血流标签
+// 疾病模型切换时保留用户已选择的瓣口血流标签；仅 MMVD 确保二尖瓣反流处于激活状态。
 function setDefaultValveFlowTags(diseaseType) {
-    // 先取消所有瓣口血流标签的激活状态
-    document.querySelectorAll('.valve-flow-tag:not(.valve-flow-tag-hcm)').forEach(btn => {
-        btn.classList.remove('active');
-        const tag = btn.getAttribute('data-tag');
-        toggleRegurgitationVelocityInput(tag, false);
-    });
+    const normalButton = document.querySelector('.valve-flow-tag-normal[data-tag="各瓣口血流正常"]');
+    const mitralButton = document.querySelector('.valve-flow-tag-red[data-tag="二尖瓣反流"]');
 
-    // 根据疾病类型激活对应的标签
-    let tagsToActivate = [];
+    if (diseaseType === 'Normal') {
+        if (!normalButton || normalButton.classList.contains('active')) return;
 
-    switch(diseaseType) {
-        case 'Normal':
-            tagsToActivate = ['各瓣口血流正常'];
-            break;
-        case 'MMVD':
-            tagsToActivate = ['二尖瓣反流', '三尖瓣反流'];
-            break;
-        case 'HCM':
-            tagsToActivate = ['二尖瓣反流'];
-            break;
-        case 'PDA':
-        case 'RCM':
-        case 'TOF':
-            // 所见/结论与「健康」一致：默认各瓣口血流正常
-            tagsToActivate = ['各瓣口血流正常'];
-            break;
-        case 'DCM':
-            // DCM 默认二尖瓣轻度反流（程度默认值由反流程度按钮控制）
-            tagsToActivate = ['二尖瓣反流'];
-            break;
-        default:
-            // 其他疾病类型不自动勾选
-            return;
+        // 「各瓣口血流正常」与所有反流标签互斥，切回正常时同步清除反流输入项。
+        document.querySelectorAll('.valve-flow-tag-red.active').forEach(button => {
+            button.classList.remove('active');
+            toggleRegurgitationVelocityInput(button.getAttribute('data-tag'), false);
+        });
+        normalButton.classList.add('active');
+        return;
     }
 
-    // 激活对应的标签
-    tagsToActivate.forEach(tagName => {
-        const button = document.querySelector(`.valve-flow-tag:not(.valve-flow-tag-hcm)[data-tag="${tagName}"]`);
-        if (button) {
-            button.classList.add('active');
-            toggleRegurgitationVelocityInput(tagName, true);
-        }
-    });
+    if (diseaseType !== 'MMVD') return;
+
+    if (!mitralButton || mitralButton.classList.contains('active')) return;
+
+    // 「各瓣口血流正常」与反流标签互斥；切换至 MMVD 时仅撤销该互斥状态，保留其他反流标签。
+    if (normalButton) normalButton.classList.remove('active');
+    mitralButton.classList.add('active');
+    toggleRegurgitationVelocityInput('二尖瓣反流', true);
 }
 
 // 顶栏疾病类型按钮点击事件
 document.querySelectorAll('.disease-tag').forEach(button => {
     button.addEventListener('click', function() {
         const diseaseType = this.getAttribute('data-value');
-        // 重置下拉框
-        const moreDiseaseSelect = document.getElementById('moreDiseaseSelect');
-        if (moreDiseaseSelect) {
-            moreDiseaseSelect.value = '';
-            moreDiseaseSelect.classList.remove('active');
-        }
         handleDiseaseTypeChange(diseaseType);
     });
 });
-
-// 更多选择下拉框事件
-const moreDiseaseSelect = document.getElementById('moreDiseaseSelect');
-if (moreDiseaseSelect) {
-    moreDiseaseSelect.addEventListener('change', function() {
-        if (this.value) {
-            handleDiseaseTypeChange(this.value);
-        }
-    });
-
-}
 
 // 参考范围下拉选择框事件
 const referenceRangeSelect = document.getElementById('referenceRangeSelect');
@@ -365,6 +299,25 @@ if (rightHeartAdvancedButton) {
             delete parameters['右心高阶'];
         }
         toggleRightHeartAdvancedInputs();
+        generateTemplate();
+    });
+}
+
+// 右心高阶开启后：「仅显示含数值的参数」——右侧栏只输出有值的右心高阶项
+const rightHeartValuesOnlyButton = document.getElementById('rightHeartValuesOnlyButton');
+if (rightHeartValuesOnlyButton) {
+    rightHeartValuesOnlyButton.addEventListener('click', function() {
+        if (!rightHeartAdvancedEnabled) return;
+        rightHeartValuesOnlyEnabled = !rightHeartValuesOnlyEnabled;
+        if (rightHeartValuesOnlyEnabled) {
+            this.classList.add('active');
+            this.setAttribute('aria-pressed', 'true');
+            parameters['仅显示含数值的参数'] = '是';
+        } else {
+            this.classList.remove('active');
+            this.setAttribute('aria-pressed', 'false');
+            delete parameters['仅显示含数值的参数'];
+        }
         generateTemplate();
     });
 }

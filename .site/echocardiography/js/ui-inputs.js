@@ -124,6 +124,11 @@ function setupInputListeners() {
                 calculateEOverA();
             }
 
+            // 如果 TV 的 E 或 A 变化，自动计算 TV 的 E/A
+            if (paramName === 'E（TV）' || paramName === 'A（TV）') {
+                calculateTvEOverA();
+            }
+
             // 如果E或E'变化，自动计算E/E'
             if (paramName === 'E' || paramName === "E'") {
                 calculateEOverEPrime();
@@ -149,17 +154,6 @@ function setupInputListeners() {
             // 如果特殊逻辑参数变化，更新颜色显示
             if (['FS', 'EF', 'EPSS', 'SI', 'VPA', 'VAO', 'E', 'dp/dt', 'EA融合', "E/E'"].includes(paramName)) {
                 updateSpecialLogicInputColors();
-            }
-            // dp/dt：当输入框有内容时，自动跳转为"显示"
-            if (paramName === 'dp/dt' && value) {
-                const dpdtItem = document.getElementById('dpdtInputItem');
-                if (dpdtItem) {
-                    const showBtn = dpdtItem.querySelector('button[data-param="dp/dt显示"][data-value="显示"]');
-                    if (showBtn) {
-                        showBtn.classList.add('active');
-                        parameters['dp/dt显示'] = '显示';
-                    }
-                }
             }
 
             // LA Volume：当输入框有内容时，自动跳转为"显示"
@@ -391,48 +385,6 @@ function setLeftSidebarInputPlaceholders() {
         }
     });
 }
-
-// 强制处理"显示"开关点击（避免绑定时机/重复初始化导致的失效）
-// 说明：这些按钮在不同模块里可能被重置/重建，直接绑定 click 可能出现偶发失效；
-// 这里使用 capture 阶段统一接管，确保点击后参数与样式一定同步。
-document.addEventListener('click', function(e) {
-    const dpdtBtn = e.target.closest?.('button[data-param="dp/dt显示"][data-value="显示"]');
-    if (dpdtBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        const willShow = !dpdtBtn.classList.contains('active');
-        dpdtBtn.classList.toggle('active', willShow);
-
-        if (willShow) {
-            parameters['dp/dt显示'] = '显示';
-        } else {
-            delete parameters['dp/dt显示'];
-        }
-
-        updateSpecialLogicInputColors();
-        generateTemplate();
-
-        return;
-    }
-
-    const laBtn = e.target.closest?.('button[data-param="LA Volume显示"][data-value="显示"]');
-    if (laBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const willShow = !laBtn.classList.contains('active');
-        laBtn.classList.toggle('active', willShow);
-
-        if (willShow) {
-            parameters['LA Volume显示'] = '显示';
-        } else {
-            delete parameters['LA Volume显示'];
-        }
-
-        generateTemplate();
-
-}
-}, true);
 
 // 设置 tooltip 提示功能
 function setupTooltips() {

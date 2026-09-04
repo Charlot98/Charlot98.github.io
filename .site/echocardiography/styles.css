@@ -6,15 +6,9 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
-    /* 背景：略灰底，左侧50%与左侧栏区域同色遮罩，右侧纹理，固定不随滚动 */
+    /* 背景：略灰底，固定不随滚动 */
     background-color: #f1f3f5;
-    background-image:
-        linear-gradient(to right, #f1f3f5 0%, #f1f3f5 50%, transparent 50%),
-        radial-gradient(circle, #d1d5db 1px, transparent 1px);
-    background-size: 100% 100%, 20px 20px;
-    background-position: 0 0, 0 0;
-    background-repeat: no-repeat, repeat;
-    background-attachment: fixed, fixed;
+    background-image: none;
     color: #333;
     margin: 0;
     padding: 0;
@@ -56,20 +50,22 @@ body {
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
-    width: 40%;
+    width: auto;
+    max-width: none;
     min-width: 0;
-    flex-shrink: 0;
+    flex: 1 1 auto;
 }
 
-/* 参考、体重等：顶栏 40% 处起左对齐 */
+/* 参考、体重整体右对齐（刷新按钮仍跟在其后） */
 .top-row .reference-weight-wrap {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 12px;
     flex-wrap: wrap;
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
-    margin-left: 0;
+    margin-left: auto;
 }
 
 .ocr-status-tag {
@@ -286,7 +282,7 @@ body {
     color: #b91c1c;
 }
 
-/* 右侧栏：截图快捷键说明（与整体蓝灰风格统一，不拦截点击） */
+/* 右侧栏：截图快捷键说明（直角、灰虚线边框、无阴影） */
 .right-sidebar-snip-hint {
     display: flex;
     flex-wrap: wrap;
@@ -301,11 +297,11 @@ body {
     font-size: 13px;
     line-height: 1.5;
     font-weight: 500;
-    color: #4f5f75;
-    background: rgba(240, 246, 255, 0.9);
-    border: 1px solid rgba(74, 144, 226, 0.32);
-    border-radius: 10px;
-    box-shadow: 0 3px 12px rgba(74, 144, 226, 0.14);
+    color: #555;
+    background: #fff;
+    border: 1px dashed #9aa0a6;
+    border-radius: 0;
+    box-shadow: none;
     pointer-events: none;
     user-select: none;
     -webkit-font-smoothing: antialiased;
@@ -313,7 +309,7 @@ body {
 }
 
 .right-sidebar-snip-hint-intro {
-    color: #3f6ea5;
+    color: #555;
     font-weight: 600;
 }
 
@@ -325,7 +321,7 @@ body {
 }
 
 .right-sidebar-snip-plus {
-    color: #4a90e2;
+    color: #666;
     font-size: 11px;
     font-weight: 700;
     padding: 0 1px;
@@ -338,11 +334,11 @@ body {
     font-size: 12px;
     font-weight: 500;
     line-height: 1.35;
-    color: #356ea7;
-    background: #fff;
-    border: 1px solid #bcd8f3;
-    border-radius: 5px;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 1px 4px rgba(74, 144, 226, 0.12);
+    color: #fff;
+    background: #555;
+    border: 1px solid #555;
+    border-radius: 0;
+    box-shadow: none;
     font-family: inherit;
 }
 
@@ -352,14 +348,14 @@ body {
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 0;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .simpson-tag {
-    padding: 4px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: #f5f5f5;
+    padding: 4px 10px;
+    border: 1px solid #e1e7ef;
+    border-radius: 6px;
+    background-color: #fff;
     font-size: 12px;
     font-weight: 500;
     color: #666;
@@ -451,13 +447,21 @@ body {
 
 .weight-input:hover {
     border-color: #4a90e2;
-    background-color: #e8f2ff;
-    color: #4a90e2;
 }
 
-.weight-input:focus {
+.weight-input:focus,
+.weight-input:focus-visible,
+.weight-input:active {
     outline: none;
     border-color: #4a90e2;
+}
+
+/* hover / 点击 / 输入时字体颜色保持不变 */
+.weight-input:hover,
+.weight-input:focus,
+.weight-input:focus-visible,
+.weight-input:active {
+    color: #666;
 }
 
 .weight-reference-display {
@@ -497,7 +501,7 @@ body {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding: 12px;
+    padding: 0;
     background-color: #f1f3f5;
 }
 
@@ -531,40 +535,56 @@ body {
     background: transparent;
 }
 
-/* 左侧栏：始终预留滚动条槽位，避免滚动时卡片宽度跳动 */
+/* 左侧栏：滚动条不占宽度，参数区右边缘与顶栏对齐 */
 .left-sidebar-scroll.auto-hide-scrollbar {
-    scrollbar-gutter: stable;
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
+    scrollbar-gutter: auto;
+    scrollbar-width: none;
 }
 
-.left-sidebar-scroll.auto-hide-scrollbar.is-scrolling {
-    scrollbar-color: rgba(0, 0, 0, 0.28) transparent;
-}
-
-.left-sidebar-scroll.auto-hide-scrollbar::-webkit-scrollbar {
-    width: 6px;
+.left-sidebar-scroll.auto-hide-scrollbar::-webkit-scrollbar,
+.left-sidebar-scroll.auto-hide-scrollbar.is-scrolling::-webkit-scrollbar {
+    width: 0;
     height: 0;
 }
 
-.left-sidebar-scroll.auto-hide-scrollbar::-webkit-scrollbar-thumb {
-    background-color: transparent;
-    border-radius: 999px;
+.left-sidebar-scroll.auto-hide-scrollbar.is-scrolling {
+    scrollbar-width: none;
 }
 
-.left-sidebar-scroll.auto-hide-scrollbar.is-scrolling::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.28);
-}
-
-.left-sidebar-scroll.auto-hide-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-/* 左侧栏参数区：1–4 区块卡片布局 */
+/* 左侧栏参数区：留白与分区边界保持克制。 */
 .parameters-container {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+}
+
+/* 疾病模型作为录入区的轻量起始卡片，不与顶栏混用视觉层级。 */
+.disease-model-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 10px 12px;
+    border: 1px solid #e5eaf0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.disease-tags-wrap--common {
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
+.disease-model-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.disease-more-panel {
+    grid-column: 1 / -1;
 }
 
 /* 左侧栏首行空白边框 */
@@ -578,19 +598,31 @@ body {
     display: none;
 }
 
-/* 1.M-mode标题行：标题与OCR状态同一行 */
+/* 1.M-mode 标题：仅保留细分隔，减少整条色带。 */
 .m-mode-title-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e8eaed;
+    margin: 0 0 6px;
+    padding: 0 0 6px;
+    background-color: transparent;
+    color: #334155;
+    border-bottom: 1px solid #e8edf3;
 }
 
 .m-mode-title-row .parameters-section-title {
     margin: 0;
+    color: #334155;
+}
+
+.m-mode-title-row .ocr-status-tag {
+    background-color: #fff;
+    color: #4b5563;
+}
+
+.m-mode-title-row .ocr-status-tag::before {
+    color: #4f46e5;
 }
 
 /* 左侧栏区块标题 */
@@ -598,21 +630,29 @@ body {
     font-size: 13px;
     font-weight: 600;
     color: #2c3e50;
-    margin: 0 0 8px 0;
+    margin: 0 0 6px 0;
     letter-spacing: 0.3px;
 }
 
+/* 2/3/4 分区标题与首区保持同一层级。 */
 .parameters-section > .parameters-section-title {
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e8eaed;
+    margin: 0 0 8px;
+    padding: 0 0 6px;
+    background-color: transparent;
+    color: #334155;
+    border-bottom: 1px solid #e8edf3;
 }
 
-/* 左侧栏参数输入区块 - 白色卡片，无边框线 */
+/* 左侧栏参数输入区块。 */
 .parameters-section {
-    margin-bottom: 0;
-    padding: 12px 14px;
+    margin: 0;
+    padding: 10px 12px;
+    width: 100%;
+    box-sizing: border-box;
     background-color: #fff;
+    border: 1px solid #e5eaf0;
     border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025);
 }
 
 .parameters-section:last-child {
@@ -626,42 +666,68 @@ body {
 /* 心超测量参数 - 2列布局 */
 .m-type-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
     margin-bottom: 0;
 }
 
 .m-type-item {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
 .m-type-label {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
-    color: #555;
-    margin-bottom: 0;
-    letter-spacing: 0.2px;
+    color: #5b6778;
+    margin-bottom: 3px;
+    letter-spacing: 0;
+}
+
+/* 数值异常提醒：标题旁红色感叹号，默认隐藏 */
+.value-warning {
+    display: none;
+    width: 14px;
+    height: 14px;
+    margin-left: 4px;
+    box-sizing: border-box;
+    border: 1.5px solid #e74c3c;
+    border-radius: 50%;
+    color: #e74c3c;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: middle;
+    cursor: help;
+    user-select: none;
+}
+
+.value-warning.is-visible {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .m-type-input {
     width: 100%;
-    padding: 5px 8px;
-    border: 1px solid #81818100;
-    border-radius: 4px;
+    max-width: 600px;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 1px solid #e1e7ef;
+    border-radius: 6px;
     font-size: 13px;
-    transition: all 0.2s ease;
-    background-color: #f3f3f380;
+    transition: border-color 0.2s ease;
+    background-color: #f5f5f5;
 }
 
 .m-type-input:hover {
-    border-color: #818181;
+    border-color: #b9c7d8;
 }
 
 .m-type-input:focus {
     outline: none;
     border-color: #4a90e2;
-    background-color: #fff;
 }
 
 
@@ -700,8 +766,8 @@ body {
     border: 1px solid #e1e8ed05;
     border-radius: 4px;
     overflow: hidden;
-    background-color: #f3f3f380;
-    transition: all 0.2s ease;
+    background-color: #f5f5f5;
+    transition: border-color 0.2s ease;
     flex: 1;
     min-width: 0;
     max-width: 100%;
@@ -730,7 +796,7 @@ body {
     outline: none;
     box-shadow: none;
     border: none;
-    background-color: #fff;
+    background-color: transparent;
 }
 
 .input-with-label-wrapper .m-type-input:disabled {
@@ -1014,21 +1080,22 @@ body {
 /* 心肌运动和频谱多普勒 - 单列布局 */
 .other-params-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
     margin-bottom: 0;
 }
 
 .other-param-item {
     display: flex;
     flex-direction: column;
+    min-width: 0;
 }
 
-/* AO、LA、LA/AO 同行三列布局 */
+/* AO、LA、LA/AO、LA Volume 同行四列布局 */
 .la-ao-row {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
 }
 
@@ -1036,6 +1103,16 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+}
+
+.la-ao-row .la-ao-item .input-with-unit-suffix {
+    width: 100%;
+    max-width: 220px;
+}
+
+.la-ao-row .la-ao-item .other-param-input {
+    width: 100%;
+    max-width: none;
 }
 
 /* LAD Max：占满一行 */
@@ -1057,7 +1134,21 @@ body {
 
 .pa-ao-advanced-row .pa-ao-adv-item {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.pa-ao-advanced-row .pa-ao-adv-item .other-param-label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.pa-ao-advanced-row .pa-ao-adv-item .pa-ao-paa-wrap,
+.pa-ao-advanced-row .pa-ao-adv-item .pa-ao-fac-input-wrap {
+    flex: 1;
     min-width: 0;
 }
 
@@ -1142,13 +1233,15 @@ body {
 
 .pa-ao-advanced-row .pa-ao-adv-item--fac {
     grid-column: 1 / -1;
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
 }
 
 .pa-ao-advanced-row .pa-ao-fac-input-wrap {
-    width: 100%;
-    max-width: 100%;
+    flex: 1;
+    width: auto;
+    max-width: none;
 }
 
 .pa-ao-advanced-row .pa-ao-fac-input-wrap .other-param-input {
@@ -1164,9 +1257,22 @@ body {
 
 .rpad-adv-item--rpad-wrap {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
     min-width: 0;
     overflow: visible;
+}
+
+.rpad-adv-item--rpad-wrap .other-param-label {
+    margin-bottom: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.rpad-adv-item--rpad-wrap .rpad-paa-wrap {
+    flex: 1;
+    min-width: 0;
 }
 
 .rpad-paa-wrap {
@@ -1251,45 +1357,83 @@ body {
     white-space: nowrap;
 }
 
-/* readme 2.5 VPA/VAO：默认横向；右心高阶时 VPA|VAO 仍与未开启时同排，VTI|AT/ET 另起整行 */
+/* 多普勒基础参数：标签在上、输入在下，避免长短标签打乱同一基线。 */
 .vpa-vao-wrap {
     grid-column: 1 / -1;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px 10px;
+    align-items: start;
 }
 
-/* VPA、VAO：与左栏其它项一致，标签在输入框上一行 */
+/* VPA、VAO 占同等宽度的两个字段位。 */
 .vpa-vao-wrap .vpa-row,
 .vpa-vao-wrap .vao-row {
+    grid-column: auto;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    gap: 4px;
-    flex: 1 1 calc(50% - 3px);
+    gap: 3px;
     min-width: 0;
+}
+
+.vpa-vao-wrap .vpa-row .other-param-label,
+.vpa-vao-wrap .vao-row .other-param-label {
+    margin-bottom: 0;
+    width: auto;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.vpa-vao-wrap .vpa-row .input-with-unit-suffix,
+.vpa-vao-wrap .vao-row .input-with-unit-suffix {
+    min-width: 0;
+    width: 100%;
+}
+
+/* 第 3 区四列布局：缩小单位占位，避免 m/s、cm/s 等在窄字段中溢出。 */
+.vpa-vao-wrap .input-with-unit-suffix:not(.input-with-unit-suffix--bare) .other-param-input,
+.e-diastolic-row .input-with-unit-suffix:not(.input-with-unit-suffix--bare) .other-param-input,
+.tv-tricuspid-row .input-with-unit-suffix:not(.input-with-unit-suffix--bare) .other-param-input {
+    padding-right: 2.35rem;
+}
+
+.vpa-vao-wrap .unit-suffix,
+.e-diastolic-row .unit-suffix,
+.tv-tricuspid-row .unit-suffix {
+    right: 6px;
+    font-size: 11px;
 }
 
 .vpa-vao-wrap:not(.right-heart-advanced) .vti-atet-row {
     display: none !important;
 }
 
-/* 右心高阶开启：不改变 VPA/VAO 的并排宽度，仅让 VTI/AT/ET 行占满换行 */
+/* 右心高阶：VTI、AT/ET 与基础参数采用相同的上下结构。 */
 .vpa-vao-wrap.right-heart-advanced .vti-atet-row {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-    flex: 1 1 100%;
-    width: 100%;
-    min-width: 100%;
+    display: contents !important;
 }
 
 .vti-atet-item {
+    grid-column: auto;
     display: flex;
     flex-direction: column;
+    gap: 3px;
     min-width: 0;
+}
+
+.vti-atet-item.atet-wrap {
+    grid-template-columns: none;
+}
+
+.vti-atet-item .other-param-label {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.vti-atet-item .input-with-unit-suffix,
+.vti-atet-item .atet-paa-wrap {
+    min-width: 0;
+    width: 100%;
 }
 
 .vti-atet-item.atet-wrap {
@@ -1310,7 +1454,7 @@ body {
     position: absolute;
     left: 0;
     top: calc(100% + 4px);
-    min-width: 220px;
+    min-width: 660px;
     max-width: min(100vw - 24px, 300px);
     z-index: 120;
     padding: 0;
@@ -1365,31 +1509,38 @@ body {
     border-top: 1px solid #eee;
 }
 
-/* readme 2.6 三尖瓣 TV 行 */
+/* 三尖瓣频谱参数采用统一字段节奏。 */
 .tv-tricuspid-row {
     grid-column: 1 / -1;
+    display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
+    gap: 6px 10px;
     align-items: start;
 }
 
 .tv-tricuspid-row .tv-tv-item {
     display: flex;
     flex-direction: column;
+    gap: 3px;
     min-width: 0;
 }
 
-@media (max-width: 1200px) {
-    .tv-tricuspid-row {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+.tv-tricuspid-row .tv-tv-item .other-param-label {
+    margin-bottom: 0;
+    white-space: nowrap;
 }
 
-/* readme 2.7 GS/FWS：反流速区域末行之下 */
+.tv-tricuspid-row .tv-tv-item .input-with-unit-suffix {
+    min-width: 0;
+    width: 100%;
+}
+
+/* 右心室应变位于第 3 区参数网格内。 */
 .gs-fws-row {
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: end;
+    gap: 6px 10px;
 }
 
 .gs-fws-row .regurgitation-label {
@@ -1412,6 +1563,33 @@ body {
     color: #555;
     white-space: nowrap;
     flex-shrink: 0;
+}
+
+/* 右心室应变已移入第 3 区四列网格，单位改为同行显示以避免绝对定位溢出。 */
+#gsFwsRow .gs-fws-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+}
+
+#gsFwsRow .gs-fws-input-wrap .other-param-input {
+    width: 100%;
+    min-width: 0;
+    padding-right: 8px;
+}
+
+#gsFwsRow .gs-fws-input-wrap .unit-suffix {
+    position: static;
+    transform: none;
+    flex-shrink: 0;
+}
+
+/* 与 EA 融合同行：右心室应变标题、GS、FWS 依次占用余下三列。 */
+.other-params-grid #gsFwsRow {
+    grid-column: 2 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 /* GS/FWS：单位 % 在输入框右侧同行展示，勿沿用反流速 100px 宽与内嵌单位占位 */
@@ -1439,29 +1617,66 @@ body {
     --right-area-panel-gap: 16px;
     --right-area-sidebar-gap: 8px;
     --right-area-right-margin: 16px;
-    --lv-strain-panel-slot-width: 256px;
 }
 
+/* 左心室应变卡片与 M 型参数同行；空间不足时自动换到下一行。 */
 .lv-strain-panel {
-    position: fixed;
-    left: calc(50% + var(--right-area-panel-gap));
-    top: var(--right-area-top);
-    z-index: 9;
+    position: static;
+    order: 2;
+    flex: 0 1 256px;
     pointer-events: auto;
-    transition: opacity 0.2s ease;
+}
+
+/* M 型网格优先保持完整宽度；与左心高阶卡片放不下时卡片换行。 */
+.m-mode-body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.m-mode-body > .m-type-grid {
+    order: 1;
+    flex: 1 1 390px;
+    min-width: 0;
 }
 
 .lv-strain-panel--inactive {
-    opacity: 0.38;
     cursor: pointer;
 }
 
 .lv-strain-panel--inactive .lv-strain-panel-card {
     pointer-events: none;
+    border-color: #d0d5dd;
 }
 
 .lv-strain-panel--inactive .lv-strain-only-toggle {
     pointer-events: auto;
+}
+
+/* 已激活：仅边框高亮；空白处可再次点击关闭（toggle-off） */
+.lv-strain-panel:not(.lv-strain-panel--inactive) .lv-strain-panel-card {
+    border-color: #4a90e2;
+}
+
+.lv-strain-panel--toggle-off .lv-strain-panel-card {
+    cursor: pointer;
+}
+
+.lv-strain-panel--toggle-off .lv-strain-panel-card input,
+.lv-strain-panel--toggle-off .lv-strain-panel-card button,
+.lv-strain-panel--toggle-off .lv-strain-panel-card .lv-strain-seg,
+.lv-strain-panel--toggle-off .lv-strain-panel-card .gs-fws-input-wrap {
+    cursor: auto;
+}
+
+.lv-strain-panel--toggle-off .lv-strain-panel-card input {
+    cursor: text;
+}
+
+.lv-strain-panel--toggle-off .lv-strain-panel-card button,
+.lv-strain-panel--toggle-off .lv-strain-panel-card .lv-strain-only-toggle {
+    cursor: pointer;
 }
 
 .lv-strain-panel-card {
@@ -1475,6 +1690,7 @@ body {
     gap: 8px;
     width: fit-content;
     max-width: min(calc(50vw - 32px), 280px);
+    transition: border-color 0.2s ease;
 }
 
 .lv-strain-panel-toolbar {
@@ -1728,30 +1944,40 @@ body {
     fill: rgba(229, 57, 53, 0.75);
 }
 
-/* 舒张参数四联行：E、A、E/A、E/E'（E′ 在 E/E' 气泡内） */
+/* 舒张参数四联行：统一改为标签在上、输入在下。 */
 .e-diastolic-row {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     align-items: start;
-    gap: 6px;
+    gap: 6px 10px;
 }
 
 .e-diastolic-row .diastolic-item {
     display: flex;
     flex-direction: column;
+    gap: 3px;
     min-width: 0;
 }
 
 .e-diastolic-row .other-param-label {
     font-size: 12px;
     white-space: nowrap;
+    margin-bottom: 0;
+    width: auto;
+    min-width: 0;
+}
+
+.e-diastolic-row .input-with-unit-suffix,
+.e-diastolic-row .ee-prime-paa-wrap {
+    min-width: 0;
+    width: 100%;
 }
 
 .e-diastolic-row .input-with-unit-suffix .other-param-input {
     width: 100%;
     min-width: 0;
-    padding: 4px 6px;
+    padding: 6px 8px;
     font-size: 12px;
 }
 
@@ -1759,11 +1985,31 @@ body {
     padding-right: 2.75rem;
 }
 
-/* 窄宽度兜底：避免极端情况下被挤压不可读 */
-@media (max-width: 1200px) {
-    .e-diastolic-row {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+/* EA融合占第 3 区四列中的第一列，保持与其他字段相同的上下节奏。 */
+.other-param-item.ea-fusion-item {
+    grid-column: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: flex-start;
+}
+
+.other-param-item.ea-fusion-item .other-param-label {
+    margin: 0;
+    white-space: nowrap;
+    width: auto;
+    text-align: left;
+}
+
+.other-param-item.ea-fusion-item .input-with-unit-suffix {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+}
+
+.other-param-item.ea-fusion-item .other-param-input {
+    width: 100%;
+    max-width: none;
 }
 
 .diastolic-item-ee-prime.ee-prime-wrap {
@@ -1860,65 +2106,33 @@ body {
     margin-bottom: 0;
 }
 
-#dpdtInputItem .dpdt-display-btn-group {
-    display: inline-flex;
-    gap: 4px;
-    align-items: center;
-}
-
-/* dP/dt 显示/不显示按钮 - 风格同反流程度选择框 */
-#dpdtInputItem .dpdt-display-btn {
-    padding: 4px 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+.other-param-label {
     font-size: 12px;
     font-weight: 500;
-    color: #666;
-    background-color: #f5f5f5;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-#dpdtInputItem .dpdt-display-btn.active {
-    border-color: #4a90e2;
-    background-color: #4a90e2;
-    color: #fff;
-    font-weight: 600;
-}
-
-#dpdtInputItem .dpdt-display-btn:hover:not(.active) {
-    border-color: #4a90e2;
-    background-color: #e8f2ff;
-    color: #4a90e2;
-}
-
-.other-param-label {
-    font-size: 13px;
-    font-weight: 500;
-    color: #555;
-    margin-bottom: 0;
-    letter-spacing: 0.2px;
+    color: #5b6778;
+    margin-bottom: 3px;
+    letter-spacing: 0;
 }
 
 .other-param-input {
     width: 100%;
-    padding: 5px 8px;
-    border: 1px solid #e1e8ed00;
-    border-radius: 4px;
+    max-width: 220px;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 1px solid #e1e7ef;
+    border-radius: 6px;
     font-size: 13px;
-    transition: all 0.2s ease;
-    background-color: #f3f3f380;
+    transition: border-color 0.2s ease;
+    background-color: #f5f5f5;
 }
 
 .other-param-input:hover {
-    border-color: #818181;
+    border-color: #b9c7d8;
 }
 
 .other-param-input:focus {
     outline: none;
     border-color: #4a90e2;
-    background-color: #fff;
 }
 
 .other-param-input:disabled {
@@ -1928,14 +2142,12 @@ body {
     opacity: 0.7;
 }
 
-
-
-/* 右侧栏 - 默认顶端与左心高阶卡片对齐，左侧预留卡片位 */
+/* 右侧栏占用右侧完整可用区域。 */
 .right-sidebar {
     position: fixed;
-    left: calc(50% + var(--right-area-panel-gap) + var(--lv-strain-panel-slot-width) + var(--right-area-sidebar-gap));
+    left: calc(50% + var(--right-area-panel-gap));
     top: var(--right-area-top);
-    width: calc(50% - var(--right-area-panel-gap) - var(--lv-strain-panel-slot-width) - var(--right-area-sidebar-gap) - var(--right-area-right-margin));
+    width: calc(50% - var(--right-area-panel-gap) - var(--right-area-right-margin));
     height: calc(100vh * 0.8);
     min-width: 280px;
     min-height: 200px;
@@ -2327,12 +2539,12 @@ body {
     color: #fff;
 }
 
-/* 反流速输入框样式 */
+/* 反流速输入框样式（对齐 pub/v5.1.2：固定标签宽，输入框与「未测得」跨行左对齐） */
 .regurgitation-velocity-inputs {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-top: 8px;
+    gap: 4px;
+    margin-top: 6px;
     margin-bottom: 0;
 }
 
@@ -2349,7 +2561,8 @@ body {
     color: #555;
     white-space: nowrap;
     width: 130px;
-    flex-shrink: 0;
+    min-width: 130px;
+    flex: 0 0 130px;
 }
 
 .regurgitation-input {
@@ -2368,7 +2581,10 @@ body {
     font-size: 13px;
     color: #2c3e50;
     font-weight: 500;
+    width: 60px;
     min-width: 60px;
+    flex: 0 0 60px;
+    white-space: nowrap;
 }
 
 .regurgitation-severity-label {
@@ -2377,6 +2593,7 @@ body {
     color: #666;
     white-space: nowrap;
     margin-left: 16px;
+    flex-shrink: 0;
 }
 
 .regurgitation-severity-buttons {
@@ -2384,6 +2601,17 @@ body {
     gap: 4px;
     align-items: center;
     flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+    .e-diastolic-row,
+    .tv-tricuspid-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .regurgitation-severity-buttons {
+        flex-wrap: wrap;
+    }
 }
 
 .regurgitation-severity-btn {
@@ -2418,6 +2646,7 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .regurgitation-unknown-btn:hover {
@@ -2441,17 +2670,43 @@ body {
 }
 
 /* 心率部分样式 */
+.parameters-section:has(.heart-rate-section) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 16px;
+}
+
+.parameters-section:has(.heart-rate-section) > .parameters-section-title {
+    margin: 0;
+    padding: 0;
+    border-bottom: 0;
+    white-space: nowrap;
+}
+
 .heart-rate-section {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .heart-rate-section .parameters-section-title {
     margin: 0;
     padding-bottom: 0;
     border-bottom: none;
+}
+
+.heart-rate-section .input-with-unit-suffix.heart-rate-input-wrap {
+    width: 180px;
+    min-width: 180px;
+    flex: 0 0 180px;
+}
+
+.heart-rate-section .heart-rate-input-wrap .heart-rate-input {
+    width: 100%;
+    max-width: none;
 }
 
 .heart-rate-input {
@@ -2512,17 +2767,43 @@ body {
     flex-shrink: 0;
 }
 
-/* HCM 特征标签行（位于 AO 上一行） */
-.hcm-feature-tag-row {
+/* 第 2 区标题与心肌/HCM 特征标签同行，窄屏时才自然换行。 */
+.section-title-feature-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    margin: 0 0 8px;
+    padding: 0 0 6px;
+    border-bottom: 1px solid #e8edf3;
+}
+
+.section-title-feature-row > .parameters-section-title {
+    margin: 0;
+    padding: 0;
+    white-space: nowrap;
+}
+
+.feature-tag-row {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
-    padding: 5px 0;
+    padding: 0;
     margin-bottom: 0;
 }
 
-.valve-flow-tag-hcm.active {
+/* SAM 与左心室流出道湍流仅在 HCM 模型下出现。 */
+.valve-flow-tag-hcm {
+    display: none;
+}
+
+.feature-tag-row.hcm-features-visible .valve-flow-tag-hcm {
+    display: inline-flex;
+}
+
+.valve-flow-tag-hcm.active,
+.valve-flow-tag-feature.active {
     border-color: #4a90e2;
     background-color: #4a90e2;
     color: #fff;
@@ -2550,30 +2831,41 @@ body {
     margin-left: 16px;
 }
 
-/* LA Volume和LAVi样式（在 .other-params-grid 内占满一行，位于 PA/Ao 上一行） */
+/* LA Volume：作为 LA/AO 四联行的第 4 列。 */
 .la-volume-row {
-    grid-column: 1 / -1;
     display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 5px 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+    padding: 0;
     margin-bottom: 0;
-    flex-wrap: wrap;
 }
 
 .la-volume-label {
-    font-size: 13px;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 0;
+    font-size: 12px;
     font-weight: 500;
-    color: #555;
+    color: #5b6778;
     white-space: nowrap;
 }
 
+.lavi-inline {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 2px;
+    min-width: 0;
+}
+
 .la-volume-input {
-    flex-shrink: 0;
+    width: 100%;
+    max-width: none;
 }
 
 .lavi-display {
-    font-size: 13px;
+    font-size: 11px;
     color: #2c3e50;
     font-weight: 500;
     white-space: nowrap;
@@ -2584,7 +2876,7 @@ body {
 }
 
 .lavi-unit {
-    font-size: 12px;
+    font-size: 10px;
     color: #999;
     font-weight: normal;
     white-space: nowrap;
@@ -2827,15 +3119,6 @@ body {
         border-right: none;
         border-bottom: 1px solid #818181;
     }
-    .lv-strain-panel {
-        position: relative;
-        left: auto;
-        top: auto;
-        width: 100%;
-        padding: 10px 12px;
-        box-sizing: border-box;
-        z-index: auto;
-    }
     .lv-strain-panel-card {
         max-width: none;
         width: 100%;
@@ -2908,8 +3191,7 @@ body {
 #rpadAdvancedRow .other-param-input,
 .vpa-vao-wrap.right-heart-advanced .vti-atet-row .other-param-input,
 #tvTricuspidRow .other-param-input,
-#gsFwsRow .other-param-input,
-#lvStrainPanel .other-param-input {
+#gsFwsRow .other-param-input {
     background-color: #fff0f2;
 }
 

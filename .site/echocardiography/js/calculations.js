@@ -2,6 +2,7 @@
 // 计算EDVI的函数
 // EDVI = EDV / BSA, BSA = 0.101 * 体重^(2/3)
 function calculateEDVI() {
+    if (typeof updateEdvEsvWarning === 'function') updateEdvEsvWarning();
     const edv = parseFloat(parameters['EDV']);
     const weight = parseFloat(parameters['体重']);
     const edviDisplay = document.getElementById('edviDisplay');
@@ -41,6 +42,7 @@ function calculateEDVI() {
 // 计算ESVI的函数
 // ESVI = ESV / BSA, BSA = 0.101 * 体重^(2/3)
 function calculateESVI() {
+    if (typeof updateEdvEsvWarning === 'function') updateEdvEsvWarning();
     const esv = parseFloat(parameters['ESV']);
     const weight = parseFloat(parameters['体重']);
     const esviDisplay = document.getElementById('esviDisplay');
@@ -474,28 +476,14 @@ function calculateLAVi() {
     parameters['LAVi'] = laviRounded;
 }
 
-// 根据参考范围显示/隐藏 EA融合 输入框
+// EA融合输入框：所有品种均显示
 function updateEAFusionVisibility() {
     const eaFusionInput = document.querySelector('input[data-param="EA融合"]');
-    if (eaFusionInput) {
-        const eaFusionItem = eaFusionInput.closest('.other-param-item');
-        if (eaFusionItem) {
-            // 仅在"猫"或"猫（含体重）"时显示
-            if (selectedReferenceRange === '猫' || selectedReferenceRange === '猫（含体重）') {
-                eaFusionItem.style.display = 'block';
-                updateEAInputsState();
-                updateEAFusionColor();
-            } else {
-                eaFusionItem.style.display = 'none';
-                // 隐藏时清空EA融合的值
-                eaFusionInput.value = '';
-                eaFusionInput.style.color = '';
-                delete parameters['EA融合'];
-                // 重新启用 E、A、E/A 输入框
-                updateEAInputsState();
-            }
-        }
-    }
+    if (!eaFusionInput) return;
+    const eaFusionItem = eaFusionInput.closest('.other-param-item');
+    if (eaFusionItem) eaFusionItem.style.display = 'flex';
+    updateEAInputsState();
+    updateEAFusionColor();
 }
 
 // 仅「猫」「猫（含体重）」显示 LAD Max；数值 ≥16 标红（readme）
@@ -531,8 +519,6 @@ function updateLaVolumeVisibility() {
         delete parameters['LA Volume'];
         delete parameters['LAVi'];
         delete parameters['LA Volume显示'];
-        const showBtn = document.querySelector('#laVolumeInputItem button[data-param="LA Volume显示"][data-value="显示"]');
-        if (showBtn) showBtn.classList.remove('active');
     } else {
         row.style.display = 'flex';
     }
@@ -728,6 +714,26 @@ function calculateEOverA() {
     // 更新E值的颜色显示
     updateEColor();
     updateEAColor();
+}
+
+// 自动计算 TV 的 E/A，保留两位小数
+function calculateTvEOverA() {
+    const eInput = document.querySelector('input[data-param="E（TV）"]');
+    const aInput = document.querySelector('input[data-param="A（TV）"]');
+    const eAInput = document.querySelector('input[data-param="E/A（TV）"]');
+    if (!eInput || !aInput || !eAInput) return;
+
+    const eValue = parseFloat(eInput.value.trim());
+    const aValue = parseFloat(aInput.value.trim());
+    if (!Number.isFinite(eValue) || !Number.isFinite(aValue) || aValue === 0) {
+        eAInput.value = '';
+        delete parameters['E/A（TV）'];
+        return;
+    }
+
+    const result = (eValue / aValue).toFixed(2);
+    eAInput.value = result;
+    parameters['E/A（TV）'] = result;
 }
 
 // 自动计算 E/E'（E′ 在气泡内输入；主框可手动覆盖）

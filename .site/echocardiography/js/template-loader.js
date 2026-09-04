@@ -3,6 +3,8 @@
 let simpsonEnabled = false;
 // 右心高阶测量（后续 TAPSE / PA/Ao 等字段依赖此开关）
 let rightHeartAdvancedEnabled = false;
+// 右心高阶开启后：仅将有输入数值的右心高阶参数写入右侧栏
+let rightHeartValuesOnlyEnabled = false;
 // 左心高阶（左心室斑点追踪牛眼图等）
 let leftHeartAdvancedEnabled = false;
 // 仅左心高阶：左侧栏同左心高阶，右侧栏仅显示应变相关所见/结论

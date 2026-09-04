@@ -1,7 +1,8 @@
 
 /**
  * 获取左心室应变异常节段描述子句列表（所见与结论共用）
- * 返回如：['基底部前壁（ANT）、下壁（INF）纵向应变下降', '近段侧壁（LAT）纵向应变下降']
+ * 异常节段合并为一条描述，返回如：
+ * ['基底部前壁（ANT）、近段前壁（ANT）、远段前壁（ANT）、心尖纵向应变下降']
  * 若无异常（所有节段 ≤ -15%）返回空数组 []
  */
 function buildLvStrainAbnormalClauses() {
@@ -39,22 +40,21 @@ function buildLvStrainAbnormalClauses() {
         { name: '远段',   segs: [13, 14, 15, 16] }
     ];
 
-    const clauses = [];
+    const segNames = [];
 
     for (const ring of RINGS) {
-        const abnormal = ring.segs.filter(function(s) { return isSegAbnormal(s); });
-        if (abnormal.length > 0) {
-            const dirs = abnormal.map(function(s) { return SEG_DIR[s]; }).join('、');
-            clauses.push(ring.name + dirs + '纵向应变下降');
-        }
+        ring.segs.forEach(function(s) {
+            if (isSegAbnormal(s)) segNames.push(ring.name + SEG_DIR[s]);
+        });
     }
 
     // 心尖（seg 17）单独判断
     if (isSegAbnormal(17)) {
-        clauses.push('心尖纵向应变下降');
+        segNames.push('心尖');
     }
 
-    return clauses;
+    if (segNames.length === 0) return [];
+    return [segNames.join('、') + '纵向应变下降'];
 }
 
 /** 左心室应变所见一行（GS + 节段描述） */
@@ -77,6 +77,31 @@ function generateLeftHeartAdvancedOnlyFindingsText(referenceRange) {
     let findings = `${animalType}侧卧位扫查:\n`;
     findings += `  1.${buildLvStrainFindingsLine(get)}\n`;
     return findings + '\n';
+}
+
+/** 「仅显示含数值的参数」开启时：右心高阶项需有非空输入才写入右侧栏 */
+function isRightHeartValuesOnlyMode() {
+    return !!(typeof rightHeartAdvancedEnabled !== 'undefined'
+        && rightHeartAdvancedEnabled
+        && typeof rightHeartValuesOnlyEnabled !== 'undefined'
+        && rightHeartValuesOnlyEnabled);
+}
+
+function hasRhParamValue(get, key) {
+    return !!((get(key, '') || '').toString().trim());
+}
+
+/** 心肌及运动异常行：假腱索激活时写强回声亮线，并覆盖「未见明显异常」 */
+function buildMyocardiumAbnormalityFindingsLine(extraText) {
+    const segments = [];
+    if (extraText) segments.push(extraText);
+    if (typeof isFalseChordaeTagActive === 'function' && isFalseChordaeTagActive()) {
+        segments.push('左心室可见强回声亮线影像');
+    }
+    if (segments.length === 0) {
+        return '    心肌及运动异常: 未见明显异常。\n';
+    }
+    return `    心肌及运动异常: ${segments.join('；')}。\n`;
 }
 
 /**
@@ -243,19 +268,21 @@ function generateFindingsText(diseaseType, referenceRange, params) {
                     );
                 }
                 if (rightHeartAdvancedEnabled) {
-                    const wStr = get('体重', '');
-                    const { str: tapseRefStr } = getTapseRefRangeFromWeight(wStr);
                     const tapseVal = get('TAPSE', '');
-                    const tapseFormatted = tapseVal ? formatValue(tapseVal) : '';
-                    let tapseLeft;
-                    if (tapseFormatted) {
-                        tapseLeft = tapseRefStr
-                            ? `TAPSE: ${tapseFormatted}mm（${tapseRefStr}）`
-                            : `TAPSE: ${tapseFormatted}mm（）`;
-                    } else {
-                        tapseLeft = tapseRefStr ? `TAPSE:（${tapseRefStr}）` : `TAPSE:（）`;
+                    if (!isRightHeartValuesOnlyMode() || hasRhParamValue(get, 'TAPSE')) {
+                        const wStr = get('体重', '');
+                        const { str: tapseRefStr } = getTapseRefRangeFromWeight(wStr);
+                        const tapseFormatted = tapseVal ? formatValue(tapseVal) : '';
+                        let tapseLeft;
+                        if (tapseFormatted) {
+                            tapseLeft = tapseRefStr
+                                ? `TAPSE: ${tapseFormatted}mm（${tapseRefStr}）`
+                                : `TAPSE: ${tapseFormatted}mm（）`;
+                        } else {
+                            tapseLeft = tapseRefStr ? `TAPSE:（${tapseRefStr}）` : `TAPSE:（）`;
+                        }
+                        renderLeftRight(tapseLeft, '');
                     }
-                    renderLeftRight(tapseLeft, '');
                 }
                 continue;
             }
@@ -297,7 +324,7 @@ function generateFindingsText(diseaseType, referenceRange, params) {
             }
         } else if (diseaseType === 'PDA') {
             findings += `  2.瓣膜异常: 未见明显异常；\n`;
-            findings += `    心肌及运动异常: 未见明显异常。\n`;
+            findings += buildMyocardiumAbnormalityFindingsLine();
             findings += `    可见一管腔样结构开口于肺动脉分叉处，直径约：mm，于肺动脉开口处直径约：mm。\n`;
         } else if (diseaseType === 'MMVD') {
             const thickness = get('二尖瓣前叶厚度', '');
@@ -311,10 +338,10 @@ function generateFindingsText(diseaseType, referenceRange, params) {
             } else {
                 findings += `${line2Base}。\n`;
             }
-            findings += `    心肌及运动异常: 未见明显异常。\n`;
+            findings += buildMyocardiumAbnormalityFindingsLine();
         } else {
             findings += `  2.瓣膜异常: 未见明显异常；\n`;
-            findings += `    心肌及运动异常: 未见明显异常。\n`;
+            findings += buildMyocardiumAbnormalityFindingsLine();
         }
         findings += `    ${formatParamWithRef('AO', get('AO', ''), 'AO')}\n`;
         findings += `    ${formatParamWithRef('LA', get('LA', ''), 'LA')}\n`;
@@ -325,20 +352,27 @@ function generateFindingsText(diseaseType, referenceRange, params) {
                 findings += `    LAD Max: ${formatValue(maxLadRaw)}mm\n`;
             }
         }
-        const laVolumeDisplay = (get('LA Volume显示', '不显示') || '').toString().trim();
+        const laVolumeRaw = (get('LA Volume', '') || '').toString().trim();
         const lavi = get('LAVi', '');
-        if (laVolumeDisplay === '显示') {
+        if (laVolumeRaw) {
             findings += `    LA volume：${lavi ? formatValue(lavi) : ''}ml/kg；\n`;
         }
         if (rightHeartAdvancedEnabled) {
+            const rhOnly = isRightHeartValuesOnlyMode();
             const paAoVal = get('PA/Ao', '');
-            findings += `    PA/Ao: ${paAoVal ? formatValue(paAoVal) : ''}（正常＜1.1）\n`;
+            if (!rhOnly || hasRhParamValue(get, 'PA/Ao')) {
+                findings += `    PA/Ao: ${paAoVal ? formatValue(paAoVal) : ''}（正常＜1.1）\n`;
+            }
             const facVal = get('FAC', '');
-            const { str: facRefStrFindings } = getFACRefRangeFromWeight((get('体重', '') || '').toString().trim());
-            const facParen = facRefStrFindings ? `（${facRefStrFindings}）` : '（参考值）';
-            findings += `    RV FAC: ${facVal ? formatValue(facVal) : ''}%${facParen}\n`;
+            if (!rhOnly || hasRhParamValue(get, 'FAC')) {
+                const { str: facRefStrFindings } = getFACRefRangeFromWeight((get('体重', '') || '').toString().trim());
+                const facParen = facRefStrFindings ? `（${facRefStrFindings}）` : '（参考值）';
+                findings += `    RV FAC: ${facVal ? formatValue(facVal) : ''}%${facParen}\n`;
+            }
             const rpadVal = get('RPAD', '');
-            findings += `    RPAD: ${rpadVal ? formatValue(rpadVal) : ''}%\n`;
+            if (!rhOnly || hasRhParamValue(get, 'RPAD')) {
+                findings += `    RPAD: ${rpadVal ? formatValue(rpadVal) : ''}%\n`;
+            }
         }
         findings += `\n`;
 
@@ -376,53 +410,74 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         }
 
         // 频谱多普勒
-        const vpaFormattedInFindings = formatValue(get('VPA', ''));
-        const vaoFormattedInFindings = formatValue(get('VAO', ''));
         if (rightHeartAdvancedEnabled) {
+            const rhOnly = isRightHeartValuesOnlyMode();
             const vtiRaw = get('VTI', '');
             const atetRaw = get('AT/ET', '');
-            const vtiPart = vtiRaw ? formatValue(vtiRaw) : '';
-            const atetPart = atetRaw ? formatValue(atetRaw) : '';
-            findings += `    频谱多普勒检查\n`;
-            findings += `    VPA：${vpaFormattedInFindings}m/s； VTI: ${vtiPart}cm； AT/ET: ${atetPart}（＜0.3 提示可能肺动脉高压）；\n`;
-            findings += `    VAO: ${vaoFormattedInFindings}m/s；\n`;
+            const vpaRaw = (get('VPA', '') || '').toString().trim();
+            const vaoRaw = (get('VAO', '') || '').toString().trim();
+            if (rhOnly) {
+                const spectrumParts = [];
+                if (vpaRaw) spectrumParts.push(`VPA：${formatValue(vpaRaw)}m/s`);
+                if (vtiRaw) spectrumParts.push(`VTI: ${formatValue(vtiRaw)}cm`);
+                if (atetRaw) spectrumParts.push(`AT/ET: ${formatValue(atetRaw)}（＜0.3 提示可能肺动脉高压）`);
+                if (spectrumParts.length > 0) {
+                    findings += `    频谱多普勒检查\n`;
+                    findings += `    ${spectrumParts.join('； ')}；\n`;
+                }
+                if (vaoRaw) findings += `    VAO: ${formatValue(vaoRaw)}m/s；\n`;
+            } else {
+                const vtiPart = vtiRaw ? formatValue(vtiRaw) : '';
+                const atetPart = atetRaw ? formatValue(atetRaw) : '';
+                findings += `    频谱多普勒检查\n`;
+                findings += `    VPA：${formatValue(get('VPA', ''))}m/s； VTI: ${vtiPart}cm； AT/ET: ${atetPart}（＜0.3 提示可能肺动脉高压）；\n`;
+                findings += `    VAO: ${formatValue(get('VAO', ''))}m/s；\n`;
+            }
         } else {
-            findings += `    频谱多普勒检查  VPA: ${vpaFormattedInFindings}m/s；  VAO: ${vaoFormattedInFindings}m/s；\n`;
+            findings += `    频谱多普勒检查  VPA: ${formatValue(get('VPA', ''))}m/s；  VAO: ${formatValue(get('VAO', ''))}m/s；\n`;
         }
         const eaFusionInFindings = get('EA融合', '');
-        const isCatReferenceInFindings =
-            referenceRange === '猫' || referenceRange === '猫（含体重）';
-        if (isCatReferenceInFindings && eaFusionInFindings) {
-            findings += `    EA融合: ${eaFusionInFindings}m/s；\n`;
+        if (eaFusionInFindings) {
+            findings += `    EA融合: ${formatValue(eaFusionInFindings)}m/s；\n`;
         } else {
             const eFormattedInFindings = formatValue(get('E', ''));
             const aFormattedInFindings = formatValue(get('A', ''));
             const eEText = (get("E/E'", '') || '').toString().trim();
             const eENum = parseFloat(eEText);
             const eEFormatted = eEText ? (!isNaN(eENum) ? eENum.toFixed(2) : eEText) : '';
-            const showEEField = !isCatReferenceInFindings || !!eEText;
             const mvPrefix = rightHeartAdvancedEnabled ? 'MV:   ' : '';
             let eaLine = `    ${mvPrefix}E: ${eFormattedInFindings}m/s，A: ${aFormattedInFindings}m/s，E/A${get('E/A', '')}；`;
-            if (showEEField) {
+            if (eEFormatted) {
                 eaLine += ` E/E': ${eEFormatted}；`;
             }
             findings += `${eaLine}\n`;
         }
 
-        // dp/dt：放在 E/A 所在行的下一行（由“显示”按钮控制）
-        const dpdtDisplay = (get('dp/dt显示', '不显示') || '').toString().trim();
+        // dp/dt：有数值才写入所见
         const dpdtRaw = (get('dp/dt', '') || '').toString().trim();
-        if (dpdtDisplay === '显示') {
-            const dpdtValue = dpdtRaw ? formatValue(dpdtRaw) : '';
-            findings += `    dp/dt：${dpdtValue}mmHg/s；\n`;
+        if (dpdtRaw) {
+            findings += `    dp/dt：${formatValue(dpdtRaw)}mmHg/s；\n`;
         }
 
         if (rightHeartAdvancedEnabled) {
-            const eTV = formatValue(get('E（TV）', ''));
-            const aTV = formatValue(get('A（TV）', ''));
-            const eaTV = formatValue(get('E/A（TV）', ''));
-            const sP = formatValue(get("S'", ''));
-            findings += `    TV：  E:${eTV}m/s  A: ${aTV}m/s   E/A: ${eaTV}；  S':${sP}cm/s；\n`;
+            const rhOnly = isRightHeartValuesOnlyMode();
+            if (!rhOnly) {
+                findings += `    TV：  E:${formatValue(get('E（TV）', ''))}m/s，A: ${formatValue(get('A（TV）', ''))}m/s，E/A: ${formatValue(get('E/A（TV）', ''))}；  S':${formatValue(get("S'", ''))}cm/s；\n`;
+            } else {
+                const tvEaParts = [];
+                if (hasRhParamValue(get, 'E（TV）')) tvEaParts.push(`E:${formatValue(get('E（TV）', ''))}m/s`);
+                if (hasRhParamValue(get, 'A（TV）')) tvEaParts.push(`A: ${formatValue(get('A（TV）', ''))}m/s`);
+                if (hasRhParamValue(get, 'E/A（TV）')) tvEaParts.push(`E/A: ${formatValue(get('E/A（TV）', ''))}`);
+                const sPrimePart = hasRhParamValue(get, "S'")
+                    ? `S':${formatValue(get("S'", ''))}cm/s`
+                    : '';
+                if (tvEaParts.length > 0 || sPrimePart) {
+                    const tvBody = tvEaParts.length > 0
+                        ? (sPrimePart ? `${tvEaParts.join('，')}；  ${sPrimePart}` : tvEaParts.join('，'))
+                        : sPrimePart;
+                    findings += `    TV：  ${tvBody}；\n`;
+                }
+            }
         }
 
         // 各瓣口反流速 + 压差
@@ -466,7 +521,15 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         if (rightHeartAdvancedEnabled) {
             const gs = get('GS', '');
             const fws = get('FWS', '');
-            findings += `    右心室应变：GS：${gs ? formatValue(gs) : ''}% FWS：${fws ? formatValue(fws) : ''}%\n`;
+            const rhOnly = isRightHeartValuesOnlyMode();
+            if (!rhOnly) {
+                findings += `    右心室应变：GS：${gs ? formatValue(gs) : ''}% FWS：${fws ? formatValue(fws) : ''}%\n`;
+            } else if (gs || fws) {
+                const strainParts = [];
+                if (gs) strainParts.push(`GS：${formatValue(gs)}%`);
+                if (fws) strainParts.push(`FWS：${formatValue(fws)}%`);
+                findings += `    右心室应变：${strainParts.join(' ')}\n`;
+            }
         }
         if (leftHeartAdvancedEnabled) {
             findings += `    ${buildLvStrainFindingsLine(get)}\n`;
@@ -551,13 +614,15 @@ function generateFindingsText(diseaseType, referenceRange, params) {
     findings += `     ${`FS: ${fsFormatted ? `${fsFormatted}%` : '%'}`.padEnd(45, ' ')}${efFormatted ? `EF: ${efFormatted}%` : 'EF: %'}\n`;
 
     if (rightHeartAdvancedEnabled) {
-        const { str: tapseRefStr } = getTapseRefRangeFromWeight(get('体重', ''));
-        const tapse = get('TAPSE', '');
-        const tapseFormatted = tapse ? formatValue(tapse) : '';
-        const tapseLine = tapseFormatted
-            ? (tapseRefStr ? `TAPSE: ${tapseFormatted}mm（${tapseRefStr}）` : `TAPSE: ${tapseFormatted}mm（）`)
-            : (tapseRefStr ? `TAPSE:（${tapseRefStr}）` : `TAPSE:（）`);
-        findings += `     ${tapseLine.padEnd(45, ' ')}\n`;
+        if (!isRightHeartValuesOnlyMode() || hasRhParamValue(get, 'TAPSE')) {
+            const { str: tapseRefStr } = getTapseRefRangeFromWeight(get('体重', ''));
+            const tapse = get('TAPSE', '');
+            const tapseFormatted = tapse ? formatValue(tapse) : '';
+            const tapseLine = tapseFormatted
+                ? (tapseRefStr ? `TAPSE: ${tapseFormatted}mm（${tapseRefStr}）` : `TAPSE: ${tapseFormatted}mm（）`)
+                : (tapseRefStr ? `TAPSE:（${tapseRefStr}）` : `TAPSE:（）`);
+            findings += `     ${tapseLine.padEnd(45, ' ')}\n`;
+        }
     }
     findings += `\n`;
 
@@ -594,20 +659,26 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         if (maxLadRaw) findings += `     LAD Max: ${formatValue(maxLadRaw)}mm\n`;
     }
     if (rightHeartAdvancedEnabled) {
+        const rhOnly = isRightHeartValuesOnlyMode();
         const paAoCompact = get('PA/Ao', '');
-        findings += `     PA/Ao: ${paAoCompact ? formatValue(paAoCompact) : ''}（正常＜1.1）\n`;
+        if (!rhOnly || hasRhParamValue(get, 'PA/Ao')) {
+            findings += `     PA/Ao: ${paAoCompact ? formatValue(paAoCompact) : ''}（正常＜1.1）\n`;
+        }
         const facCompact = get('FAC', '');
-        const { str: facRefStrCompact } = getFACRefRangeFromWeight((get('体重', '') || '').toString().trim());
-        const facParenCompact = facRefStrCompact ? `（${facRefStrCompact}）` : '（参考值）';
-        findings += `     RV FAC: ${facCompact ? formatValue(facCompact) : ''}%${facParenCompact}\n`;
+        if (!rhOnly || hasRhParamValue(get, 'FAC')) {
+            const { str: facRefStrCompact } = getFACRefRangeFromWeight((get('体重', '') || '').toString().trim());
+            const facParenCompact = facRefStrCompact ? `（${facRefStrCompact}）` : '（参考值）';
+            findings += `     RV FAC: ${facCompact ? formatValue(facCompact) : ''}%${facParenCompact}\n`;
+        }
         const rpadCompact = get('RPAD', '');
-        findings += `     RPAD: ${rpadCompact ? formatValue(rpadCompact) : ''}%\n`;
+        if (!rhOnly || hasRhParamValue(get, 'RPAD')) {
+            findings += `     RPAD: ${rpadCompact ? formatValue(rpadCompact) : ''}%\n`;
+        }
     }
     findings += `\n`;
 
     findings += `  3.频谱多普勒： 未见明显异常；\n`;
     let dopplerLine = '';
-    const isCatReference = referenceRange === '猫' || referenceRange === '猫（含体重）';
     const eaFusion = get('EA融合', '');
     if (!rightHeartAdvancedEnabled) {
         const vpa = get('VPA', '');
@@ -615,7 +686,7 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         if (vpa) dopplerLine += `VPA: ${formatValue(vpa)} `;
         if (vao) dopplerLine += `VAO: ${formatValue(vao)} `;
     }
-    if (eaFusion && isCatReference) {
+    if (eaFusion) {
         dopplerLine += `EA融合: ${formatValue(eaFusion)}m/s `;
     } else {
         const e = get('E', '');
@@ -629,35 +700,61 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         const eEFormatted = (eE || '').toString().trim()
             ? (!isNaN(eENum) ? eENum.toFixed(2) : formatValue(eE))
             : '';
-        if (!isCatReference || eEFormatted) dopplerLine += `E/E': ${eEFormatted}`;
+        if (eEFormatted) dopplerLine += `E/E': ${eEFormatted}`;
     }
 
     if (rightHeartAdvancedEnabled) {
+        const rhOnly = isRightHeartValuesOnlyMode();
         const vpaF = formatValue(get('VPA', ''));
         const vaoF = formatValue(get('VAO', ''));
         const vti = get('VTI', '');
         const atet = get('AT/ET', '');
-        findings += `     频谱多普勒检查\n`;
-        findings += `     VPA：${vpaF}m/s； VTI: ${vti ? formatValue(vti) : ''}cm； AT/ET: ${atet ? formatValue(atet) : ''}（＜0.3 提示可能肺动脉高压）；\n`;
-        findings += `     VAO: ${vaoF}m/s；\n`;
+        if (rhOnly) {
+            const spectrumParts = [];
+            if (hasRhParamValue(get, 'VPA')) spectrumParts.push(`VPA：${vpaF}m/s`);
+            if (vti) spectrumParts.push(`VTI: ${formatValue(vti)}cm`);
+            if (atet) spectrumParts.push(`AT/ET: ${formatValue(atet)}（＜0.3 提示可能肺动脉高压）`);
+            if (spectrumParts.length > 0) {
+                findings += `     频谱多普勒检查\n`;
+                findings += `     ${spectrumParts.join('； ')}；\n`;
+            }
+            if (hasRhParamValue(get, 'VAO')) findings += `     VAO: ${vaoF}m/s；\n`;
+        } else {
+            findings += `     频谱多普勒检查\n`;
+            findings += `     VPA：${vpaF}m/s； VTI: ${vti ? formatValue(vti) : ''}cm； AT/ET: ${atet ? formatValue(atet) : ''}（＜0.3 提示可能肺动脉高压）；\n`;
+            findings += `     VAO: ${vaoF}m/s；\n`;
+        }
     }
 
     if (dopplerLine.trim()) {
         let lineOut = dopplerLine.trim();
-        if (rightHeartAdvancedEnabled && !(eaFusion && isCatReference)) lineOut = `MV:   ${lineOut}`;
+        if (rightHeartAdvancedEnabled && !eaFusion) lineOut = `MV:   ${lineOut}`;
         findings += `     ${lineOut}\n`;
     } else if (!rightHeartAdvancedEnabled) {
         findings += `     E: m/s A: m/s E/A: ；\n`;
-    } else if (!(eaFusion && isCatReference)) {
+    } else if (!eaFusion) {
         findings += `     MV:   E: m/s A: m/s E/A: ；\n`;
     }
 
     if (rightHeartAdvancedEnabled) {
-        const eTV = formatValue(get('E（TV）', ''));
-        const aTV = formatValue(get('A（TV）', ''));
-        const eaTV = formatValue(get('E/A（TV）', ''));
-        const sP = formatValue(get("S'", ''));
-        findings += `     TV：  E:${eTV}m/s  A: ${aTV}m/s   E/A: ${eaTV}；  S':${sP}cm/s；\n`;
+        const rhOnly = isRightHeartValuesOnlyMode();
+        if (!rhOnly) {
+            findings += `     TV：  E:${formatValue(get('E（TV）', ''))}m/s，A: ${formatValue(get('A（TV）', ''))}m/s，E/A: ${formatValue(get('E/A（TV）', ''))}；  S':${formatValue(get("S'", ''))}cm/s；\n`;
+        } else {
+            const tvEaParts = [];
+            if (hasRhParamValue(get, 'E（TV）')) tvEaParts.push(`E:${formatValue(get('E（TV）', ''))}m/s`);
+            if (hasRhParamValue(get, 'A（TV）')) tvEaParts.push(`A: ${formatValue(get('A（TV）', ''))}m/s`);
+            if (hasRhParamValue(get, 'E/A（TV）')) tvEaParts.push(`E/A: ${formatValue(get('E/A（TV）', ''))}`);
+            const sPrimePart = hasRhParamValue(get, "S'")
+                ? `S':${formatValue(get("S'", ''))}cm/s`
+                : '';
+            if (tvEaParts.length > 0 || sPrimePart) {
+                const tvBody = tvEaParts.length > 0
+                    ? (sPrimePart ? `${tvEaParts.join('，')}；  ${sPrimePart}` : tvEaParts.join('，'))
+                    : sPrimePart;
+                findings += `     TV：  ${tvBody}；\n`;
+            }
+        }
     }
 
     findings += `\n`;
