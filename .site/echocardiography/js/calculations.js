@@ -500,6 +500,7 @@ function updateMaxLadVisibility() {
         delete parameters['LAD Max'];
     }
     updateMaxLadColor();
+    updateLaAoRowLayout();
 }
 
 // 参考为「猫」时不显示 LA Volume / LAVi（犬等非猫参考仍显示）
@@ -522,6 +523,19 @@ function updateLaVolumeVisibility() {
     } else {
         row.style.display = 'flex';
     }
+    updateLaAoRowLayout();
+}
+
+/** LA Volume 与 LAD Max 同时显示时，采用三列两行布局。 */
+function updateLaAoRowLayout() {
+    const row = document.querySelector('.la-ao-row');
+    const maxLadRow = document.getElementById('maxLadRow');
+    const laVolumeRow = document.getElementById('laVolumeRow');
+    if (!row || !maxLadRow || !laVolumeRow) return;
+
+    const hasMaxLad = maxLadRow.style.display !== 'none';
+    const hasLaVolume = laVolumeRow.style.display !== 'none';
+    row.classList.toggle('la-ao-row--five-fields', hasMaxLad && hasLaVolume);
 }
 
 function updateMaxLadColor() {

@@ -8,7 +8,7 @@
     <meta http-equiv="Expires" content="0">
     <title>心超报告生成器</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23e74c3c'><path d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/></svg>" type="image/svg+xml">
-    <link rel="stylesheet" href="styles.css?v=5.1.3-row-gap">
+    <link rel="stylesheet" href="styles.css?v=5.1.4-la-ao-responsive-grid">
 </head>
 <body>
     <!-- 提示词显示区域 -->
@@ -19,7 +19,11 @@
                 <!-- 顶栏：置于左侧栏顶部，置顶显示 -->
                 <div class="top-disease-selector">
                     <div class="top-row">
-                        <div class="disease-tags-wrap">
+                        <button type="button" id="mobileDiseaseToggle" class="mobile-disease-toggle" aria-expanded="false" aria-controls="diseaseTagsWrap">
+                            疾病模型
+                            <span class="mobile-disease-toggle-icon" aria-hidden="true">⌄</span>
+                        </button>
+                        <div class="disease-tags-wrap" id="diseaseTagsWrap">
                             <button class="disease-tag" data-value="Normal">正常</button>
                             <button class="disease-tag" data-value="MMVD">MMVD</button>
                             <button class="disease-tag" data-value="HCM">HCM</button>
@@ -351,6 +355,7 @@
                         <div id="laVolumeRow" class="la-ao-item la-volume-row">
                             <span class="la-volume-label">
                                 LA Volume
+                                <span class="ao-measurement-hint" id="laVolumeAoHint" aria-live="polite">AO偏高，建议测量</span>
                                 <span class="lavi-inline">
                                     <span class="lavi-display" id="laviDisplay">-</span>
                                     <span class="lavi-unit">ml/kg</span>
@@ -361,13 +366,16 @@
                                 <span class="unit-suffix" aria-hidden="true">ml</span>
                             </div>
                         </div>
-                    </div>
-                    <!-- LAD Max：仅猫 / 猫（含体重）；单击标题在弹窗中放大示意图 -->
-                    <div class="other-param-item max-lad-row" id="maxLadRow" style="display: none;">
-                        <label class="other-param-label max-lad-label-wrap" for="maxLadInput">LAD Max</label>
-                        <div class="input-with-unit-suffix">
-                            <input type="text" id="maxLadInput" class="other-param-input" data-param="LAD Max" placeholder="" autocomplete="off" aria-labelledby="maxLadTitleBtn">
-                            <span class="unit-suffix" aria-hidden="true">mm</span>
+                        <!-- LAD Max：仅猫 / 猫（含体重）；单击标题在弹窗中放大示意图 -->
+                        <div class="la-ao-item max-lad-row" id="maxLadRow" style="display: none;">
+                            <label class="other-param-label max-lad-label-wrap" for="maxLadInput">
+                                LAD Max
+                                <span class="ao-measurement-hint" id="maxLadAoHint" aria-live="polite">AO偏高，建议测量</span>
+                            </label>
+                            <div class="input-with-unit-suffix">
+                                <input type="text" id="maxLadInput" class="other-param-input" data-param="LAD Max" placeholder="" autocomplete="off" aria-labelledby="maxLadTitleBtn">
+                                <span class="unit-suffix" aria-hidden="true">mm</span>
+                            </div>
                         </div>
                     </div>
                     <!-- readme 2.2 PA/Ao：仅「右心高阶」；PA/Ao=PA/AO（2），AO（2）空时用主动脉 AO；PA 与 AO（2）在气泡内编辑 -->
@@ -747,13 +755,13 @@
     <script src="js/utils.js"></script>
     <script src="js/data-loader.js"></script>
     <script src="js/template-loader.js?v=5.1.3-rh-values"></script>
-    <script src="js/reference-values.js?v=5.1.3-warn1"></script>
-    <script src="js/calculations.js?v=5.1.3-tv-ea-auto"></script>
-    <script src="js/ui-inputs.js?v=5.1.3-dpdt-auto"></script>
+    <script src="js/reference-values.js?v=5.1.4-ao-measurement-hint"></script>
+    <script src="js/calculations.js?v=5.1.4-la-ao-responsive-grid"></script>
+    <script src="js/ui-inputs.js?v=5.1.4-unit-map"></script>
     <script src="js/refresh.js?v=5.1.3-dpdt-auto"></script>
     <script src="js/resize.js"></script>
     <script src="js/ocr.js"></script>
-    <script src="js/disease-selector.js?v=5.1.3-hcm-features-conditional"></script>
+    <script src="js/disease-selector.js?v=5.1.4-mobile-disease-collapse"></script>
     <script src="js/right-heart.js?v=5.1.3-rh-values"></script>
     <script src="js/left-heart.js?v=5.1.3-blank1"></script>
     <script src="js/valve-tags.js?v=5.1.3-hcm-features-conditional"></script>

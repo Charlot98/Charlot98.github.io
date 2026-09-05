@@ -56,6 +56,10 @@ body {
     flex: 1 1 auto;
 }
 
+.mobile-disease-toggle {
+    display: none;
+}
+
 /* 参考、体重整体右对齐（刷新按钮仍跟在其后） */
 .top-row .reference-weight-wrap {
     display: flex;
@@ -985,6 +989,11 @@ body {
     white-space: nowrap;
 }
 
+/* 输入框本身设有最大宽度时，单位容器同步收窄，确保单位以输入框为定位边界。 */
+.other-param-item > .input-with-unit-suffix {
+    width: min(100%, 220px);
+}
+
 .mmvd-thickness-wrap {
     width: 100px;
     min-width: 100px;
@@ -1016,8 +1025,8 @@ body {
 }
 
 .heart-rate-section .input-with-unit-suffix.heart-rate-input-wrap {
-    width: 180px;
-    min-width: 180px;
+    width: 140px;
+    min-width: 140px;
     flex-shrink: 0;
 }
 
@@ -1091,12 +1100,37 @@ body {
     min-width: 0;
 }
 
-/* AO、LA、LA/AO、LA Volume 同行四列布局 */
+/* AO、LA、LA/AO、LAD Max 同行四列布局。LA Volume 按需换至下一行。 */
 .la-ao-row {
     grid-column: 1 / -1;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 6px;
+}
+
+/* LAD Max 与 LA Volume 同时显示时，优先 3+2 两行，避免末项单独占一行。 */
+.la-ao-row.la-ao-row--five-fields {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* 左栏在桌面窄宽或手机宽度下自动分行，保留可读的输入宽度。 */
+@media (min-width: 769px) and (max-width: 1200px) {
+    .la-ao-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .la-ao-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 440px) {
+    .la-ao-row,
+    .la-ao-row.la-ao-row--five-fields {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 .la-ao-row .la-ao-item {
@@ -1115,12 +1149,55 @@ body {
     max-width: none;
 }
 
-/* LAD Max：占满一行 */
+/* 猫参考范围下，LAD Max 固定为第 4 列；LA Volume 随后另起一行。 */
 .max-lad-row {
-    grid-column: 1 / -1;
+    order: 4;
 }
 .max-lad-label-wrap {
     align-self: flex-start;
+    position: relative;
+}
+
+.la-volume-row {
+    order: 5;
+}
+
+.la-volume-label {
+    position: relative;
+}
+
+/* AO 超参考上限时的测量提示采用绝对定位，不改变网格列宽或行高。 */
+.ao-measurement-hint {
+    display: none;
+    position: absolute;
+    z-index: 3;
+    top: 50%;
+    left: calc(100% + 4px);
+    transform: translateY(-50%);
+    padding: 2px 5px;
+    border: 1px solid #f5b7b1;
+    border-radius: 4px;
+    background: #fff5f5;
+    color: #c0392b;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.ao-measurement-hint.is-visible {
+    display: inline-flex;
+}
+
+#maxLadRow .ao-measurement-hint {
+    right: calc(100% + 4px);
+    left: auto;
+}
+
+.other-param-input.ao-measurement-required {
+    border-color: #d92d20 !important;
+    box-shadow: 0 0 0 1px rgba(217, 45, 32, 0.12);
 }
 
 /* readme 2.2–2.3 PA/Ao + FAC（右心高阶）：首行仅 PA/Ao（PA、AO2 在气泡内）；次行 FAC 全宽 */
@@ -1247,6 +1324,7 @@ body {
 .pa-ao-advanced-row .pa-ao-fac-input-wrap .other-param-input {
     width: 100%;
     min-width: 0;
+    max-width: none;
 }
 
 /* readme 2.4 RPAD：单行 + 气泡内舒张/收缩直径 */
@@ -1283,6 +1361,10 @@ body {
 #rpadRatioInput {
     background-color: #f8f9fa;
     cursor: text;
+}
+
+.rpad-paa-wrap > .input-with-unit-suffix > .other-param-input {
+    max-width: none;
 }
 
 .rpad-bubble {
@@ -1361,9 +1443,19 @@ body {
 .vpa-vao-wrap {
     grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px 10px;
     align-items: start;
+}
+
+.vpa-vao-wrap.right-heart-advanced {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* 未启用右心高阶时，VPA、VAO 各占左栏一半并填满对应字段宽度。 */
+.vpa-vao-wrap:not(.right-heart-advanced) .vpa-row .other-param-input,
+.vpa-vao-wrap:not(.right-heart-advanced) .vao-row .other-param-input {
+    max-width: none;
 }
 
 /* VPA、VAO 占同等宽度的两个字段位。 */
@@ -1500,6 +1592,10 @@ body {
     min-width: 0;
 }
 
+.atet-bubble-row .input-with-unit-suffix .other-param-input {
+    max-width: none;
+}
+
 .atet-bubble-hint {
     font-size: 11px;
     color: #888;
@@ -1565,7 +1661,7 @@ body {
     flex-shrink: 0;
 }
 
-/* 右心室应变已移入第 3 区四列网格，单位改为同行显示以避免绝对定位溢出。 */
+/* 右心室应变单位固定在对应输入框内右侧。 */
 #gsFwsRow .gs-fws-input-wrap {
     display: flex;
     align-items: center;
@@ -1577,13 +1673,12 @@ body {
 #gsFwsRow .gs-fws-input-wrap .other-param-input {
     width: 100%;
     min-width: 0;
-    padding-right: 8px;
+    padding-right: 2rem;
 }
 
 #gsFwsRow .gs-fws-input-wrap .unit-suffix {
-    position: static;
-    transform: none;
-    flex-shrink: 0;
+    right: 6px;
+    font-size: 11px;
 }
 
 /* 与 EA 融合同行：右心室应变标题、GS、FWS 依次占用余下三列。 */
@@ -1592,7 +1687,7 @@ body {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-/* GS/FWS：单位 % 在输入框右侧同行展示，勿沿用反流速 100px 宽与内嵌单位占位 */
+/* GS/FWS：沿用统一的输入框内单位样式，勿沿用反流速 100px 宽。 */
 .regurgitation-velocity-item.gs-fws-row .gs-fws-input-wrap {
     width: auto;
     min-width: 0;
@@ -1602,14 +1697,13 @@ body {
     width: 5rem;
     min-width: 5rem;
     flex-shrink: 0;
-    padding-right: 8px;
+    padding-right: 2rem;
     box-sizing: border-box;
 }
 
 .regurgitation-velocity-item.gs-fws-row .gs-fws-input-wrap .unit-suffix {
-    position: static;
-    transform: none;
-    flex-shrink: 0;
+    right: 6px;
+    font-size: 11px;
 }
 
 :root {
@@ -1791,15 +1885,13 @@ body {
     width: 4.5rem;
     min-width: 4.5rem;
     flex-shrink: 0;
-    padding: 4px 8px;
+    padding: 4px 2rem 4px 8px;
     font-size: 12px;
     box-sizing: border-box;
 }
 
 .lv-strain-panel .gs-fws-input-wrap .unit-suffix {
-    position: static;
-    transform: none;
-    flex-shrink: 0;
+    right: 6px;
     font-size: 11px;
     color: #666;
 }
@@ -2699,9 +2791,9 @@ body {
 }
 
 .heart-rate-section .input-with-unit-suffix.heart-rate-input-wrap {
-    width: 180px;
-    min-width: 180px;
-    flex: 0 0 180px;
+    width: 140px;
+    min-width: 140px;
+    flex: 0 0 140px;
 }
 
 .heart-rate-section .heart-rate-input-wrap .heart-rate-input {
@@ -3099,6 +3191,48 @@ body {
 /* 操作指引：右下角三层显示，图2风格垂直卡片 */
 /* 手机宽度：左侧栏与右侧栏上下分行显示，左侧为主、右侧紧凑 */
 @media (max-width: 768px) {
+    /* 手机端不显示「可粘贴截图」提示，避免占用顶栏空间。 */
+    #ocrStatus {
+        display: none;
+    }
+
+    /* 手机端疾病模型默认折叠；点击「疾病模型」后以独立一行展开。 */
+    .mobile-disease-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        min-height: 28px;
+        padding: 4px 8px;
+        border: 1px solid #d7dee8;
+        border-radius: 5px;
+        background: #fff;
+        color: #344054;
+        font-size: 12px;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .mobile-disease-toggle-icon {
+        font-size: 14px;
+        line-height: 1;
+        transition: transform 0.2s ease;
+    }
+
+    .top-row .disease-tags-wrap {
+        display: none;
+        order: 4;
+        flex: 0 0 100%;
+        width: 100%;
+    }
+
+    .top-disease-selector.mobile-disease-expanded .disease-tags-wrap {
+        display: flex;
+    }
+
+    .top-disease-selector.mobile-disease-expanded .mobile-disease-toggle-icon {
+        transform: rotate(180deg);
+    }
+
     body {
         background-image: none;
         background-color: #fff;

@@ -177,6 +177,30 @@ function updateReferenceBasedInputColors() {
             input.style.color = '';
         }
     });
+
+    updateAoMeasurementWarning(referenceData);
+}
+
+/** AO 超过当前参考上限时，提示补测 LA Volume 与 LAD Max。 */
+function updateAoMeasurementWarning(referenceData = getReferenceData()) {
+    const aoInput = document.querySelector('input[data-param="AO"]');
+    const shouldSuggestMeasurement = (() => {
+        if (!aoInput || !referenceData) return false;
+        const aoValue = parseFloat(aoInput.value.trim().replace(',', '.'));
+        const aoRange = parseReferenceValue(findReferenceValueForParam('AO', referenceData));
+        return !isNaN(aoValue) && !!aoRange && aoValue > aoRange.max;
+    })();
+
+    ['LA Volume', 'LAD Max'].forEach((paramName) => {
+        const input = document.querySelector(`input[data-param="${paramName}"]`);
+        if (!input) return;
+        input.classList.toggle('ao-measurement-required', shouldSuggestMeasurement);
+        input.setAttribute('aria-invalid', shouldSuggestMeasurement ? 'true' : 'false');
+    });
+
+    document.querySelectorAll('.ao-measurement-hint').forEach((hint) => {
+        hint.classList.toggle('is-visible', shouldSuggestMeasurement);
+    });
 }
 
 // 更新特殊逻辑参数的颜色（FS、EF、VPA、VAO、E）

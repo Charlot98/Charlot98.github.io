@@ -218,8 +218,37 @@ document.querySelectorAll('.disease-tag').forEach(button => {
     button.addEventListener('click', function() {
         const diseaseType = this.getAttribute('data-value');
         handleDiseaseTypeChange(diseaseType);
+        collapseMobileDiseaseModel();
     });
 });
+
+function collapseMobileDiseaseModel() {
+    if (!window.matchMedia || !window.matchMedia('(max-width: 768px)').matches) return;
+    const selector = document.querySelector('.top-disease-selector');
+    const toggle = document.getElementById('mobileDiseaseToggle');
+    if (selector) selector.classList.remove('mobile-disease-expanded');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+}
+
+function setupMobileDiseaseToggle() {
+    const selector = document.querySelector('.top-disease-selector');
+    const toggle = document.getElementById('mobileDiseaseToggle');
+    if (!selector || !toggle) return;
+
+    toggle.addEventListener('click', function() {
+        const expanded = selector.classList.toggle('mobile-disease-expanded');
+        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    });
+
+    const mediaQuery = window.matchMedia && window.matchMedia('(max-width: 768px)');
+    if (mediaQuery && typeof mediaQuery.addEventListener === 'function') {
+        mediaQuery.addEventListener('change', function(event) {
+            if (event.matches) collapseMobileDiseaseModel();
+        });
+    }
+}
+
+setupMobileDiseaseToggle();
 
 // 参考范围下拉选择框事件
 const referenceRangeSelect = document.getElementById('referenceRangeSelect');
