@@ -35,6 +35,23 @@ function getPdaChamberConclusionText(get, referenceRange) {
     return '左心房、左心室严重容量过载；右心大小尚可。';
 }
 
+function buildPdaConclusionLine(get) {
+    const ductDiam = (get('动脉导管直径', '') || '').toString().trim();
+    const openingDiam = (get('开口直径', '') || '').toString().trim();
+    const ductMm = ductDiam ? formatValue(ductDiam) : '';
+    const openingMm = openingDiam ? formatValue(openingDiam) : '';
+    return `PDA（持续性左→右分流），动脉导管直径约${ductMm}mm，肺动脉开口处直径约${openingMm}mm。`;
+}
+
+function appendPdaConclusionIfOverlayActive(conclusion, get) {
+    const pdaActive = typeof isPdaActive === 'function' && isPdaActive();
+    if (!pdaActive || selectedDiseaseType === 'PDA') return conclusion;
+
+    const trimmed = (conclusion || '').trimEnd();
+    const nextIndex = trimmed.split('\n').filter(line => /^\s*\d+\./.test(line)).length + 1;
+    return `${trimmed}\n  ${nextIndex}.${buildPdaConclusionLine(get)}\n`;
+}
+
 /**
  * 腔室大小结论（Normal / MMVD 等共用）
  * EDVI>100 / LVIDDN≥1.7 / 猫 LVDd≥20mm → 左心室容量过载；
@@ -256,7 +273,9 @@ function appendFalseChordaeConclusionIfEnabled(conclusion) {
 }
 
 function appendTrailingConclusions(conclusion) {
-    return appendFalseChordaeConclusionIfEnabled(appendRvStrainConclusionIfEnabled(conclusion));
+    const get = (key, defaultValue = '') => parameters[key] || defaultValue;
+    const withPda = appendPdaConclusionIfOverlayActive(conclusion, get);
+    return appendFalseChordaeConclusionIfEnabled(appendRvStrainConclusionIfEnabled(withPda));
 }
 
 function generateConclusionText(diseaseType, referenceRange, params) {
@@ -307,13 +326,8 @@ function generateConclusionText(diseaseType, referenceRange, params) {
 
     // PDA
     if (diseaseType === 'PDA') {
-        const ductDiam = (get('动脉导管直径', '') || '').toString().trim();
-        const openingDiam = (get('开口直径', '') || '').toString().trim();
-        const ductMm = ductDiam ? formatValue(ductDiam) : '';
-        const openingMm = openingDiam ? formatValue(openingDiam) : '';
-
         let conclusion = '';
-        conclusion += `  1.PDA（持续性左→右分流），动脉导管直径约${ductMm}mm，开口直径约${openingMm}mm。\n`;
+        conclusion += `  1.${buildPdaConclusionLine(get)}\n`;
         conclusion += `  2.${getPdaChamberConclusionText(get, referenceRange)}\n`;
         if (leftHeartAdvancedEnabled) {
             conclusion += buildLvStrainConclusionLine(get, referenceRange, 'PDA', 3) + '\n';
@@ -521,6 +535,14 @@ function generateConclusionText(diseaseType, referenceRange, params) {
         }
         if (!addedChamberSummary && diseaseType === 'MMVD' && mmvdNeedsDefaultChamberSummary) {
             conclusion += `  ${idx}.${chamber.text}\n`;
+        }
+
+        if (diseaseType === 'MMVD' && mmvdNeedsDefaultChamberSummary
+            && typeof buildMineConclusionLine === 'function') {
+            const mineLine = buildMineConclusionLine(get);
+            if (mineLine) {
+                conclusion += `    ${mineLine}\n`;
+            }
         }
 
         // 收缩 / 舒张功能

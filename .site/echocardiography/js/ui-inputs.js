@@ -211,6 +211,10 @@ function setupInputListeners() {
                 }
             }
 
+            if (paramName === '肺动脉内分流速') {
+                updatePdaShuntPressure(value);
+            }
+
             // 如果体重变化，自动选择最接近的体重值（中间的选项），更新参考值显示和引用体重值，并自动更新模板
             // （generateTemplate 由末尾的 generateTemplateDeferred 统一触发，此处不再单独调用）
             if (paramName === '体重') {

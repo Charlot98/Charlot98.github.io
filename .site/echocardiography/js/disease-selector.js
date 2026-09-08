@@ -1,5 +1,11 @@
 // 疾病类型按钮点击事件（顶栏）
 let selectedDiseaseType = '';
+let pdaOverlayEnabled = false;
+
+// PDA 可与其他疾病模型并存；其他模型仍保持单选。
+function isPdaActive() {
+    return selectedDiseaseType === 'PDA' || pdaOverlayEnabled;
+}
 
 function isMitralRegurgTagActive() {
     const mitralBtn = document.querySelector('.valve-flow-tag[data-tag="二尖瓣反流"]');
@@ -25,13 +31,53 @@ function updateDpdtVisibilityByMitralRegurg() {
     updateSpecialLogicInputColors();
 }
 
+function updatePdaSpecificInputsVisibility() {
+    const pdaInputs = document.getElementById('pdaSpecificInputs');
+    const shuntItem = document.getElementById('pdaShuntVelocityItem');
+    const shouldShow = isPdaActive();
+
+    if (pdaInputs) pdaInputs.style.display = shouldShow ? 'flex' : 'none';
+    if (shuntItem) shuntItem.style.display = shouldShow ? 'flex' : 'none';
+    if (shouldShow) return;
+
+    ['动脉导管直径', '开口直径', '肺动脉内分流速', '肺动脉内分流压力差'].forEach((param) => {
+        delete parameters[param];
+    });
+    document.querySelectorAll('#pdaSpecificInputs input, #pdaShuntVelocityItem input').forEach((input) => {
+        input.value = '';
+    });
+    const pressureDisplay = document.getElementById('pdaShuntPressureDisplay');
+    if (pressureDisplay) pressureDisplay.textContent = '-';
+}
+
 // 通用的疾病类型处理函数
 function handleDiseaseTypeChange(diseaseType) {
     saveSimpsonDataToCache();
     unlockRightSidebarTemplateText();
-    // 再次点击当前疾病标签表示取消选择；无疾病选择时回到「正常」。
-    const isDeselecting = selectedDiseaseType === diseaseType && diseaseType !== 'Normal';
-    selectedDiseaseType = isDeselecting ? 'Normal' : diseaseType;
+    const wasPdaPrimary = selectedDiseaseType === 'PDA';
+    if (diseaseType === 'PDA') {
+        if (selectedDiseaseType === 'PDA') {
+            selectedDiseaseType = 'Normal';
+        } else if (pdaOverlayEnabled) {
+            pdaOverlayEnabled = false;
+        } else if (selectedDiseaseType && selectedDiseaseType !== 'Normal') {
+            pdaOverlayEnabled = true;
+        } else {
+            selectedDiseaseType = 'PDA';
+        }
+    } else {
+        // 再次点击当前疾病标签表示取消选择；无疾病选择时回到「正常」。
+        const isDeselecting = selectedDiseaseType === diseaseType && diseaseType !== 'Normal';
+        selectedDiseaseType = isDeselecting ? 'Normal' : diseaseType;
+        if (wasPdaPrimary && selectedDiseaseType !== 'PDA') {
+            pdaOverlayEnabled = true;
+        }
+        // 取消并发疾病后，PDA 回到单独激活状态。
+        if (selectedDiseaseType === 'Normal' && pdaOverlayEnabled) {
+            selectedDiseaseType = 'PDA';
+            pdaOverlayEnabled = false;
+        }
+    }
 
     // 移除所有按钮的激活状态，再激活当前或兜底的「正常」标签。
     document.querySelectorAll('.disease-tag').forEach(btn => {
@@ -39,6 +85,10 @@ function handleDiseaseTypeChange(diseaseType) {
     });
     const activeButton = document.querySelector(`.disease-tag[data-value="${selectedDiseaseType}"]`);
     if (activeButton) activeButton.classList.add('active');
+    if (pdaOverlayEnabled) {
+        const pdaButton = document.querySelector('.disease-tag[data-value="PDA"]');
+        if (pdaButton) pdaButton.classList.add('active');
+    }
 
         // 根据疾病类型自动选择参考范围
         const referenceRangeSelect = document.getElementById('referenceRangeSelect');
@@ -49,7 +99,7 @@ function handleDiseaseTypeChange(diseaseType) {
             const isCatRange = currentRange === '猫' || currentRange === '猫（含体重）';
 
             // DCM、PDA、MMVD、Normal → 犬类疾病，仅在当前为空或为猫/兔参考时才切换为"犬＞3kg"
-            if (selectedDiseaseType === 'DCM' || selectedDiseaseType === 'PDA' || selectedDiseaseType === 'MMVD' || selectedDiseaseType === 'Normal') {
+            if (isPdaActive() || selectedDiseaseType === 'DCM' || selectedDiseaseType === 'MMVD' || selectedDiseaseType === 'Normal') {
                 if (!currentRange || isCatRange || currentRange === '兔子') {
                     referenceRangeSelect.value = '犬＞3kg';
                     selectedReferenceRange = '犬＞3kg';
@@ -138,6 +188,8 @@ function handleDiseaseTypeChange(diseaseType) {
                 }
             }
         }
+
+        updatePdaSpecificInputsVisibility();
 
         // HCM 特征标签：仅在 HCM 模型下显示；切离 HCM 时一并清除激活态。
         const myocardiumFeatureTagRow = document.getElementById('myocardiumFeatureTagRow');

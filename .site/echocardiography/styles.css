@@ -1190,6 +1190,17 @@ body {
     display: inline-flex;
 }
 
+/* LA Volume 的提示悬浮在标题旁的卡片内，避免越过左侧栏边界。 */
+#laVolumeRow .ao-measurement-hint {
+    top: calc(100% + 4px);
+    left: 0;
+    right: auto;
+    max-width: 100%;
+    transform: none;
+    white-space: normal;
+    text-align: left;
+}
+
 #maxLadRow .ao-measurement-hint {
     right: calc(100% + 4px);
     left: auto;
@@ -2596,6 +2607,8 @@ body {
     gap: 6px;
     margin-top: 0;
     margin-bottom: 0;
+    width: 100%;
+    min-width: 0;
 }
 
 .valve-flow-tag {
@@ -2608,7 +2621,8 @@ body {
     color: #6b7280;
     cursor: pointer;
     text-align: center;
-    white-space: nowrap;
+    white-space: normal;
+    max-width: 100%;
     transition: all 0.2s ease;
 }
 
@@ -2642,19 +2656,21 @@ body {
 
 .regurgitation-velocity-item {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 4px 8px;
     padding: 5px 0;
+    min-width: 0;
 }
 
 .regurgitation-label {
     font-size: 13px;
     font-weight: 500;
     color: #555;
-    white-space: nowrap;
+    white-space: normal;
     width: 130px;
-    min-width: 130px;
-    flex: 0 0 130px;
+    min-width: 0;
+    flex: 0 1 130px;
 }
 
 .regurgitation-input {
@@ -2690,9 +2706,10 @@ body {
 
 .regurgitation-severity-buttons {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     align-items: center;
-    flex-shrink: 0;
+    min-width: 0;
 }
 
 @media (max-width: 560px) {
@@ -2921,6 +2938,74 @@ body {
     color: #666;
     white-space: nowrap;
     margin-left: 16px;
+}
+
+/* PDA 专属测量与瓣膜标题同组显示；空间不足时自动分行。 */
+.pda-specific-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 6px 12px;
+    margin: 0 0 6px;
+}
+
+.pda-measurement-item {
+    display: flex;
+    align-items: end;
+    gap: 4px;
+    min-width: 0;
+}
+
+.pda-measurement-item .other-param-label {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.pda-measurement-item .input-with-unit-suffix {
+    width: 100px;
+    min-width: 100px;
+}
+
+.pda-measurement-item .other-param-input {
+    width: 100%;
+    padding-right: 2.5rem;
+}
+
+/* PDA 直径字段的单位固定在输入框内右侧，避免被窄栏样式覆盖。 */
+.pda-measurement-item .unit-suffix {
+    display: block;
+    right: 8px;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.pda-shunt-velocity-item {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+}
+
+.pda-shunt-velocity-item .other-param-label {
+    margin-bottom: 0;
+    white-space: nowrap;
+}
+
+.pda-shunt-velocity-item .input-with-unit-suffix {
+    width: 100px;
+    min-width: 100px;
+}
+
+.pda-shunt-velocity-item .other-param-input {
+    width: 100%;
+}
+
+.pda-shunt-pressure-display {
+    color: #2c3e50;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
 }
 
 /* LA Volume：作为 LA/AO 四联行的第 4 列。 */

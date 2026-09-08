@@ -493,6 +493,25 @@ function calculateRegurgitationPressure(velocity) {
     return pressure.toFixed(1);
 }
 
+// PDA 肺动脉内分流压差按简化伯努利公式计算，保留两位小数。
+function calculatePdaShuntPressure(velocity) {
+    if (!velocity || Number.isNaN(parseFloat(velocity))) return null;
+    const pressure = 4 * Math.pow(parseFloat(velocity), 2);
+    return pressure.toFixed(2);
+}
+
+function updatePdaShuntPressure(velocity) {
+    const display = document.getElementById('pdaShuntPressureDisplay');
+    const pressure = calculatePdaShuntPressure(velocity);
+    if (pressure) {
+        if (display) display.textContent = pressure;
+        parameters['肺动脉内分流压力差'] = pressure;
+    } else {
+        if (display) display.textContent = '-';
+        delete parameters['肺动脉内分流压力差'];
+    }
+}
+
 // 更新反流压力差显示
 function updateRegurgitationPressure(paramName, velocity) {
     let displayId = null;

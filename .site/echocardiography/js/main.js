@@ -50,6 +50,10 @@ document.addEventListener('DOMContentLoaded', function() {
             updateRegurgitationPressure(paramName, input.value);
         }
     });
+    const pdaShuntVelocityInput = document.querySelector('input[data-param="肺动脉内分流速"]');
+    if (pdaShuntVelocityInput && pdaShuntVelocityInput.value) {
+        updatePdaShuntPressure(pdaShuntVelocityInput.value);
+    }
     updateRegurgitationVelocityColor();
 
     // 页面加载时默认选择"正常"

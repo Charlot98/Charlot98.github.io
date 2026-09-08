@@ -156,9 +156,13 @@ function generateFindingsText(diseaseType, referenceRange, params) {
             || !diseaseType) &&
         (referenceRange === '犬≤3kg' || referenceRange === '犬＞3kg' || referenceRange === '金毛'
             || referenceRange === '猫' || referenceRange === '猫（含体重）' || referenceRange === '兔子');
+    const pdaActive = diseaseType === 'PDA' || (typeof isPdaActive === 'function' && isPdaActive());
 
     if (isDogRuleBase) {
         const getReferenceValue = (k) => getRefValue(referenceData, k);
+        const pdaDuctDiameter = (get('动脉导管直径', '') || '').toString().trim();
+        const pdaOpeningDiameter = (get('开口直径', '') || '').toString().trim();
+        const pdaAnatomyLine = `可见一管腔样结构开口于肺动脉分叉处，直径约：${pdaDuctDiameter ? formatValue(pdaDuctDiameter) : ''}mm，于肺动脉开口处直径约：${pdaOpeningDiameter ? formatValue(pdaOpeningDiameter) : ''}mm。`;
 
         const valueByKey = (key) => {
             switch (key) {
@@ -325,7 +329,7 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         } else if (diseaseType === 'PDA') {
             findings += `  2.瓣膜异常: 未见明显异常；\n`;
             findings += buildMyocardiumAbnormalityFindingsLine();
-            findings += `    可见一管腔样结构开口于肺动脉分叉处，直径约：mm，于肺动脉开口处直径约：mm。\n`;
+            findings += `    ${pdaAnatomyLine}\n`;
         } else if (diseaseType === 'MMVD') {
             const thickness = get('二尖瓣前叶厚度', '');
             const droop = get('脱垂程度', '');
@@ -342,6 +346,9 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         } else {
             findings += `  2.瓣膜异常: 未见明显异常；\n`;
             findings += buildMyocardiumAbnormalityFindingsLine();
+        }
+        if (pdaActive && diseaseType !== 'PDA') {
+            findings += `    ${pdaAnatomyLine}\n`;
         }
         findings += `    ${formatParamWithRef('AO', get('AO', ''), 'AO')}\n`;
         findings += `    ${formatParamWithRef('LA', get('LA', ''), 'LA')}\n`;
@@ -397,17 +404,21 @@ function generateFindingsText(diseaseType, referenceRange, params) {
             diseaseType === 'HCM' && typeof isHcmFeatureTagActive === 'function' && isHcmFeatureTagActive('左心室流出道湍流')
                 ? '，左室流出道可见湍流信号'
                 : '';
+        let colorDopplerText = '各瓣口未见明显反流、湍流';
 
         if (isTagActive('各瓣口血流正常') && activeFlows.length === 0) {
-            findings += `  3.彩色多普勒检查  各瓣口未见明显反流、湍流${hcmLvotTurbulenceSuffix}；\n`;
         } else if (activeFlows.length > 0) {
             const regurgDesc = formatMergedRegurgitationDescription(activeFlows, (v) =>
                 (get(v.severityParam, '') || '').trim() || getDefaultRegurgitationSeverityForParam(v.severityParam)
             );
-            findings += `  3.彩色多普勒检查  ${regurgDesc}${hcmLvotTurbulenceSuffix}；\n`;
-        } else {
-            findings += `  3.彩色多普勒检查  各瓣口未见明显反流、湍流${hcmLvotTurbulenceSuffix}；\n`;
+            colorDopplerText = regurgDesc;
         }
+        if (pdaActive) {
+            colorDopplerText = activeFlows.length > 0
+                ? `${colorDopplerText}；肺动脉瓣湍流`
+                : '肺动脉瓣湍流';
+        }
+        findings += `  3.彩色多普勒检查  ${colorDopplerText}${hcmLvotTurbulenceSuffix}；\n`;
 
         // 频谱多普勒
         if (rightHeartAdvancedEnabled) {
@@ -516,6 +527,11 @@ function generateFindingsText(diseaseType, referenceRange, params) {
         velocityLines.forEach(line => { findings += `${line}\n`; });
         if (unknownValves.length > 0) {
             findings += `    ${unknownValves.join('、')}反流速未测得；\n`;
+        }
+        if (pdaActive) {
+            const pdaShuntVelocity = (get('肺动脉内分流速', '') || '').toString().trim();
+            const pdaShuntPressure = (get('肺动脉内分流压力差', '') || '').toString().trim();
+            findings += `    肺动脉内分流速呈连续型，分流速：${pdaShuntVelocity ? `${formatValue(pdaShuntVelocity)}m/s` : 'm/s'}（${pdaShuntPressure ? `${formatValue(pdaShuntPressure)}mmHg` : 'mmHg'}）。\n`;
         }
 
         if (rightHeartAdvancedEnabled) {
