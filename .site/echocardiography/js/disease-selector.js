@@ -1,10 +1,37 @@
 // 疾病类型按钮点击事件（顶栏）
 let selectedDiseaseType = '';
 let pdaOverlayEnabled = false;
+let hcmAutoActivatedFromNormal = false;
 
 // PDA 可与其他疾病模型并存；其他模型仍保持单选。
 function isPdaActive() {
     return selectedDiseaseType === 'PDA' || pdaOverlayEnabled;
+}
+
+// 猫的舒张期室间隔或左室游离壁厚度达到 6mm 时，自动切换到 HCM；PDA 并发状态由疾病切换逻辑保留。
+function autoActivateHcmForCatWallThickness() {
+    const isCatReference = selectedReferenceRange === '猫' || selectedReferenceRange === '猫（含体重）';
+    if (!isCatReference) return false;
+
+    const ivsdInput = document.querySelector('input[data-param="IVSd"]');
+    const lvpwdInput = document.querySelector('input[data-param="LVPWd"]');
+    const ivsd = ivsdInput ? Number.parseFloat(ivsdInput.value.trim().replace(',', '.')) : NaN;
+    const lvpwd = lvpwdInput ? Number.parseFloat(lvpwdInput.value.trim().replace(',', '.')) : NaN;
+    const meetsHcmWallThickness = (!Number.isNaN(ivsd) && ivsd >= 6)
+        || (!Number.isNaN(lvpwd) && lvpwd >= 6);
+
+    if (hcmAutoActivatedFromNormal && selectedDiseaseType === 'HCM' && !meetsHcmWallThickness) {
+        hcmAutoActivatedFromNormal = false;
+        handleDiseaseTypeChange('Normal', { preserveReferenceRange: true });
+        return true;
+    }
+
+    if (selectedDiseaseType === 'Normal' && meetsHcmWallThickness) {
+        hcmAutoActivatedFromNormal = true;
+        handleDiseaseTypeChange('HCM');
+        return true;
+    }
+    return false;
 }
 
 function isMitralRegurgTagActive() {
@@ -34,13 +61,28 @@ function updateDpdtVisibilityByMitralRegurg() {
 function updatePdaSpecificInputsVisibility() {
     const pdaInputs = document.getElementById('pdaSpecificInputs');
     const shuntItem = document.getElementById('pdaShuntVelocityItem');
+    const directionButtons = shuntItem
+        ? shuntItem.querySelector('.regurgitation-severity-buttons[data-param="PDA分流方向"]')
+        : null;
     const shouldShow = isPdaActive();
 
-    if (pdaInputs) pdaInputs.style.display = shouldShow ? 'flex' : 'none';
+    if (pdaInputs) pdaInputs.style.display = shouldShow ? 'grid' : 'none';
     if (shuntItem) shuntItem.style.display = shouldShow ? 'flex' : 'none';
-    if (shouldShow) return;
+    if (shouldShow) {
+        let activeDirection = directionButtons
+            ? directionButtons.querySelector('.regurgitation-severity-btn.active')
+            : null;
+        if (!activeDirection && directionButtons) {
+            activeDirection = directionButtons.querySelector('.regurgitation-severity-btn[data-value="左→右"]');
+            if (activeDirection) activeDirection.classList.add('active');
+        }
+        parameters['PDA分流方向'] = activeDirection
+            ? activeDirection.getAttribute('data-value')
+            : '左→右';
+        return;
+    }
 
-    ['动脉导管直径', '开口直径', '肺动脉内分流速', '肺动脉内分流压力差'].forEach((param) => {
+    ['动脉导管直径', '开口直径', '肺动脉内分流速', '肺动脉内分流压力差', 'PDA分流方向'].forEach((param) => {
         delete parameters[param];
     });
     document.querySelectorAll('#pdaSpecificInputs input, #pdaShuntVelocityItem input').forEach((input) => {
@@ -48,12 +90,25 @@ function updatePdaSpecificInputsVisibility() {
     });
     const pressureDisplay = document.getElementById('pdaShuntPressureDisplay');
     if (pressureDisplay) pressureDisplay.textContent = '-';
+    if (directionButtons) {
+        directionButtons.querySelectorAll('.regurgitation-severity-btn').forEach((button) => {
+            button.classList.remove('active');
+        });
+    }
 }
 
 // 通用的疾病类型处理函数
-function handleDiseaseTypeChange(diseaseType) {
+function handleDiseaseTypeChange(diseaseType, options = {}) {
+    // 只有用户直接点击 HCM 疾病标签时，才解除“由健康自动切换”的回退关联。
+    // 瓣叶反流等普通标签不会经过这个手动标记，也就不会中断自动切换。
+    if (diseaseType === 'HCM' && options.manualHcmSelection) {
+        hcmAutoActivatedFromNormal = false;
+    }
     saveSimpsonDataToCache();
     unlockRightSidebarTemplateText();
+    const previousDiseaseType = selectedDiseaseType;
+    const preserveValveFlowForHcmToggle = diseaseType === 'HCM'
+        || (previousDiseaseType === 'HCM' && diseaseType === 'Normal');
     const wasPdaPrimary = selectedDiseaseType === 'PDA';
     if (diseaseType === 'PDA') {
         if (selectedDiseaseType === 'PDA') {
@@ -100,7 +155,7 @@ function handleDiseaseTypeChange(diseaseType) {
 
             // DCM、PDA、MMVD、Normal → 犬类疾病，仅在当前为空或为猫/兔参考时才切换为"犬＞3kg"
             if (isPdaActive() || selectedDiseaseType === 'DCM' || selectedDiseaseType === 'MMVD' || selectedDiseaseType === 'Normal') {
-                if (!currentRange || isCatRange || currentRange === '兔子') {
+                if (!options.preserveReferenceRange && (!currentRange || isCatRange || currentRange === '兔子')) {
                     referenceRangeSelect.value = '犬＞3kg';
                     selectedReferenceRange = '犬＞3kg';
                 }
@@ -231,17 +286,21 @@ function handleDiseaseTypeChange(diseaseType) {
 
         updateReferenceValues();
 
-        // 根据疾病类型自动勾选瓣口血流标签
-        setDefaultValveFlowTags(selectedDiseaseType);
+        // HCM 的进入及退出只切换疾病模型，不改动当前瓣口血流/反流标签。
+        setDefaultValveFlowTags(selectedDiseaseType, {
+            preserveCurrentState: preserveValveFlowForHcmToggle
+        });
         updateDpdtVisibilityByMitralRegurg();
 
         generateTemplate();
 }
 
-// 疾病模型切换时保留用户已选择的瓣口血流标签；仅 MMVD 确保二尖瓣反流处于激活状态。
-function setDefaultValveFlowTags(diseaseType) {
+// 疾病模型切换时保留用户已选择的瓣口血流标签；MMVD 与 DCM 确保二尖瓣反流处于激活状态。
+function setDefaultValveFlowTags(diseaseType, options = {}) {
     const normalButton = document.querySelector('.valve-flow-tag-normal[data-tag="各瓣口血流正常"]');
     const mitralButton = document.querySelector('.valve-flow-tag-red[data-tag="二尖瓣反流"]');
+
+    if (options.preserveCurrentState) return;
 
     if (diseaseType === 'Normal') {
         if (!normalButton || normalButton.classList.contains('active')) return;
@@ -255,21 +314,39 @@ function setDefaultValveFlowTags(diseaseType) {
         return;
     }
 
-    if (diseaseType !== 'MMVD') return;
+    if (diseaseType !== 'MMVD' && diseaseType !== 'DCM') return;
 
-    if (!mitralButton || mitralButton.classList.contains('active')) return;
+    if (!mitralButton) return;
 
-    // 「各瓣口血流正常」与反流标签互斥；切换至 MMVD 时仅撤销该互斥状态，保留其他反流标签。
+    // 「各瓣口血流正常」与反流标签互斥；仅撤销该互斥状态，保留其他反流标签。
     if (normalButton) normalButton.classList.remove('active');
-    mitralButton.classList.add('active');
-    toggleRegurgitationVelocityInput('二尖瓣反流', true);
+    if (!mitralButton.classList.contains('active')) {
+        mitralButton.classList.add('active');
+        toggleRegurgitationVelocityInput('二尖瓣反流', true);
+    }
+
+    // DCM 默认二尖瓣微量反流；覆盖通用的二尖瓣“轻度”默认值。
+    if (diseaseType === 'DCM') {
+        const mitralItem = document.getElementById('mitralRegurgVelocityItem');
+        const severityButtons = mitralItem
+            ? mitralItem.querySelector('.regurgitation-severity-buttons[data-param="二尖瓣反流程度"]')
+            : null;
+        if (severityButtons) {
+            severityButtons.querySelectorAll('.regurgitation-severity-btn').forEach(button => {
+                button.classList.toggle('active', button.getAttribute('data-value') === '微量');
+            });
+        }
+        parameters['二尖瓣反流程度'] = '微量';
+    }
 }
 
 // 顶栏疾病类型按钮点击事件
 document.querySelectorAll('.disease-tag').forEach(button => {
     button.addEventListener('click', function() {
         const diseaseType = this.getAttribute('data-value');
-        handleDiseaseTypeChange(diseaseType);
+        handleDiseaseTypeChange(diseaseType, {
+            manualHcmSelection: diseaseType === 'HCM'
+        });
         collapseMobileDiseaseModel();
     });
 });
@@ -344,6 +421,7 @@ if (referenceRangeSelect) {
         toggleWeightInput();
         // 更新参考值显示
         updateReferenceValues();
+        autoActivateHcmForCatWallThickness();
         updateDpdtVisibilityByMitralRegurg();
         generateTemplate();
     });

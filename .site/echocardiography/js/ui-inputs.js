@@ -150,6 +150,10 @@ function setupInputListeners() {
             if (['IVSd', 'LVDd', 'LVPWd', 'IVSs', 'LVDs', 'LVPWs', 'AO', 'LA'].includes(paramName)) {
                 updateReferenceBasedInputColors();
             }
+            if ((paramName === 'IVSd' || paramName === 'LVPWd')
+                && typeof autoActivateHcmForCatWallThickness === 'function') {
+                autoActivateHcmForCatWallThickness();
+            }
 
             // 如果特殊逻辑参数变化，更新颜色显示
             if (['FS', 'EF', 'EPSS', 'SI', 'VPA', 'VAO', 'E', 'dp/dt', 'EA融合', "E/E'"].includes(paramName)) {
@@ -368,6 +372,7 @@ function setLeftSidebarInputPlaceholders() {
         '三尖瓣反流速': 'm/s',
         '肺动脉瓣反流速': 'm/s',
         '主动脉瓣反流速': 'm/s',
+        '肺动脉内分流速': 'm/s',
         '心率': 'bpm'
     };
 

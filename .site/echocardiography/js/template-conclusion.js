@@ -19,28 +19,24 @@ function hasLeftAtrialEnlargement(get, referenceRange) {
     return useMaxLadInsteadOfLaAo ? maxLadNum >= 16 : !Number.isNaN(laAoNum) && laAoNum >= 1.6;
 }
 
-/** HCM 结论第 2 条：仅描述左心房大小 */
-function getHcmLeftAtriumConclusionText(get, referenceRange) {
-    return hasLeftAtrialEnlargement(get, referenceRange)
-        ? '左心房增大。'
-        : '左心房未见明显增大。';
-}
-
-/** PDA 结论第 2 条：腔室大小与健康规则一致；无触发项时默认严重双腔过载表述 */
-function getPdaChamberConclusionText(get, referenceRange) {
-    const chamber = evaluateChamberSizeConclusion(get, referenceRange);
-    if (chamber.hasAbnormality) {
-        return chamber.text;
-    }
-    return '左心房、左心室严重容量过载；右心大小尚可。';
-}
-
 function buildPdaConclusionLine(get) {
     const ductDiam = (get('动脉导管直径', '') || '').toString().trim();
     const openingDiam = (get('开口直径', '') || '').toString().trim();
+    const selectedDirection = (get('PDA分流方向', '左→右') || '').toString().trim();
+    const shuntDirection = ['左→右', '右→左', '双向'].includes(selectedDirection)
+        ? selectedDirection
+        : '左→右';
     const ductMm = ductDiam ? formatValue(ductDiam) : '';
     const openingMm = openingDiam ? formatValue(openingDiam) : '';
-    return `PDA（持续性左→右分流），动脉导管直径约${ductMm}mm，肺动脉开口处直径约${openingMm}mm。`;
+    return `PDA（持续性${shuntDirection}分流），动脉导管直径约${ductMm}mm，肺动脉开口处直径约${openingMm}mm。`;
+}
+
+const PDA_FOLLOWUP_NOTE = '备注: 若进行手术/封堵治疗，建议术后当日、术后1个月、3个月、6个月、12个月各复查一次心超。';
+
+function shiftConclusionLineNumbers(conclusion, offset) {
+    return (conclusion || '').replace(/^(\s*)(\d+)\./gm, (match, indent, lineNumber) => {
+        return `${indent}${Number.parseInt(lineNumber, 10) + offset}.`;
+    });
 }
 
 function appendPdaConclusionIfOverlayActive(conclusion, get) {
@@ -54,26 +50,30 @@ function appendPdaConclusionIfOverlayActive(conclusion, get) {
 
 /**
  * 腔室大小结论（Normal / MMVD 等共用）
- * EDVI>100 / LVIDDN≥1.7 / 猫 LVDd≥20mm → 左心室容量过载；
- * 左房+猫左室同时满足 → 左心容量过载。
+ * 犬等：EDVI>100 / LVIDDN≥1.7 → 左心室容量过载；
+ * 猫：LVDd 超过当前参考上限 → 左心室容量过载。
  */
-function evaluateChamberSizeConclusion(get, referenceRange) {
+function evaluateChamberSizeConclusion(get, referenceRange, referenceData) {
     const edviNum = parseFloat(get('EDVI', ''));
     const lviddnNum = parseFloat(get('LVIDDN', ''));
     const isCatRef = referenceRange === '猫' || referenceRange === '猫（含体重）';
     const lvdMmForCat = parseFloat(get('LVDd', ''));
-    const hasCatLvOverloadByLvdMm = isCatRef && !Number.isNaN(lvdMmForCat) && lvdMmForCat >= 20;
+    const lvdReferenceRange = isCatRef && referenceData
+        ? parseReferenceValue(getRefValue(referenceData, 'LVDd'))
+        : null;
+    const hasCatLvOverloadByLvdMm = isCatRef
+        && !Number.isNaN(lvdMmForCat)
+        && !!lvdReferenceRange
+        && lvdMmForCat > lvdReferenceRange.max;
 
-    const hasLvOverload =
+    const hasNormalizedLvOverload =
         (!Number.isNaN(edviNum) && edviNum > 100) ||
-        (!Number.isNaN(lviddnNum) && lviddnNum >= 1.7) ||
-        hasCatLvOverloadByLvdMm;
+        (!Number.isNaN(lviddnNum) && lviddnNum >= 1.7);
+    const hasLvOverload = isCatRef ? hasCatLvOverloadByLvdMm : hasNormalizedLvOverload;
     const hasLaEnlargement = hasLeftAtrialEnlargement(get, referenceRange);
 
-    if (hasLaEnlargement && hasCatLvOverloadByLvdMm)
-        return { text: '左心容量过载，其余腔室大小尚可。', hasAbnormality: true };
     if (hasLvOverload && hasLaEnlargement)
-        return { text: '左心容量过载，其余腔室大小尚可。', hasAbnormality: true };
+        return { text: '左心房、左心室容量过载，其余腔室大小尚可。', hasAbnormality: true };
     if (hasLvOverload)
         return { text: '左心室容量过载，其余各腔室大小尚可。', hasAbnormality: true };
     if (hasLaEnlargement)
@@ -275,11 +275,26 @@ function appendFalseChordaeConclusionIfEnabled(conclusion) {
 function appendTrailingConclusions(conclusion) {
     const get = (key, defaultValue = '') => parameters[key] || defaultValue;
     const withPda = appendPdaConclusionIfOverlayActive(conclusion, get);
-    return appendFalseChordaeConclusionIfEnabled(appendRvStrainConclusionIfEnabled(withPda));
+    const withOptionalFindings = appendFalseChordaeConclusionIfEnabled(appendRvStrainConclusionIfEnabled(withPda));
+    const pdaOverlayActive = typeof isPdaActive === 'function'
+        && isPdaActive()
+        && selectedDiseaseType !== 'PDA';
+    if (!pdaOverlayActive) return withOptionalFindings;
+    return `${withOptionalFindings.trimEnd()}\n\n${PDA_FOLLOWUP_NOTE}\n`;
 }
 
 function generateConclusionText(diseaseType, referenceRange, params) {
     const get = (key, defaultValue = '') => parameters[key] || defaultValue;
+
+    // PDA 固定只保留诊断行与末行备注；中间内容复用常规模板规则。
+    if (diseaseType === 'PDA') {
+        const templatedConclusion = generateConclusionText('Normal', referenceRange, params).trimEnd();
+        const shiftedConclusion = shiftConclusionLineNumbers(templatedConclusion, 1);
+        let conclusion = `  1.${buildPdaConclusionLine(get)}\n`;
+        if (shiftedConclusion) conclusion += `${shiftedConclusion}\n`;
+        conclusion += `\n${PDA_FOLLOWUP_NOTE}\n`;
+        return conclusion;
+    }
 
     if (leftHeartAdvancedOnlyEnabled) {
         return appendFalseChordaeConclusionIfEnabled(
@@ -317,26 +332,12 @@ function generateConclusionText(diseaseType, referenceRange, params) {
 
         let conclusion = '';
         conclusion += line1;
-        conclusion += `  2.${getHcmLeftAtriumConclusionText(get, referenceRange)}\n`;
+        const chamber = evaluateChamberSizeConclusion(get, referenceRange, referenceData);
+        conclusion += `  2.${chamber.text}\n`;
         conclusion += (leftHeartAdvancedEnabled
             ? buildLvStrainConclusionLine(get, referenceRange, 'HCM', 3)
             : buildSystolicDiastolicFuncConclusionLine(get, referenceRange, 'HCM', 3)) + '\n';
         return appendTrailingConclusions(conclusion);
-    }
-
-    // PDA
-    if (diseaseType === 'PDA') {
-        let conclusion = '';
-        conclusion += `  1.${buildPdaConclusionLine(get)}\n`;
-        conclusion += `  2.${getPdaChamberConclusionText(get, referenceRange)}\n`;
-        if (leftHeartAdvancedEnabled) {
-            conclusion += buildLvStrainConclusionLine(get, referenceRange, 'PDA', 3) + '\n';
-        } else {
-            conclusion += '  3.左心室收缩功能下降，舒张功能尚可。\n';
-        }
-        conclusion = appendTrailingConclusions(conclusion);
-        conclusion += '\n备注: 若进行手术/封堵治疗，建议术后当日、术后1个月、3个月、6个月、12个月各复查一次心超。\n';
-        return conclusion;
     }
 
     // DCM：固定初始结论（由 JS 规则维护）
@@ -362,11 +363,20 @@ function generateConclusionText(diseaseType, referenceRange, params) {
         }
 
         let conclusion = '';
-        conclusion += '  1.DCM（左心室、左心房容量过载，左心室球形指数下降，EF、FS下降，PEP/ET＞0.4，EPSS＞6.5mm），建议复查监测。\n';
+        conclusion += '  1.DCM表型，建议复查监测。\n';
         conclusion += regurgLine;
+        const isCatReference = referenceRange === '猫' || referenceRange === '猫（含体重）';
+        let nextLineIndex = 3;
+        if (isCatReference) {
+            conclusion += `  ${nextLineIndex}.心脏各室壁厚度未见明显异常。\n`;
+            nextLineIndex += 1;
+        }
+        const chamber = evaluateChamberSizeConclusion(get, referenceRange, referenceData);
+        conclusion += `  ${nextLineIndex}.${chamber.text}\n`;
+        nextLineIndex += 1;
         conclusion += (leftHeartAdvancedEnabled
-            ? buildLvStrainConclusionLine(get, referenceRange, 'DCM', 3)
-            : buildSystolicDiastolicFuncConclusionLine(get, referenceRange, 'DCM', 3)) + '\n';
+            ? buildLvStrainConclusionLine(get, referenceRange, 'DCM', nextLineIndex)
+            : buildSystolicDiastolicFuncConclusionLine(get, referenceRange, 'DCM', nextLineIndex)) + '\n';
         return appendTrailingConclusions(conclusion);
     }
 
@@ -381,6 +391,7 @@ function generateConclusionText(diseaseType, referenceRange, params) {
             || referenceRange === '猫' || referenceRange === '猫（含体重）' || referenceRange === '兔子');
 
     if (isDogRuleBase) {
+        const isCatReference = referenceRange === '猫' || referenceRange === '猫（含体重）';
         const isTagActive = (tagName) => {
             const button = document.querySelector(`.valve-flow-tag[data-tag="${tagName}"]`);
             return button && button.classList.contains('active');
@@ -464,7 +475,9 @@ function generateConclusionText(diseaseType, referenceRange, params) {
                 mmvdDeferredOtherRegurgEnabled = true;
             }
         } else if (activeRegurg.length === 0 && normalActive) {
-            conclusion += '  1.心脏各腔室大小、室壁厚度、各瓣口血流未见明显异常。\n';
+            conclusion += isCatReference
+                ? '  1.心脏各腔室大小、各室壁厚度、各瓣口血流未见明显异常。\n'
+                : '  1.心脏各腔室大小、室壁厚度、各瓣口血流未见明显异常。\n';
         } else if (activeRegurg.length > 0) {
             let hasExtraConclusion = false;
             const mvVelRaw0 = (get('二尖瓣反流速', '') || '').toString().trim();
@@ -479,7 +492,9 @@ function generateConclusionText(diseaseType, referenceRange, params) {
                     (get(v.severityParam, '') || '').trim() || getDefaultRegurgitationSeverityForParam(v.severityParam)
                 );
                 conclusion += `  1.${regurgDesc}。\n`;
-                conclusion += '  2.心脏各腔室大小未见明显异常。\n';
+                conclusion += isCatReference
+                    ? '  2.心脏各腔室大小、各室壁厚度未见明显异常。\n'
+                    : '  2.心脏各腔室大小未见明显异常。\n';
             } else {
                 let index = 1;
                 for (const v of regurgTags) {
@@ -506,22 +521,32 @@ function generateConclusionText(diseaseType, referenceRange, params) {
                     conclusion += `${line}\n`;
                     index += 1;
                 }
-                conclusion += `  ${index}.心脏各腔室大小未见明显异常。\n`;
+                conclusion += isCatReference
+                    ? `  ${index}.心脏各腔室大小、各室壁厚度未见明显异常。\n`
+                    : `  ${index}.心脏各腔室大小未见明显异常。\n`;
             }
         } else {
-            conclusion += '  1.心脏各腔室大小、室壁厚度、各瓣口血流未见明显异常。\n';
+            conclusion += isCatReference
+                ? '  1.心脏各腔室大小、各室壁厚度、各瓣口血流未见明显异常。\n'
+                : '  1.心脏各腔室大小、室壁厚度、各瓣口血流未见明显异常。\n';
         }
 
         // 容量/结构异常
-        const chamber = evaluateChamberSizeConclusion(get, referenceRange);
+        const chamber = evaluateChamberSizeConclusion(get, referenceRange, referenceData);
         if (chamber.hasAbnormality) {
             // 前面的反流分支可能已写入默认“腔室大小未见异常”。
             // 容量异常命中时删除该默认行，避免与容量过载结论重复或矛盾。
             conclusion = conclusion
                 .replace(/^\s*\d+\.心脏各腔室大小未见明显异常。\n?/gm, '')
                 .replace(
-                    /^(\s*\d+\.)心脏各腔室大小、室壁厚度、各瓣口血流未见明显异常。/gm,
-                    '$1各室壁厚度、各瓣口血流未见明显异常。'
+                    /^(\s*\d+\.)心脏各腔室大小、各室壁厚度未见明显异常。/gm,
+                    '$1心脏各室壁厚度未见明显异常。'
+                )
+                .replace(
+                    /^(\s*\d+\.)心脏各腔室大小、(?:各)?室壁厚度、各瓣口血流未见明显异常。/gm,
+                    isCatReference
+                        ? '$1心脏各室壁厚度、各瓣口血流未见明显异常。'
+                        : '$1各室壁厚度、各瓣口血流未见明显异常。'
                 );
         }
         const numberedLinesForIndex = conclusion.trimEnd().split('\n').filter(l => /^\s*\d+\./.test(l)).length;

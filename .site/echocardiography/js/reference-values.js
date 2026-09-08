@@ -126,6 +126,7 @@ function findReferenceValueForParam(paramName, referenceData) {
 // 更新需要参考值比较的输入框颜色（IVSd、LVDd、LVWd、IVSs、LVDs、LVWs、AO、LA）
 function updateReferenceBasedInputColors() {
     const referenceData = getReferenceData();
+    const isCatReference = selectedReferenceRange === '猫' || selectedReferenceRange === '猫（含体重）';
 
     // 需要参考值比较的参数列表
     const paramsToCheck = [
@@ -143,7 +144,13 @@ function updateReferenceBasedInputColors() {
         const input = document.querySelector(selector);
         if (!input) return;
 
-        const value = parseFloat(input.value.trim());
+        const value = parseFloat(input.value.trim().replace(',', '.'));
+
+        // 猫的舒张期室壁厚度使用独立阈值：仅 ≥5.5mm 标红，其余均为默认字体颜色。
+        if (isCatReference && (param === 'IVSd' || param === 'LVPWd')) {
+            input.style.color = !isNaN(value) && value >= 5.5 ? 'red' : '';
+            return;
+        }
 
         if (!referenceData) {
             // 如果没有参考数据，重置颜色

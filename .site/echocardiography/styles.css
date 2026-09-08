@@ -1190,17 +1190,6 @@ body {
     display: inline-flex;
 }
 
-/* LA Volume 的提示悬浮在标题旁的卡片内，避免越过左侧栏边界。 */
-#laVolumeRow .ao-measurement-hint {
-    top: calc(100% + 4px);
-    left: 0;
-    right: auto;
-    max-width: 100%;
-    transform: none;
-    white-space: normal;
-    text-align: left;
-}
-
 #maxLadRow .ao-measurement-hint {
     right: calc(100% + 4px);
     left: auto;
@@ -2940,19 +2929,20 @@ body {
     margin-left: 16px;
 }
 
-/* PDA 专属测量与瓣膜标题同组显示；空间不足时自动分行。 */
+/* PDA 专属测量分为两个等宽区域；空间不足时自动改为上下两行。 */
 .pda-specific-inputs {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: end;
-    gap: 6px 12px;
-    margin: 0 0 6px;
+    gap: 8px 16px;
+    margin: 2px 0 8px;
 }
 
 .pda-measurement-item {
-    display: flex;
-    align-items: end;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: max-content minmax(100px, 220px);
+    align-items: center;
+    gap: 6px;
     min-width: 0;
 }
 
@@ -2962,8 +2952,9 @@ body {
 }
 
 .pda-measurement-item .input-with-unit-suffix {
-    width: 100px;
-    min-width: 100px;
+    width: 100%;
+    min-width: 0;
+    max-width: 220px;
 }
 
 .pda-measurement-item .other-param-input {
@@ -2971,41 +2962,33 @@ body {
     padding-right: 2.5rem;
 }
 
-/* PDA 直径字段的单位固定在输入框内右侧，避免被窄栏样式覆盖。 */
-.pda-measurement-item .unit-suffix {
-    display: block;
+/* PDA 直径字段使用专用伪元素显示单位，避免通用单位节点被页面状态覆盖。 */
+.pda-diameter-input-wrap::after {
+    content: attr(data-unit);
+    position: absolute;
     right: 8px;
-    z-index: 1;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    color: #888;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
     pointer-events: none;
 }
 
+@media (max-width: 680px) {
+    .pda-specific-inputs {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
 .pda-shunt-velocity-item {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 8px;
+    order: 99;
 }
 
-.pda-shunt-velocity-item .other-param-label {
-    margin-bottom: 0;
-    white-space: nowrap;
-}
-
-.pda-shunt-velocity-item .input-with-unit-suffix {
-    width: 100px;
-    min-width: 100px;
-}
-
-.pda-shunt-velocity-item .other-param-input {
+.pda-shunt-velocity-item .input-with-unit-suffix .other-param-input {
     width: 100%;
-}
-
-.pda-shunt-pressure-display {
-    color: #2c3e50;
-    font-size: 12px;
-    font-weight: 500;
-    white-space: nowrap;
 }
 
 /* LA Volume：作为 LA/AO 四联行的第 4 列。 */
@@ -3020,6 +3003,7 @@ body {
 
 .la-volume-label {
     display: flex;
+    flex-wrap: nowrap;
     align-items: baseline;
     gap: 4px;
     min-width: 0;
