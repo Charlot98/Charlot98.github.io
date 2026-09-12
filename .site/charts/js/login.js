@@ -14,6 +14,7 @@
     }
     document.querySelector('.login-card').hidden = false;
     $('login-btn').disabled = false;
+    $('guest-btn').disabled = false;
   }
 
   $('login-form').addEventListener('submit', async function (event) {
@@ -28,5 +29,18 @@
       setError(error && error.message ? error.message : '登录失败');
     }
   });
+
+  $('guest-btn').addEventListener('click', async function () {
+    setError('');
+    $('guest-btn').disabled = true;
+    try {
+      await DashAuth.loginAsGuest();
+      go(DashAuth.rootPath('index.html'));
+    } catch (error) {
+      $('guest-btn').disabled = false;
+      setError(error && error.message ? error.message : '游客访问失败');
+    }
+  });
+
   boot();
 })();

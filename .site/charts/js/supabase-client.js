@@ -67,11 +67,26 @@
       var result = await client.auth.getSession();
       return !!(result.data && result.data.session);
     },
+    async isGuest() {
+      var cfg = global.SUPABASE_CONFIG || {};
+      if (!cfg.guestUsername) return false;
+      var client = await getClient();
+      var result = await client.auth.getSession();
+      var session = result.data && result.data.session;
+      if (!session || !session.user || !session.user.email) return false;
+      return session.user.email.toLowerCase() === usernameToEmail(cfg.guestUsername);
+    },
     async login(username, password) {
       var client = await getClient();
       var result = await client.auth.signInWithPassword({ email: usernameToEmail(username), password: password });
       if (result.error) throw result.error;
       return result.data;
+    },
+    // 游客用的是一个只读的固定账号，密码随前端公开；轮换见 tools/setup_guest_account.py。
+    async loginAsGuest() {
+      var cfg = global.SUPABASE_CONFIG || {};
+      if (!cfg.guestUsername || !cfg.guestPassword) throw new Error('游客访问未配置');
+      return this.login(cfg.guestUsername, cfg.guestPassword);
     },
     async logout() {
       if (global.DashData && typeof global.DashData.clearCache === 'function') global.DashData.clearCache();

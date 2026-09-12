@@ -15,7 +15,7 @@
   async function ensureSupabase() {
     if (!window.DashAuth) {
       await loadScript(rootPath('js/supabase-config.js'));
-      await loadScript(rootPath('js/supabase-client.js'));
+      await loadScript(rootPath('js/supabase-client.js?v=20260912a'));
     }
     if (!window.DashData) await loadScript(rootPath('js/data-source.js?v=20260802-2'));
   }

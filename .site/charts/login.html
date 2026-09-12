@@ -6,7 +6,7 @@
   <title>登录 - 统计看板</title>
   <link rel="icon" href="statistics.png" type="image/png" />
   <link rel="stylesheet" href="css/common.css?v=20260802l" />
-  <link rel="stylesheet" href="css/login.css?v=20260802b" />
+  <link rel="stylesheet" href="css/login.css?v=20260912a" />
 </head>
 <body>
   <div class="login-card" hidden>
@@ -19,9 +19,12 @@
       <div id="error" class="error"></div>
       <button id="login-btn" class="login-btn" type="submit" disabled>登录</button>
     </form>
+    <div class="login-divider"><span>或</span></div>
+    <button id="guest-btn" class="login-btn login-btn-guest" type="button" disabled>游客访问</button>
+    <div class="login-sub login-guest-note">游客无需密码，仅可查看统计数据</div>
   </div>
   <script src="js/supabase-config.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/login.js"></script>
+  <script src="js/supabase-client.js?v=20260912a"></script>
+  <script src="js/login.js?v=20260912a"></script>
 </body>
 </html>
