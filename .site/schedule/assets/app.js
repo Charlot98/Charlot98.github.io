@@ -52,6 +52,7 @@ let currentPeriodKey = "";
 let query = "";
 let heatmapChart = null;
 let roomChart = null;
+let weekendStatsChart = null;
 let showShiftLabels = false;
 let tableMoveSource = null;
 let tableStatus = "拖动姓名换班";
@@ -243,6 +244,7 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   renderTable();
   renderHeatmap();
   renderRoomChart();
+  renderWeekendStatsChart();
 }
 
 function canReorderWithinCell(source, chip) {
@@ -583,6 +585,7 @@ function swapHeatmapAssignments(target) {
   renderTable();
   renderHeatmap();
   renderRoomChart();
+  renderWeekendStatsChart();
 }
 
 function handleHeatmapSwapClick(custom) {
@@ -1287,6 +1290,114 @@ function renderRoomChart() {
   });
 }
 
+function personWorksOnScheduleDay(person, dateKey) {
+  return shiftsFor(person, dateKey).some((shift) => (
+    shift !== "annual-leave" && shift !== "expansion"
+  ));
+}
+
+function weekendStatsByPerson() {
+  const dates = Object.keys(schedule).sort();
+  const saturdays = dates.filter((dateKey) => new Date(`${dateKey}T00:00:00`).getDay() === 6);
+  const weekendNights = dates.filter((dateKey) => {
+    const day = new Date(`${dateKey}T00:00:00`).getDay();
+    return day === 0 || day === 6;
+  });
+  return new Map(people.map((person) => {
+    const doubleWeekends = saturdays.filter((saturday) => {
+      const sunday = new Date(`${saturday}T00:00:00`);
+      sunday.setDate(sunday.getDate() + 1);
+      const sundayKey = [
+        sunday.getFullYear(),
+        String(sunday.getMonth() + 1).padStart(2, "0"),
+        String(sunday.getDate()).padStart(2, "0"),
+      ].join("-");
+      return personWorksOnScheduleDay(person, saturday)
+        && personWorksOnScheduleDay(person, sundayKey);
+    }).length;
+    const weekendNightCount = weekendNights.filter((dateKey) => (
+      (schedule[dateKey]?.night || []).includes(person)
+    )).length;
+    return [person, { doubleWeekends, weekendNights: weekendNightCount }];
+  }));
+}
+
+function renderWeekendStatsChart() {
+  const host = document.querySelector("#weekend-stats-chart");
+  if (!host || !window.Highcharts) return;
+  const counts = weekendStatsByPerson();
+  const groupBoundaries = people
+    .map((person, index) => (index > 0 && groupByPerson.get(person) !== groupByPerson.get(people[index - 1])
+      ? index - 0.5
+      : null))
+    .filter((value) => value !== null);
+  const seriesData = [
+    {
+      name: "双周末",
+      color: "rgba(0, 144, 242, 0.82)",
+      data: people.map((person) => counts.get(person).doubleWeekends),
+    },
+    {
+      name: "周末夜班",
+      color: "rgba(15, 66, 148, 0.88)",
+      data: people.map((person) => counts.get(person).weekendNights),
+    },
+  ];
+  if (weekendStatsChart && weekendStatsChart.series.length === seriesData.length) {
+    seriesData.forEach((series, index) => {
+      weekendStatsChart.series[index].setData(series.data, false);
+    });
+    weekendStatsChart.redraw(false);
+    return;
+  }
+  if (weekendStatsChart) {
+    weekendStatsChart.destroy();
+    weekendStatsChart = null;
+  }
+  weekendStatsChart = window.Highcharts.chart(host, {
+    chart: { type: "column", backgroundColor: "transparent", spacing: [12, 8, 4, 8] },
+    title: { text: undefined },
+    accessibility: { enabled: false },
+    credits: { enabled: false },
+    legend: { align: "right", verticalAlign: "top", itemStyle: { fontSize: "11px", fontWeight: "700" } },
+    xAxis: {
+      categories: people,
+      labels: { rotation: -60, style: { fontSize: "10px", color: "#26384f" } },
+      lineColor: "#dce4ed",
+      tickLength: 0,
+      plotLines: groupBoundaries.map((value) => ({ value, color: "#c9d6e4", width: 1, dashStyle: "Dash" })),
+    },
+    yAxis: {
+      min: 0,
+      allowDecimals: false,
+      title: { text: "次数", style: { fontSize: "11px", color: "#667085" } },
+      gridLineColor: "#eef2f7",
+    },
+    tooltip: {
+      shared: true,
+      formatter() {
+        const rows = this.points.map((point) => `${point.series.name}：${point.y}次`).join("<br>");
+        return `<b>${this.x}</b>（${groupByPerson.get(this.x) || ""}）<br>${rows}`;
+      },
+    },
+    plotOptions: {
+      column: {
+        borderWidth: 0,
+        maxPointWidth: 18,
+        animation: false,
+        dataLabels: {
+          enabled: true,
+          style: { fontSize: "9px", fontWeight: "700", textOutline: "none" },
+          formatter() {
+            return this.y ? this.y : null;
+          },
+        },
+      },
+    },
+    series: seriesData,
+  });
+}
+
 function formatPeriod(periodKey) {
   const [start, end] = String(periodKey || "").split("_");
   if (!start || !end) return "2026.08.31 — 09.27";
@@ -1529,6 +1640,7 @@ async function loadVersion(versionId) {
   renderTable();
   renderHeatmap();
   renderRoomChart();
+  renderWeekendStatsChart();
   updateAnnotationToolbar();
   window.clearTimeout(loadingTimer);
   loading.classList.add("is-hidden");

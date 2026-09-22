@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=18" />
+    <link rel="stylesheet" href="./assets/styles.css?v=19" />
   </head>
   <body>
     <main class="app-shell">
@@ -101,6 +101,18 @@
         </div>
       </section>
 
+      <section class="panel" id="weekend-stats-view" aria-label="双周末与周末夜班统计">
+        <header class="panel-header">
+          <div>
+            <h2>双周末 / 周末夜班次数</h2>
+            <p>按热力图人员顺序从左到右；双周末指同一周六日均上班，周末夜班指周六或周日夜班</p>
+          </div>
+        </header>
+        <div class="weekend-stats-scroll">
+          <div id="weekend-stats-chart"></div>
+        </div>
+      </section>
+
       <section class="panel" id="room-chart-view" aria-label="超声三号屋与四号屋统计">
         <header class="panel-header">
           <div>
@@ -119,6 +131,6 @@
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
     <script src="./assets/schedule-api.js?v=2"></script>
-    <script type="module" src="./assets/app.js?v=34"></script>
+    <script type="module" src="./assets/app.js?v=35"></script>
   </body>
 </html>
