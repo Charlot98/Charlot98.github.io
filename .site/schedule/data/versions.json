@@ -1,11 +1,20 @@
 {
-  "defaultVersion": "v29",
+  "defaultVersion": "v30",
   "versions": [
+    {
+      "id": "v30",
+      "label": "第30版",
+      "status": "中高年级与住院医已生成；助理待排",
+      "file": "schedule-v30.json",
+      "periodKey": "2026-09-28_2026-11-01",
+      "versionNumber": 30
+    },
     {
       "id": "v29",
       "label": "第29版",
       "status": "已确认",
       "file": "schedule-v29.json",
+      "periodKey": "2026-08-31_2026-09-27",
       "versionNumber": 29
     },
     {
