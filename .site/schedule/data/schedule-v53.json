@@ -1,0 +1,1907 @@
+{
+  "label": "无助理暂存版 · Excel确认",
+  "status": "中高年级、住院医已排；助理待排",
+  "periodKey": "2026-09-28_2026-11-01",
+  "preferences": {},
+  "sourceFile": "科室排班_20260928-1101_无助理暂存版 (1).xlsx",
+  "schedule": {
+    "2026-09-28": {
+      "xray-report": [
+        "刘亦婷"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "冯芷珊",
+        "林雨睿"
+      ],
+      "ct-review": [
+        "戴榕全",
+        "曲艺"
+      ],
+      "ct-report": [
+        "刘慜思",
+        "江蓝"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [],
+      "us-room-1": [
+        "刘蕾",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "冯军利",
+        "王兆雪",
+        "于丛爽"
+      ],
+      "us-room-3": [
+        "张秋梅",
+        "彭竻川"
+      ],
+      "us-room-4": [
+        "张志轩",
+        "张若邈"
+      ],
+      "us-report": [
+        "张伊雯",
+        "沈烨",
+        "梁思思"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "张志轩",
+        "戴榕全",
+        "张秋梅",
+        "张若邈",
+        "冯芷珊",
+        "彭竻川",
+        "林雨睿",
+        "梁思思"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-09-29": {
+      "xray-report": [
+        "冯芷珊"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [],
+      "ct-review": [
+        "白璐",
+        "张志轩"
+      ],
+      "ct-report": [
+        "刘慜思",
+        "马萌"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "袁芳"
+      ],
+      "us-room-1": [
+        "江蓝",
+        "于丛爽"
+      ],
+      "us-room-2": [
+        "张博闻",
+        "张若邈",
+        "付诗懿"
+      ],
+      "us-room-3": [
+        "吴璇",
+        "戴睿"
+      ],
+      "us-room-4": [
+        "冯军利"
+      ],
+      "us-report": [
+        "张伊雯",
+        "梁思思"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "吴璇",
+        "张博闻",
+        "刘慜思",
+        "马萌",
+        "戴睿"
+      ],
+      "outpatient": [],
+      "management": [
+        "戴榕全",
+        "邝怡",
+        "曲艺"
+      ]
+    },
+    "2026-09-30": {
+      "xray-report": [
+        "冯军利"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "徐李祥瑞"
+      ],
+      "ct-review": [
+        "刘蕾"
+      ],
+      "ct-report": [
+        "李铭婕",
+        "王兆雪"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "付诗懿"
+      ],
+      "us-room-1": [
+        "张秋梅",
+        "戴睿"
+      ],
+      "us-room-2": [
+        "刘慜思",
+        "马萌",
+        "刘亦婷"
+      ],
+      "us-room-3": [
+        "张博闻"
+      ],
+      "us-room-4": [
+        "曲艺"
+      ],
+      "us-report": [
+        "梁思思",
+        "沈烨",
+        "林雨睿"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "李铭婕",
+        "曲艺",
+        "刘慜思",
+        "冯军利"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-01": {
+      "xray-report": [
+        "王兆雪"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [
+        "张伊雯"
+      ],
+      "ct-review": [
+        "白璐",
+        "陈可欣"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "张若邈"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "刘亦婷"
+      ],
+      "us-room-1": [
+        "江蓝",
+        "付诗懿"
+      ],
+      "us-room-2": [
+        "吴璇",
+        "于丛爽"
+      ],
+      "us-room-3": [
+        "冯军利"
+      ],
+      "us-room-4": [
+        "李铭婕"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "梁思思",
+        "沈烨",
+        "林雨睿"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "陈可欣",
+        "白璐",
+        "曲莹莹",
+        "江蓝",
+        "于丛爽",
+        "徐李祥瑞"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-02": {
+      "xray-report": [
+        "袁芳"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "付诗懿",
+        "沈烨"
+      ],
+      "ct-review": [
+        "白璐",
+        "邝怡"
+      ],
+      "ct-report": [
+        "张秋梅",
+        "江蓝"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "戴睿"
+      ],
+      "us-room-1": [
+        "曲莹莹",
+        "冯芷珊"
+      ],
+      "us-room-2": [
+        "陈可欣",
+        "王兆雪",
+        "刘亦婷"
+      ],
+      "us-room-3": [
+        "李铭婕",
+        "彭竻川"
+      ],
+      "us-room-4": [
+        "马萌"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "张伊雯",
+        "林雨睿"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "陈可欣",
+        "邝怡",
+        "曲莹莹",
+        "袁芳",
+        "张伊雯"
+      ],
+      "outpatient": [],
+      "management": [
+        "戴榕全"
+      ]
+    },
+    "2026-10-03": {
+      "xray-report": [
+        "于丛爽"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [],
+      "ct-review": [
+        "白璐",
+        "李铭婕"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "王兆雪"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "冯芷珊"
+      ],
+      "us-room-1": [
+        "邝怡",
+        "刘亦婷"
+      ],
+      "us-room-2": [
+        "刘蕾",
+        "马萌",
+        "戴睿",
+        "彭竻川"
+      ],
+      "us-room-3": [
+        "刘慜思",
+        "袁芳"
+      ],
+      "us-room-4": [
+        "陈可欣"
+      ],
+      "us-report": [
+        "张伊雯",
+        "徐李祥瑞",
+        "林雨睿"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "李铭婕",
+        "刘蕾",
+        "白璐",
+        "王兆雪",
+        "刘亦婷"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-04": {
+      "xray-report": [
+        "付诗懿"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "梁思思"
+      ],
+      "ct-review": [
+        "曲艺",
+        "陈可欣"
+      ],
+      "ct-report": [
+        "张秋梅",
+        "冯军利"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "于丛爽"
+      ],
+      "us-room-1": [
+        "戴榕全",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "张志轩",
+        "马萌",
+        "冯芷珊"
+      ],
+      "us-room-3": [
+        "江蓝",
+        "戴睿"
+      ],
+      "us-room-4": [
+        "张博闻",
+        "曲莹莹"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "戴榕全",
+        "张博闻",
+        "张志轩",
+        "曲艺",
+        "张秋梅",
+        "付诗懿",
+        "沈烨"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-05": {
+      "xray-report": [
+        "于丛爽"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "刘亦婷",
+        "林雨睿"
+      ],
+      "ct-review": [
+        "邝怡"
+      ],
+      "ct-report": [
+        "刘慜思",
+        "冯军利"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [],
+      "us-room-1": [
+        "江蓝",
+        "冯芷珊"
+      ],
+      "us-room-2": [
+        "曲艺",
+        "王兆雪",
+        "戴睿"
+      ],
+      "us-room-3": [
+        "张博闻"
+      ],
+      "us-room-4": [
+        "李铭婕"
+      ],
+      "us-report": [
+        "张伊雯",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "张博闻",
+        "曲艺",
+        "刘慜思",
+        "王兆雪"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-06": {
+      "xray-report": [
+        "付诗懿"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [],
+      "ct-review": [
+        "白璐",
+        "陈可欣"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "马萌"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "刘亦婷"
+      ],
+      "us-room-1": [
+        "冯军利",
+        "于丛爽"
+      ],
+      "us-room-2": [
+        "张志轩",
+        "袁芳",
+        "彭竻川"
+      ],
+      "us-room-3": [
+        "江蓝",
+        "戴睿"
+      ],
+      "us-room-4": [
+        "王兆雪"
+      ],
+      "us-report": [
+        "张伊雯",
+        "徐李祥瑞",
+        "林雨睿"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "白璐",
+        "张志轩",
+        "曲莹莹",
+        "于丛爽",
+        "彭竻川"
+      ],
+      "outpatient": [],
+      "management": [
+        "邝怡",
+        "曲艺"
+      ]
+    },
+    "2026-10-07": {
+      "xray-report": [
+        "刘亦婷"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [
+        "付诗懿",
+        "徐李祥瑞"
+      ],
+      "ct-review": [
+        "白璐",
+        "张志轩"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "张若邈"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "于丛爽"
+      ],
+      "us-room-1": [
+        "刘蕾",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "陈可欣",
+        "王兆雪",
+        "冯芷珊"
+      ],
+      "us-room-3": [
+        "马萌"
+      ],
+      "us-room-4": [
+        "冯军利"
+      ],
+      "us-report": [
+        "张伊雯",
+        "林雨睿",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "张志轩",
+        "陈可欣",
+        "张若邈",
+        "袁芳",
+        "张伊雯"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-08": {
+      "xray-report": [
+        "袁芳"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "张伊雯"
+      ],
+      "ct-review": [
+        "白璐",
+        "陈可欣"
+      ],
+      "ct-report": [
+        "刘慜思",
+        "江蓝"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "冯芷珊"
+      ],
+      "us-room-1": [
+        "张若邈",
+        "刘亦婷"
+      ],
+      "us-room-2": [
+        "曲莹莹",
+        "马萌",
+        "付诗懿"
+      ],
+      "us-room-3": [
+        "李铭婕"
+      ],
+      "us-room-4": [
+        "戴榕全"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "陈可欣",
+        "戴榕全",
+        "曲莹莹",
+        "冯芷珊",
+        "沈烨"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-09": {
+      "xray-report": [
+        "江蓝"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [
+        "沈烨"
+      ],
+      "ct-review": [
+        "刘蕾"
+      ],
+      "ct-report": [
+        "李铭婕",
+        "冯军利"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "付诗懿"
+      ],
+      "us-room-1": [
+        "刘慜思",
+        "于丛爽"
+      ],
+      "us-room-2": [
+        "张博闻",
+        "张若邈",
+        "戴睿"
+      ],
+      "us-room-3": [
+        "马萌"
+      ],
+      "us-room-4": [
+        "曲艺"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "林雨睿",
+        "梁思思"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "李铭婕",
+        "曲艺",
+        "冯军利",
+        "戴睿",
+        "徐李祥瑞"
+      ],
+      "outpatient": [],
+      "management": [
+        "戴榕全"
+      ]
+    },
+    "2026-10-10": {
+      "xray-report": [
+        "张若邈"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [],
+      "ct-review": [
+        "戴榕全",
+        "白璐"
+      ],
+      "ct-report": [
+        "陈可欣",
+        "江蓝"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "袁芳"
+      ],
+      "us-room-1": [
+        "冯军利",
+        "付诗懿"
+      ],
+      "us-room-2": [
+        "张博闻",
+        "戴睿",
+        "冯芷珊"
+      ],
+      "us-room-3": [
+        "曲莹莹",
+        "彭竻川"
+      ],
+      "us-room-4": [
+        "邝怡"
+      ],
+      "us-report": [
+        "张伊雯",
+        "林雨睿"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "张博闻",
+        "邝怡",
+        "戴榕全",
+        "白璐",
+        "江蓝",
+        "付诗懿",
+        "林雨睿"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-11": {
+      "xray-report": [
+        "冯芷珊"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "梁思思"
+      ],
+      "ct-review": [
+        "刘蕾",
+        "张志轩"
+      ],
+      "ct-report": [
+        "李铭婕",
+        "王兆雪"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "戴睿"
+      ],
+      "us-room-1": [
+        "吴璇",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "戴榕全",
+        "张若邈",
+        "刘亦婷",
+        "彭竻川"
+      ],
+      "us-room-3": [
+        "曲艺",
+        "于丛爽"
+      ],
+      "us-room-4": [
+        "刘慜思",
+        "马萌"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "李铭婕",
+        "刘蕾",
+        "吴璇",
+        "刘慜思",
+        "马萌",
+        "刘亦婷",
+        "梁思思"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-12": {
+      "xray-report": [
+        "于丛爽"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [],
+      "ct-review": [
+        "张志轩"
+      ],
+      "ct-report": [
+        "刘慜思",
+        "王兆雪"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "袁芳"
+      ],
+      "us-room-1": [
+        "曲艺",
+        "戴睿"
+      ],
+      "us-room-2": [
+        "曲莹莹",
+        "江蓝",
+        "彭竻川"
+      ],
+      "us-room-3": [
+        "张博闻",
+        "付诗懿"
+      ],
+      "us-room-4": [
+        "冯军利",
+        "马萌"
+      ],
+      "us-report": [
+        "张伊雯",
+        "徐李祥瑞",
+        "林雨睿",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "张博闻",
+        "刘慜思",
+        "江蓝",
+        "戴睿",
+        "彭竻川"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-13": {
+      "xray-report": [
+        "刘亦婷"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "冯芷珊",
+        "林雨睿"
+      ],
+      "ct-review": [
+        "张博闻",
+        "白璐"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "张若邈"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "戴睿"
+      ],
+      "us-room-1": [
+        "李铭婕",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "冯军利",
+        "江蓝"
+      ],
+      "us-room-3": [
+        "陈可欣",
+        "于丛爽"
+      ],
+      "us-room-4": [
+        "刘慜思",
+        "马萌"
+      ],
+      "us-report": [
+        "张伊雯",
+        "徐李祥瑞",
+        "梁思思"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "陈可欣",
+        "张博闻",
+        "曲莹莹",
+        "徐李祥瑞"
+      ],
+      "outpatient": [],
+      "management": [
+        "戴榕全",
+        "吴璇",
+        "邝怡",
+        "曲艺"
+      ]
+    },
+    "2026-10-14": {
+      "xray-report": [
+        "冯芷珊"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [
+        "刘亦婷",
+        "梁思思"
+      ],
+      "ct-review": [
+        "曲艺",
+        "陈可欣"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "冯军利"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "于丛爽"
+      ],
+      "us-room-1": [
+        "吴璇",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "戴榕全",
+        "马萌",
+        "王兆雪"
+      ],
+      "us-room-3": [
+        "刘蕾",
+        "付诗懿"
+      ],
+      "us-room-4": [
+        "张若邈"
+      ],
+      "us-report": [
+        "张伊雯",
+        "林雨睿",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "陈可欣",
+        "戴榕全",
+        "曲艺",
+        "袁芳",
+        "林雨睿"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-15": {
+      "xray-report": [
+        "付诗懿"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "张伊雯"
+      ],
+      "ct-review": [
+        "白璐",
+        "李铭婕"
+      ],
+      "ct-report": [
+        "刘慜思",
+        "江蓝"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "刘亦婷"
+      ],
+      "us-room-1": [
+        "张若邈",
+        "于丛爽"
+      ],
+      "us-room-2": [
+        "陈可欣",
+        "王兆雪",
+        "彭竻川"
+      ],
+      "us-room-3": [
+        "马萌",
+        "冯芷珊"
+      ],
+      "us-room-4": [
+        "邝怡"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "林雨睿",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "白璐",
+        "邝怡",
+        "马萌",
+        "付诗懿",
+        "梁思思"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-16": {
+      "xray-report": [
+        "袁芳"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [
+        "沈烨"
+      ],
+      "ct-review": [
+        "刘蕾",
+        "白璐"
+      ],
+      "ct-report": [
+        "张秋梅",
+        "张若邈"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "冯芷珊"
+      ],
+      "us-room-1": [
+        "张志轩",
+        "刘亦婷"
+      ],
+      "us-room-2": [
+        "李铭婕",
+        "戴睿",
+        "付诗懿"
+      ],
+      "us-room-3": [
+        "王兆雪"
+      ],
+      "us-room-4": [
+        "冯军利"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "梁思思"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "张志轩",
+        "李铭婕",
+        "张秋梅",
+        "王兆雪",
+        "刘亦婷"
+      ],
+      "outpatient": [],
+      "management": [
+        "戴榕全"
+      ]
+    },
+    "2026-10-17": {
+      "xray-report": [
+        "王兆雪"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [],
+      "ct-review": [
+        "白璐",
+        "陈可欣"
+      ],
+      "ct-report": [
+        "张秋梅",
+        "江蓝"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [],
+      "us-room-1": [
+        "张若邈",
+        "刘亦婷"
+      ],
+      "us-room-2": [
+        "戴榕全",
+        "戴睿",
+        "冯芷珊"
+      ],
+      "us-room-3": [
+        "邝怡"
+      ],
+      "us-room-4": [
+        "吴璇",
+        "曲莹莹"
+      ],
+      "us-report": [
+        "张伊雯"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "白璐",
+        "吴璇",
+        "戴榕全",
+        "曲莹莹",
+        "张若邈",
+        "冯芷珊",
+        "张伊雯"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-18": {
+      "xray-report": [
+        "冯军利"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "徐李祥瑞"
+      ],
+      "ct-review": [
+        "刘蕾",
+        "张志轩"
+      ],
+      "ct-report": [
+        "李铭婕",
+        "马萌"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "付诗懿"
+      ],
+      "us-room-1": [
+        "张博闻",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "张秋梅",
+        "江蓝",
+        "戴睿",
+        "彭竻川"
+      ],
+      "us-room-3": [
+        "曲艺",
+        "于丛爽"
+      ],
+      "us-room-4": [
+        "刘慜思"
+      ],
+      "us-report": [
+        "林雨睿",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "张志轩",
+        "曲艺",
+        "李铭婕",
+        "刘蕾",
+        "刘慜思",
+        "冯军利",
+        "于丛爽",
+        "沈烨"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-19": {
+      "xray-report": [
+        "付诗懿"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [
+        "冯芷珊"
+      ],
+      "ct-review": [
+        "白璐",
+        "张志轩"
+      ],
+      "ct-report": [
+        "张秋梅",
+        "冯军利"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "刘亦婷"
+      ],
+      "us-room-1": [
+        "曲艺",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "曲莹莹",
+        "张若邈",
+        "于丛爽"
+      ],
+      "us-room-3": [
+        "陈可欣",
+        "戴睿"
+      ],
+      "us-room-4": [
+        "李铭婕",
+        "马萌"
+      ],
+      "us-report": [
+        "张伊雯",
+        "徐李祥瑞",
+        "林雨睿",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "曲艺",
+        "白璐",
+        "曲莹莹",
+        "冯军利",
+        "刘亦婷",
+        "彭竻川"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-20": {
+      "xray-report": [
+        "张若邈"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "林雨睿"
+      ],
+      "ct-review": [
+        "白璐",
+        "李铭婕"
+      ],
+      "ct-report": [
+        "陈可欣",
+        "江蓝"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "付诗懿"
+      ],
+      "us-room-1": [
+        "张秋梅",
+        "冯芷珊"
+      ],
+      "us-room-2": [
+        "张志轩",
+        "刘亦婷"
+      ],
+      "us-room-3": [
+        "张博闻",
+        "彭竻川"
+      ],
+      "us-room-4": [
+        "冯军利"
+      ],
+      "us-report": [
+        "张伊雯",
+        "徐李祥瑞",
+        "梁思思"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "白璐",
+        "张志轩",
+        "张秋梅",
+        "林雨睿"
+      ],
+      "outpatient": [],
+      "management": [
+        "戴榕全",
+        "邝怡"
+      ]
+    },
+    "2026-10-21": {
+      "xray-report": [
+        "江蓝"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [
+        "梁思思"
+      ],
+      "ct-review": [
+        "曲艺",
+        "陈可欣"
+      ],
+      "ct-report": [
+        "刘慜思",
+        "马萌"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "袁芳"
+      ],
+      "us-room-1": [
+        "戴榕全",
+        "戴睿"
+      ],
+      "us-room-2": [
+        "冯军利",
+        "张若邈"
+      ],
+      "us-room-3": [
+        "曲莹莹",
+        "刘亦婷"
+      ],
+      "us-room-4": [
+        "刘蕾"
+      ],
+      "us-report": [
+        "张伊雯",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "陈可欣",
+        "戴榕全",
+        "刘慜思",
+        "曲莹莹",
+        "袁芳",
+        "沈烨"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-22": {
+      "xray-report": [
+        "于丛爽"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "付诗懿",
+        "张伊雯"
+      ],
+      "ct-review": [
+        "戴榕全"
+      ],
+      "ct-report": [
+        "刘慜思",
+        "王兆雪"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "戴睿"
+      ],
+      "us-room-1": [
+        "李铭婕",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "曲艺",
+        "江蓝",
+        "马萌"
+      ],
+      "us-room-3": [
+        "吴璇",
+        "冯芷珊"
+      ],
+      "us-room-4": [
+        "冯军利"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "林雨睿",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "曲艺",
+        "李铭婕",
+        "戴榕全",
+        "王兆雪",
+        "于丛爽",
+        "梁思思"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-23": {
+      "xray-report": [
+        "冯芷珊"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "徐李祥瑞"
+      ],
+      "ct-review": [
+        "刘蕾",
+        "吴璇"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "张若邈"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "于丛爽"
+      ],
+      "us-room-1": [
+        "江蓝",
+        "戴睿"
+      ],
+      "us-room-2": [
+        "张博闻",
+        "马萌",
+        "彭竻川"
+      ],
+      "us-room-3": [
+        "刘慜思",
+        "付诗懿"
+      ],
+      "us-room-4": [
+        "邝怡"
+      ],
+      "us-report": [
+        "林雨睿",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "张博闻",
+        "邝怡",
+        "刘慜思",
+        "马萌",
+        "戴睿"
+      ],
+      "outpatient": [],
+      "management": [
+        "戴榕全",
+        "曲艺"
+      ]
+    },
+    "2026-10-24": {
+      "xray-report": [
+        "刘亦婷"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [],
+      "ct-review": [
+        "张博闻",
+        "白璐"
+      ],
+      "ct-report": [
+        "张秋梅",
+        "马萌"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [],
+      "us-room-1": [
+        "刘慜思",
+        "于丛爽"
+      ],
+      "us-room-2": [
+        "邝怡",
+        "江蓝",
+        "付诗懿"
+      ],
+      "us-room-3": [
+        "李铭婕",
+        "袁芳"
+      ],
+      "us-room-4": [
+        "吴璇",
+        "王兆雪"
+      ],
+      "us-report": [
+        "张伊雯",
+        "林雨睿"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "李铭婕",
+        "张博闻",
+        "吴璇",
+        "江蓝",
+        "付诗懿",
+        "张伊雯"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-25": {
+      "xray-report": [
+        "袁芳"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "沈烨"
+      ],
+      "ct-review": [
+        "刘蕾",
+        "张志轩"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "张若邈"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "冯芷珊"
+      ],
+      "us-room-1": [
+        "陈可欣",
+        "戴睿"
+      ],
+      "us-room-2": [
+        "白璐",
+        "于丛爽",
+        "彭竻川"
+      ],
+      "us-room-3": [
+        "王兆雪",
+        "刘亦婷"
+      ],
+      "us-room-4": [
+        "张秋梅"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "梁思思"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "刘蕾",
+        "张志轩",
+        "陈可欣",
+        "张秋梅",
+        "张若邈",
+        "冯芷珊",
+        "徐李祥瑞"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-26": {
+      "xray-report": [
+        "袁芳"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "付诗懿",
+        "梁思思"
+      ],
+      "ct-review": [
+        "戴榕全",
+        "李铭婕"
+      ],
+      "ct-report": [
+        "刘慜思",
+        "张若邈"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "刘亦婷"
+      ],
+      "us-room-1": [
+        "曲莹莹",
+        "戴睿"
+      ],
+      "us-room-2": [
+        "陈可欣",
+        "马萌",
+        "冯芷珊"
+      ],
+      "us-room-3": [
+        "江蓝",
+        "彭竻川"
+      ],
+      "us-room-4": [
+        "曲艺"
+      ],
+      "us-report": [
+        "张伊雯",
+        "徐李祥瑞",
+        "林雨睿",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "戴榕全",
+        "刘慜思",
+        "曲莹莹",
+        "马萌",
+        "付诗懿",
+        "彭竻川"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-27": {
+      "xray-report": [
+        "冯芷珊"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [
+        "林雨睿"
+      ],
+      "ct-review": [
+        "张博闻",
+        "白璐"
+      ],
+      "ct-report": [
+        "陈可欣",
+        "王兆雪"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "于丛爽"
+      ],
+      "us-room-1": [
+        "张志轩",
+        "袁芳"
+      ],
+      "us-room-2": [
+        "李铭婕",
+        "马萌"
+      ],
+      "us-room-3": [
+        "刘慜思",
+        "付诗懿"
+      ],
+      "us-room-4": [
+        "张若邈"
+      ],
+      "us-report": [
+        "张伊雯",
+        "徐李祥瑞"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "张博闻",
+        "白璐",
+        "李铭婕",
+        "陈可欣",
+        "冯芷珊",
+        "于丛爽",
+        "林雨睿"
+      ],
+      "outpatient": [],
+      "management": [
+        "戴榕全",
+        "邝怡",
+        "曲艺"
+      ]
+    },
+    "2026-10-28": {
+      "xray-report": [
+        "王兆雪"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [],
+      "ct-review": [
+        "邝怡"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "马萌"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "付诗懿"
+      ],
+      "us-room-1": [
+        "刘蕾",
+        "于丛爽"
+      ],
+      "us-room-2": [
+        "张秋梅",
+        "江蓝",
+        "张若邈"
+      ],
+      "us-room-3": [
+        "陈可欣",
+        "戴睿"
+      ],
+      "us-room-4": [
+        "刘慜思"
+      ],
+      "us-report": [
+        "林雨睿",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "曲莹莹",
+        "张秋梅",
+        "江蓝",
+        "王兆雪",
+        "沈烨"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-29": {
+      "xray-report": [
+        "冯军利"
+      ],
+      "xray-teaching": [
+        "彭竻川"
+      ],
+      "xray-shooting": [
+        "刘亦婷",
+        "徐李祥瑞"
+      ],
+      "ct-review": [
+        "白璐",
+        "张博闻"
+      ],
+      "ct-report": [
+        "张秋梅",
+        "江蓝"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "袁芳"
+      ],
+      "us-room-1": [
+        "王兆雪",
+        "戴睿"
+      ],
+      "us-room-2": [
+        "吴璇",
+        "于丛爽"
+      ],
+      "us-room-3": [
+        "邝怡",
+        "冯芷珊"
+      ],
+      "us-room-4": [
+        "马萌"
+      ],
+      "us-report": [
+        "张伊雯",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "吴璇",
+        "邝怡",
+        "冯军利",
+        "袁芳",
+        "梁思思"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-10-30": {
+      "xray-report": [
+        "刘亦婷"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "张伊雯"
+      ],
+      "ct-review": [
+        "白璐",
+        "吴璇"
+      ],
+      "ct-report": [
+        "张秋梅",
+        "张若邈"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "戴睿"
+      ],
+      "us-room-1": [
+        "江蓝",
+        "于丛爽"
+      ],
+      "us-room-2": [
+        "王兆雪",
+        "袁芳"
+      ],
+      "us-room-3": [
+        "张志轩",
+        "彭竻川"
+      ],
+      "us-room-4": [
+        "曲艺"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "林雨睿",
+        "梁思思",
+        "沈烨"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "曲艺",
+        "张志轩",
+        "张秋梅",
+        "刘亦婷",
+        "徐李祥瑞"
+      ],
+      "outpatient": [],
+      "management": [
+        "戴榕全",
+        "刘蕾"
+      ]
+    },
+    "2026-10-31": {
+      "xray-report": [
+        "付诗懿"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [],
+      "ct-review": [
+        "刘蕾",
+        "白璐"
+      ],
+      "ct-report": [
+        "陈可欣",
+        "江蓝"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [
+        "冯芷珊"
+      ],
+      "us-room-1": [
+        "曲莹莹",
+        "戴睿"
+      ],
+      "us-room-2": [
+        "刘慜思",
+        "张若邈",
+        "刘亦婷"
+      ],
+      "us-room-3": [
+        "冯军利",
+        "袁芳"
+      ],
+      "us-room-4": [
+        "吴璇",
+        "李铭婕"
+      ],
+      "us-report": [
+        "张伊雯",
+        "林雨睿"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "陈可欣",
+        "刘蕾",
+        "白璐",
+        "刘慜思",
+        "张若邈",
+        "戴睿",
+        "张伊雯"
+      ],
+      "outpatient": [],
+      "management": []
+    },
+    "2026-11-01": {
+      "xray-report": [
+        "于丛爽"
+      ],
+      "xray-teaching": [],
+      "xray-shooting": [
+        "沈烨"
+      ],
+      "ct-review": [
+        "曲艺",
+        "李铭婕"
+      ],
+      "ct-report": [
+        "曲莹莹",
+        "冯军利"
+      ],
+      "ct-scan-teaching": [],
+      "ct-scan": [],
+      "us-room-1": [
+        "张秋梅",
+        "刘亦婷"
+      ],
+      "us-room-2": [
+        "张博闻",
+        "马萌",
+        "付诗懿",
+        "冯芷珊"
+      ],
+      "us-room-3": [
+        "戴榕全",
+        "彭竻川"
+      ],
+      "us-room-4": [
+        "张志轩",
+        "王兆雪"
+      ],
+      "us-report": [
+        "徐李祥瑞",
+        "梁思思"
+      ],
+      "us-coordination-teaching": [],
+      "us-new-coordination": [],
+      "night": [
+        "曲艺",
+        "戴榕全",
+        "张博闻",
+        "张志轩"
+      ],
+      "outpatient": [],
+      "management": []
+    }
+  },
+  "version": 53,
+  "cloudVersionId": "35dd01d4-ac28-49cd-b65f-dbbcfba217f0"
+}

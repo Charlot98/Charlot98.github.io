@@ -1,6 +1,16 @@
 {
-  "defaultVersion": "v30",
+  "defaultVersion": "v53",
   "versions": [
+    {
+      "id": "v53",
+      "label": "第53版 · 无助理暂存版",
+      "status": "Excel确认；中高年级、住院医已排；助理待排",
+      "file": "schedule-v53.json",
+      "periodKey": "2026-09-28_2026-11-01",
+      "versionNumber": 53,
+      "cloudVersionNumber": 53,
+      "cloudVersionId": "35dd01d4-ac28-49cd-b65f-dbbcfba217f0"
+    },
     {
       "id": "v30",
       "label": "第30版",
