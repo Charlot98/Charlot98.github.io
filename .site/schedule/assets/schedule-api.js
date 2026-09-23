@@ -248,6 +248,15 @@
     return readJson(response, '保存云端排班失败');
   }
 
+  async function updateVersion(id, payload) {
+    const response = await apiFetch(`versions/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload }),
+    });
+    return readJson(response, '更新云端排班失败');
+  }
+
   async function getAnnotations(versionKey) {
     const response = await publicFetch(`annotations/${encodeURIComponent(versionKey)}`);
     return readJson(response, '读取云端热力图标注失败');
@@ -270,6 +279,7 @@
     listVersions,
     getVersion,
     createVersion,
+    updateVersion,
     getAnnotations,
     saveAnnotations,
     endpoint: apiUrl,

@@ -1,6 +1,16 @@
 {
-  "defaultVersion": "v53",
+  "defaultVersion": "v62",
   "versions": [
+    {
+      "id": "v62",
+      "label": "第62版",
+      "status": "云端保存",
+      "file": "schedule-v62.json",
+      "periodKey": "2026-09-28_2026-11-01",
+      "versionNumber": 62,
+      "cloudVersionNumber": 62,
+      "cloudVersionId": "edaf45ba-e8f5-4966-baab-c0cb6b95a2c8"
+    },
     {
       "id": "v53",
       "label": "第53版 · 无助理暂存版",
