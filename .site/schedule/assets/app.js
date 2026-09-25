@@ -1,12 +1,12 @@
 const columns = [
   ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],
-  ["ct-scan-teaching", "CT/MRI扫查带教"], ["ct-scan", "CT/MRI扫查"],
+  ["ct-scan-teaching", "客服/带教"], ["ct-scan", "CT/MRI扫查"],
   ["us-room-1", "超声一号屋"], ["us-room-2", "超声二号屋"],
   ["us-room-3", "超声三号屋"], ["us-room-4", "超声四号屋"],
   ["us-report", "超声报告"], ["us-coordination-teaching", "超声统筹带教"],
   ["us-new-coordination", "超声新人统筹"], ["night", "夜班"],
-  ["outpatient", "门诊"], ["management", "管理"],
+  ["outpatient", "门诊白班/跟诊"], ["outpatient-night", "门诊夜班"], ["management", "管理"], ["annual-leave", "年假"], ["expansion", "拓展"],
 ];
 
 const groups = [
@@ -99,7 +99,7 @@ let tableStatus = "拖动姓名换班";
 let heatmapSwapSource = null;
 let heatmapSwapStatus = "点格换班";
 let annotationMode = "";
-let annotationStatus = "选标签，再点单元格";
+let annotationStatus = "";
 let annotationSaveQueue = Promise.resolve();
 let annotationSaveRevision = 0;
 let versionLoadRevision = 0;
@@ -123,7 +123,8 @@ function updateAccessModeUI() {
   document.body.classList.toggle("is-guest", !canEdit);
   const badge = document.querySelector("#access-mode-badge");
   const accessButton = document.querySelector("#access-mode-button");
-  badge.textContent = canEdit ? "管理账号" : "游客账号 · 只读";
+  const account = canEdit ? (globalThis.ScheduleApi?.currentAccount?.() || "") : "";
+  badge.textContent = canEdit ? (account ? `账号 ${account}` : "管理账号") : "游客账号 · 只读";
   badge.classList.toggle("is-editor", canEdit);
   accessButton.textContent = canEdit ? "退出管理" : "管理员登录";
   const saveButton = document.querySelector("#save-version-button");
@@ -155,15 +156,21 @@ async function initializeAccessMode() {
 }
 
 async function enterEditorMode() {
-  if (canEdit) return;
+  if (canEdit) return true;
   if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
-  await globalThis.ScheduleApi.ensureAccess();
+  try {
+    await globalThis.ScheduleApi.ensureAccess();
+  } catch (error) {
+    if (error?.guest) return false;
+    throw error;
+  }
   const session = await globalThis.ScheduleApi.checkSession();
   if (!session?.authenticated) throw new Error("管理员登录失败");
   canEdit = true;
   annotationMode = "";
   updateAccessModeUI();
   updateAnnotationToolbar();
+  return true;
 }
 
 async function toggleAccessMode() {
@@ -194,7 +201,7 @@ function renderTable() {
   const table = document.querySelector("#schedule-table");
   const dates = Object.keys(schedule).sort();
   const conflictKeys = getWhiteShiftConflictKeys();
-  table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${columns.map(([id, label]) => `<th class="${id === "night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
+  table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${columns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
   table.querySelector("tbody").innerHTML = dates.map((dateKey, index) => {
     const { date, day, weekday } = dateLabel(dateKey);
     const weekend = date.getDay() === 0 || date.getDay() === 6;
@@ -203,7 +210,8 @@ function renderTable() {
       const rawNames = (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query));
       const names = id === "night" ? sortNightRoster(rawNames) : rawNames;
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
-      return `<td data-date="${dateKey}" data-column="${id}" class="${id === "night" ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? names.map((name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${id !== "night" && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`).join("") : `<span class="empty-cell">—</span>`}</td>`;
+      const nightLike = id === "night" || id === "outpatient-night";
+      return `<td data-date="${dateKey}" data-column="${id}" class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? names.map((name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`).join("") : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
     const row = `<tr class="${weekend ? "weekend" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
     return weekEnd
@@ -225,6 +233,7 @@ function weekNumber(dateKey) {
 function hasWhiteShift(person, dateKey) {
   return Object.entries(schedule[dateKey] || {}).some(([shiftId, names]) => (
     shiftId !== "night"
+    && shiftId !== "outpatient-night"
     && !["annual-leave", "expansion"].includes(shiftId)
     && names.includes(person)
   ));
@@ -232,7 +241,11 @@ function hasWhiteShift(person, dateKey) {
 
 function whiteShiftIdsFor(person, dateKey) {
   return Object.entries(schedule[dateKey] || {})
-    .filter(([shiftId, names]) => shiftId !== "night" && names.includes(person))
+    .filter(([shiftId, names]) => (
+      shiftId !== "night"
+      && shiftId !== "outpatient-night"
+      && names.includes(person)
+    ))
     .map(([shiftId]) => shiftId);
 }
 
@@ -250,10 +263,11 @@ function canMoveAssignment(source, targetDateKey, targetColumnId) {
   if (!canEdit || !source || !schedule[targetDateKey]) return false;
   if ((schedule[targetDateKey][targetColumnId] || []).includes(source.person)) return false;
   if (source.columnId === "night") {
-    return targetColumnId === "night"
-      && weekNumber(source.dateKey) === weekNumber(targetDateKey)
-      && hasWhiteShift(source.person, targetDateKey)
+    const sameWeek = weekNumber(source.dateKey) === weekNumber(targetDateKey);
+    const canTakeNight = hasWhiteShift(source.person, targetDateKey)
       && !String(preferences[`${source.person}::${targetDateKey}`] || "").includes("no-night");
+    if (targetColumnId === "outpatient-night") return sameWeek && canTakeNight;
+    return targetColumnId === "night" && sameWeek && canTakeNight;
   }
   if (targetColumnId === "night") return false;
   return true;
@@ -275,6 +289,8 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   if (source.columnId === "night" || targetColumnId === "night" || movesPairedNight) {
     normalizeNightRosters();
   }
+  syncHeatmapPreference(source.person, source.dateKey);
+  syncHeatmapPreference(source.person, targetDateKey);
   const targetLabel = columns.find(([id]) => id === targetColumnId)?.[1] || targetColumnId;
   tableStatus = source.columnId === "night"
     ? `${source.person}夜班已移至${dateLabel(targetDateKey).day}`
@@ -288,6 +304,7 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   renderHeatmap();
   renderRoomChart();
   renderWeekendStatsChart();
+  queueAnnotationSave();
   queueSilentScheduleSave("排班已调整，正在自动同步…");
 }
 
@@ -357,6 +374,31 @@ function shiftsFor(person, dateKey) {
     .map(([shift]) => shift);
 }
 
+function syncHeatmapPreference(person, dateKey) {
+  const key = `${person}::${dateKey}`;
+  const before = parsePreference(preferences[key] || "");
+  const shifts = shiftsFor(person, dateKey);
+  const sticky = before.content === "rest" || before.content === "no-night";
+  let content = sticky ? before.content : undefined;
+  let tone;
+  if (shifts.includes("outpatient-night")) {
+    content = "outpatient";
+    tone = "night";
+  } else if (shifts.length) {
+    if (shifts.includes("annual-leave")) content = "annual-leave";
+    else if (shifts.includes("expansion")) content = "expansion";
+    else if (shifts.includes("management")) content = "management";
+    else if (shifts.includes("outpatient")) content = "outpatient";
+    else if (shifts.some((shift) => shift.startsWith("xray-"))) content = "xray";
+    else if (shifts.some((shift) => shift.startsWith("ct-"))) content = "ct";
+    else if (shifts.some((shift) => shift.startsWith("us-"))) content = "us";
+    tone = shifts.includes("night") ? "night" : undefined;
+  }
+  const next = serializePreference({ content, tone });
+  if (next) preferences[key] = next;
+  else delete preferences[key];
+}
+
 function cellStyle(shifts) {
   const operational = shifts.filter((shift) => !["night", "annual-leave", "expansion", "management"].includes(shift));
   const hasNight = shifts.includes("night");
@@ -364,7 +406,8 @@ function cellStyle(shifts) {
   if (shifts.includes("annual-leave")) return { category: "other", marker: "年", hasNight, label: "年假" };
   if (shifts.includes("expansion")) return { category: "other", marker: "拓", hasNight, label: "拓展" };
   if (shifts.includes("management")) return { category: "other", marker: "管", hasNight, label: "管理" };
-  if (shifts.includes("outpatient")) return { category: "other", marker: "门", hasNight, label: "门诊" };
+  if (shifts.includes("outpatient")) return { category: "other", marker: "门", hasNight, label: "门诊白班/跟诊" };
+  if (shifts.includes("outpatient-night")) return { category: "night", marker: "门夜", hasNight: true, label: "门诊夜班" };
   if (operational.some((shift) => shift.startsWith("xray"))) return { category: "xray", marker: "X", hasNight, label: "X线" };
   if (operational.some((shift) => shift.startsWith("ct"))) return { category: "ct", marker: "CT", hasNight, label: "CT/MRI" };
   if (operational.some((shift) => shift.startsWith("us"))) return { category: "us", marker: "US", hasNight, label: "超声" };
@@ -388,14 +431,157 @@ function parsePreference(raw) {
 
 const annotationLabels = {
   day: "白班", night: "夜班", xray: "X线", ct: "CT/MRI", us: "超声",
-  outpatient: "门诊", "annual-leave": "年假", rest: "普休",
-  expansion: "拓展", "no-night": "不夜", management: "管理", cancel: "取消指定",
+  outpatient: "门诊白班/跟诊", "annual-leave": "年假", rest: "普休",
+  expansion: "拓展", "no-night": "不夜", management: "管理", blank: "空白", cancel: "取消指定",
 };
 
-const manualAssignModes = new Set(["day", "night", "ct", "us"]);
+const manualAssignModes = new Set(["night", "xray", "ct", "us", "outpatient", "annual-leave", "management", "expansion"]);
+/** 助理热力图标签对应总表列，依据助理待排班人员名单。 */
+const assistantManualColumns = {
+  张明扬: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
+  杨思琪: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
+  赵家慧: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
+  赵家琳: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
+  刘越: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
+  王成龙: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
+  路萌: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
+  马析淳: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
+  安姝嫣: { xray: "xray-shooting", us: "us-new-coordination" },
+  李晓阳: { xray: "xray-shooting", us: "us-new-coordination" },
+  杨俊杰: { xray: "xray-shooting", us: "us-new-coordination" },
+  苏镜秋: { xray: "xray-shooting", us: "us-new-coordination" },
+  闫娜: { xray: "xray-shooting", us: "us-new-coordination" },
+  段艺涵: { xray: "xray-shooting", us: "us-new-coordination" },
+};
+
+function assistantManualColumn(person, mode) {
+  return assistantManualColumns[person]?.[mode] || "";
+}
+
+function modalityOfColumn(columnId) {
+  if (columnId.startsWith("xray-")) return "xray";
+  if (columnId.startsWith("ct-")) return "ct";
+  if (columnId.startsWith("us-")) return "us";
+  if (columnId === "night" || columnId === "outpatient" || columnId === "annual-leave" || columnId === "management" || columnId === "expansion") return columnId;
+  return "";
+}
+
+function manualColumnFor(person, mode) {
+  if (mode === "night") return "night";
+  if (mode === "outpatient") return "outpatient";
+  if (mode === "annual-leave") return "annual-leave";
+  if (mode === "management") return "management";
+  if (mode === "expansion") return "expansion";
+  if (assistantManualColumns[person]) return assistantManualColumn(person, mode);
+  const group = groupByPerson.get(person) || "";
+  if (mode === "xray") {
+    if (person === "彭竻川") return "xray-teaching";
+    if (group === "一年级") return "xray-shooting";
+    return "xray-report";
+  }
+  if (mode === "ct") {
+    if (group === "高级医师") return "ct-review";
+    if (group === "二年级") return "ct-scan";
+    if (group === "一年级") return "";
+    return "ct-report";
+  }
+  if (mode === "us") {
+    if (group === "一年级" && person !== "彭竻川") return "us-report";
+    return "us-room-1";
+  }
+  return "";
+}
 let scheduleSaveTimer = null;
 let scheduleSaveQueue = Promise.resolve();
 let scheduleSaveRevision = 0;
+let annotationSyncing = false;
+let collabApplying = false;
+let syncedRevision = 0;
+let syncedAnnotationAt = "";
+let collabBase = { schedule: {}, preferences: {} };
+let collabTimer = 0;
+
+function scheduleCellMap(data) {
+  const cells = new Map();
+  Object.entries(data || {}).forEach(([dateKey, day]) => {
+    if (!day || typeof day !== "object") return;
+    Object.entries(day).forEach(([columnId, names]) => {
+      if (Array.isArray(names)) cells.set(`${dateKey}::${columnId}`, names.join("\0"));
+    });
+  });
+  return cells;
+}
+
+function changedScheduleCells(base, current) {
+  const left = scheduleCellMap(base);
+  const right = scheduleCellMap(current);
+  const diff = new Map();
+  new Set([...left.keys(), ...right.keys()]).forEach((key) => {
+    const before = left.get(key) || "";
+    const after = right.get(key) || "";
+    if (before !== after) diff.set(key, after);
+  });
+  return diff;
+}
+
+function applyScheduleCellDiff(target, diff) {
+  diff.forEach((joined, key) => {
+    const splitAt = key.indexOf("::");
+    const dateKey = key.slice(0, splitAt);
+    const columnId = key.slice(splitAt + 2);
+    if (!target[dateKey]) target[dateKey] = {};
+    const names = joined ? joined.split("\0") : [];
+    if (names.length) target[dateKey][columnId] = names;
+    else delete target[dateKey][columnId];
+  });
+}
+
+function changedPreferenceEntries(base, current) {
+  const diff = new Map();
+  const keys = new Set([...Object.keys(base || {}), ...Object.keys(current || {})]);
+  keys.forEach((key) => {
+    const before = base?.[key] || "";
+    const after = current?.[key] || "";
+    if (before !== after) diff.set(key, after);
+  });
+  return diff;
+}
+
+function applyPreferenceDiff(target, diff) {
+  diff.forEach((value, key) => {
+    if (value) target[key] = value;
+    else delete target[key];
+  });
+}
+
+function rememberCollabBase(revision = syncedRevision, annotationUpdatedAt = syncedAnnotationAt) {
+  collabBase = { schedule: cloneData(schedule), preferences: cloneData(preferences) };
+  syncedRevision = Number(revision || 0);
+  syncedAnnotationAt = annotationUpdatedAt || "";
+}
+
+function renderPresence(editors) {
+  const names = document.querySelector("#presence-names");
+  if (!names) return;
+  const accounts = [...new Set((editors || []).map((item) => item.account).filter(Boolean))];
+  names.textContent = accounts.length ? accounts.join("、") : "—";
+}
+
+function rebaseOntoRemote(remoteSchedule, remotePreferences) {
+  const scheduleDiff = changedScheduleCells(collabBase.schedule, schedule);
+  const preferenceDiff = changedPreferenceEntries(collabBase.preferences, preferences);
+  schedule = cloneData(remoteSchedule || {});
+  applyScheduleCellDiff(schedule, scheduleDiff);
+  normalizeNightRosters();
+  preferences = cloneData(remotePreferences || {});
+  applyPreferenceDiff(preferences, preferenceDiff);
+  annotationsByPeriod.set(currentPeriodKey, cloneData(preferences));
+  collabBase = {
+    schedule: cloneData(remoteSchedule || {}),
+    preferences: cloneData(remotePreferences || {}),
+  };
+  return scheduleDiff.size > 0 || preferenceDiff.size > 0;
+}
 
 function ensureScheduleDay(dateKey) {
   if (!schedule[dateKey]) schedule[dateKey] = {};
@@ -423,31 +609,42 @@ function removePersonFromColumns(dateKey, person, predicate) {
   return changed;
 }
 
-function defaultDayColumnFor(person) {
-  const group = groupByPerson.get(person) || "";
-  if (group === "高级医师" || group === "中级医师") return "ct-report";
-  if (group === "老助理" || group === "新助理") return "us-report";
-  return "us-report";
+function applyManualScheduleAssignment(person, dateKey, mode) {
+  if (!manualAssignModes.has(mode)) return { changed: false, added: false };
+  const column = manualColumnFor(person, mode);
+  if (!column) return { changed: false, added: false };
+  const alreadyThere = (schedule[dateKey]?.[column] || []).includes(person);
+  if (alreadyThere) {
+    return {
+      changed: removePersonFromColumns(dateKey, person, (columnId) => columnId === column),
+      added: false,
+    };
+  }
+  const replaced = removePersonFromColumns(
+    dateKey,
+    person,
+    (columnId) => modalityOfColumn(columnId) === mode && columnId !== column,
+  );
+  addPersonToColumn(dateKey, column, person);
+  return { changed: true, added: true, replaced };
 }
 
-function applyManualScheduleAssignment(person, dateKey, mode, removing) {
-  // 取消标注只改 preference，不回删已有正式排班，避免误清空。
-  if (!manualAssignModes.has(mode) || removing) return false;
+function preferenceForTableToggle(raw, mode, added) {
+  const parsed = parsePreference(raw);
   if (mode === "night") {
-    return !(schedule[dateKey]?.night || []).includes(person)
-      && addPersonToColumn(dateKey, "night", person);
+    return serializePreference({
+      content: parsed.content,
+      tone: added ? "night" : (parsed.tone === "night" ? undefined : parsed.tone),
+    });
   }
-  if (mode === "ct") {
-    if (whiteShiftIdsFor(person, dateKey).some((id) => id.startsWith("ct-"))) return false;
-    return addPersonToColumn(dateKey, "ct-report", person);
+  if (!added) {
+    return serializePreference({
+      content: parsed.content === mode ? undefined : parsed.content,
+      tone: parsed.tone,
+    });
   }
-  if (mode === "us") {
-    if (whiteShiftIdsFor(person, dateKey).some((id) => id.startsWith("us-"))) return false;
-    return addPersonToColumn(dateKey, "us-report", person);
-  }
-  // day / 白班：无白班时写入默认白班岗位
-  if (whiteShiftIdsFor(person, dateKey).length) return false;
-  return addPersonToColumn(dateKey, defaultDayColumnFor(person), person);
+  if (mode === "annual-leave" || mode === "expansion") return mode;
+  return serializePreference({ content: mode, tone: parsed.tone });
 }
 
 function queueSilentScheduleSave(notice = "正在同步当前版本…") {
@@ -468,16 +665,33 @@ function queueSilentScheduleSave(notice = "正在同步当前版本…") {
       }
       const versionNumber = currentVersion.versionNumber || versionNumberOf(currentVersion);
       const label = currentVersion.label?.replace(/（云端）$/, "") || `第${versionNumber}版`;
-      const payload = currentPayload(versionNumber, label);
-      payload.status = "云端保存";
-      const cloudResult = await ScheduleApi.updateVersion(currentVersion.id, payload);
-      const cloudVersion = cloudResult.version;
-      const cloudPayload = cloudVersion.payload || payload;
+      let cloudVersion = null;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const payload = currentPayload(versionNumber, label);
+        payload.status = "云端保存";
+        try {
+          const cloudResult = await ScheduleApi.updateVersion(currentVersion.id, payload, syncedRevision);
+          cloudVersion = cloudResult.version;
+          break;
+        } catch (error) {
+          if (error.status !== 409 || !error.version?.payload || attempt === 2) throw error;
+          syncedRevision = Number(error.version.revision || syncedRevision);
+          rebaseOntoRemote(error.version.payload.schedule, error.version.payload.preferences);
+          renderTable();
+          renderHeatmap();
+        }
+      }
+      const cloudPayload = cloudVersion.payload || currentPayload(versionNumber, label);
       const meta = makeCloudMeta(cloudVersion, cloudPayload);
       versions = versions.map((item) => (item.id === meta.id ? meta : item));
       if (!versions.some((item) => item.id === meta.id)) versions = [meta, ...versions];
       currentVersion = meta;
-      currentPeriodKey = cloudPayload.periodKey || payload.periodKey;
+      currentPeriodKey = cloudPayload.periodKey || currentPeriodKey;
+      syncedRevision = Number(cloudVersion.revision || syncedRevision);
+      collabBase = {
+        schedule: cloneData(cloudPayload.schedule || {}),
+        preferences: cloneData(cloudPayload.preferences || {}),
+      };
       renderVersionOptions(meta.id);
       updatePeriodDisplay(currentPeriodKey);
       if (revision === scheduleSaveRevision) {
@@ -551,6 +765,8 @@ function updateAnnotationToolbar() {
     button.setAttribute("aria-pressed", String(button.dataset.annotation === annotationMode));
     button.disabled = !canEdit;
   });
+  document.body.classList.toggle("is-annotating", Boolean(annotationMode));
+  if (annotationMode && heatmapChart?.tooltip) heatmapChart.tooltip.hide();
   const status = document.querySelector("#annotation-status");
   if (status) status.textContent = annotationStatus;
 }
@@ -562,6 +778,7 @@ function queueAnnotationSave() {
   const periodKey = currentPeriodKey;
   const snapshot = cloneData(preferences);
   annotationsByPeriod.set(periodKey, cloneData(snapshot));
+  annotationSyncing = true;
   annotationStatus = "正在保存标注到云端…";
   updateAnnotationToolbar();
   annotationSaveQueue = annotationSaveQueue.catch(() => {}).then(async () => {
@@ -576,6 +793,8 @@ function queueAnnotationSave() {
       annotationStatus = `云端保存失败：${error.message || "请稍后重试"}`;
       updateAnnotationToolbar();
     }
+  }).finally(() => {
+    if (revision === annotationSaveRevision) annotationSyncing = false;
   });
   return annotationSaveQueue;
 }
@@ -584,38 +803,77 @@ function applyHeatmapAnnotation(person, dateKey) {
   const key = `${person}::${dateKey}`;
   const mode = annotationMode;
   const before = preferences[key] || "";
+  heatmapSwapSource = null;
+  if (mode === "blank") {
+    const changed = removePersonFromColumns(dateKey, person, () => true);
+    if (before) delete preferences[key];
+    if (!changed && !before) {
+      updateAnnotationToolbar();
+      return;
+    }
+    heatmapSwapStatus = `${person} ${dateLabel(dateKey).day}已恢复空白`;
+    annotationStatus = "正在自动同步…";
+    renderTable();
+    renderHeatmap();
+    renderRoomChart();
+    renderWeekendStatsChart();
+    queueAnnotationSave();
+    if (changed) queueSilentScheduleSave();
+    else updateAnnotationToolbar();
+    return;
+  }
+  if (manualAssignModes.has(mode)) {
+    const result = applyManualScheduleAssignment(person, dateKey, mode);
+    if (!result.changed && !manualColumnFor(person, mode)) {
+      heatmapSwapStatus = `${person}没有对应的“${annotationLabels[mode]}”岗位`;
+      annotationStatus = heatmapSwapStatus;
+      updateAnnotationToolbar();
+      return;
+    }
+    const value = preferenceForTableToggle(before, mode, result.added);
+    if (value) preferences[key] = value;
+    else delete preferences[key];
+    const actionLabel = result.added ? "已排入" : "已撤销";
+    heatmapSwapStatus = `${person} ${dateLabel(dateKey).day}${actionLabel}“${annotationLabels[mode]}”`;
+    annotationStatus = `${heatmapSwapStatus}，正在自动同步…`;
+    renderTable();
+    renderHeatmap();
+    renderRoomChart();
+    renderWeekendStatsChart();
+    queueAnnotationSave();
+    if (result.changed) queueSilentScheduleSave();
+    else updateAnnotationToolbar();
+    return;
+  }
   const value = nextPreference(preferences[key], mode);
   if (value) preferences[key] = value;
   else delete preferences[key];
-  heatmapSwapSource = null;
   const removed = mode === "cancel" || (before && value !== before && (
     (mode === "day" || mode === "night")
       ? parsePreference(before).tone === mode
       : parsePreference(before).content === mode
   ));
-  const scheduleChanged = mode === "cancel"
-    ? false
-    : applyManualScheduleAssignment(person, dateKey, mode, removed);
   heatmapSwapStatus = mode === "cancel"
     ? `${person} ${dateLabel(dateKey).day}已取消全部指定`
     : `${person} ${dateLabel(dateKey).day}${removed ? "已取消" : "已指定"}“${annotationLabels[mode]}”`;
-  annotationStatus = scheduleChanged
-    ? `${heatmapSwapStatus}，正在自动同步…`
-    : heatmapSwapStatus;
+  annotationStatus = heatmapSwapStatus;
   renderTable();
   renderHeatmap();
   renderRoomChart();
   renderWeekendStatsChart();
   queueAnnotationSave();
-  if (scheduleChanged) queueSilentScheduleSave();
-  else updateAnnotationToolbar();
+  updateAnnotationToolbar();
 }
 
 async function handleHeatmapAnnotationClick(person, dateKey) {
   try {
     if (!canEdit) {
       if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
-      await enterEditorMode();
+      if (!(await enterEditorMode())) {
+        annotationStatus = "游客账号仅可查看排班";
+        updateAnnotationToolbar();
+        return;
+      }
     }
     applyHeatmapAnnotation(person, dateKey);
   } catch (error) {
@@ -865,6 +1123,8 @@ function getNightStreakByCell(currentDates) {
 
 function mainHeatmapCategory(preference, shifts) {
   const parsed = parsePreference(preference);
+  if (shifts.includes("outpatient-night")) return "night";
+  if (parsed.content === "outpatient" && parsed.tone === "night" && !shifts.includes("night")) return "night";
   if (parsed.content === "management" && parsed.tone === "night") return "night";
   if (["annual-leave", "expansion", "management", "outpatient"].includes(parsed.content)) return "other";
   if (parsed.tone === "night") return "night";
@@ -889,6 +1149,7 @@ function heatmapLabelColor(category, hasWhiteConflict) {
 function mainHeatmapMarker(preference, shifts, restHonored) {
   const parsed = parsePreference(preference);
   if (parsed.content === "annual-leave") return "年";
+  if (shifts.includes("outpatient-night") || (parsed.content === "outpatient" && parsed.tone === "night" && !shifts.includes("night"))) return "门夜";
   if (parsed.content === "expansion") return "拓";
   if (parsed.content === "management") return "管";
   if (parsed.content === "outpatient") return "门";
@@ -946,7 +1207,7 @@ function renderHeatmap() {
     conflict: "rgba(220, 38, 38, 0.78)",
   };
   const shiftLabels = Object.fromEntries(columns);
-  Object.assign(shiftLabels, { "annual-leave": "年假", expansion: "拓展", outpatient: "门诊", management: "管理" });
+  Object.assign(shiftLabels, { "annual-leave": "年假", expansion: "拓展", outpatient: "门诊白班/跟诊", "outpatient-night": "门诊夜班", management: "管理" });
   const points = visiblePeople.flatMap((person, personIndex) => heatmapDates.map((dateKey, dateIndex) => {
     const x = dateIndex + Math.floor(dateIndex / 7);
     const shifts = shiftsFor(person, dateKey);
@@ -1014,6 +1275,7 @@ function renderHeatmap() {
   if (heatmapChart && heatmapLayoutKey === nextLayoutKey && container.querySelector(".heatmap-chart-host")) {
     heatmapChart.series[0].setData(points, false, false, false);
     heatmapChart.redraw(false);
+    refreshLiveCharts();
     return;
   }
   container.innerHTML = "";
@@ -1035,6 +1297,7 @@ function renderHeatmap() {
   frozenYAxis.innerHTML = yPositions.map((position, index) => (
     `<span style="top:${48 + ((position + 0.55) / yAxisRange) * (chartHeight - 48 - 28)}px">${visiblePeople[index]}</span>`
   )).join("");
+  refreshLiveCharts();
   stage.append(chartHost, frozenXAxis, frozenYAxis);
   container.append(stage);
   heatmapChart = window.Highcharts.chart(chartHost, {
@@ -1093,7 +1356,7 @@ function renderHeatmap() {
       title: { text: undefined },
     },
     tooltip: {
-      enabled: true,
+      enabled: !annotationMode,
       outside: true,
       useHTML: true,
       headerFormat: "",
@@ -1399,6 +1662,11 @@ function roomCountsByPerson() {
   return counts;
 }
 
+function refreshLiveCharts() {
+  renderRoomChart();
+  renderWeekendStatsChart();
+}
+
 function renderRoomChart() {
   const host = document.querySelector("#room-chart");
   if (!host || !window.Highcharts) return;
@@ -1412,7 +1680,7 @@ function renderRoomChart() {
     roomChartRooms.forEach(([roomId], index) => {
       roomChart.series[index].setData(roomChartPeople.map((person) => counts.get(person)[roomId]), false);
     });
-    roomChart.redraw(false);
+    roomChart.redraw();
     return;
   }
   roomChart = window.Highcharts.chart(host, {
@@ -1467,9 +1735,7 @@ function renderRoomChart() {
 }
 
 function personWorksOnScheduleDay(person, dateKey) {
-  return shiftsFor(person, dateKey).some((shift) => (
-    shift !== "annual-leave" && shift !== "expansion"
-  ));
+  return isWorkDay(person, dateKey);
 }
 
 function weekendStatsByPerson() {
@@ -1491,9 +1757,10 @@ function weekendStatsByPerson() {
       return personWorksOnScheduleDay(person, saturday)
         && personWorksOnScheduleDay(person, sundayKey);
     }).length;
-    const weekendNightCount = weekendNights.filter((dateKey) => (
-      (schedule[dateKey]?.night || []).includes(person)
-    )).length;
+    const weekendNightCount = weekendNights.filter((dateKey) => {
+      const shifts = shiftsFor(person, dateKey);
+      return shifts.includes("night") || shifts.includes("outpatient-night");
+    }).length;
     return [person, { doubleWeekends, weekendNights: weekendNightCount }];
   }));
 }
@@ -1524,7 +1791,7 @@ function renderWeekendStatsChart() {
     seriesData.forEach((series, index) => {
       weekendStatsChart.series[index].setData(series.data, false);
     });
-    weekendStatsChart.redraw(false);
+    weekendStatsChart.redraw();
     return;
   }
   if (weekendStatsChart) {
@@ -1677,7 +1944,7 @@ async function saveAsNewVersion() {
       button.disabled = true;
       button.textContent = "保存中…";
     }
-    if (!canEdit) await enterEditorMode();
+    if (!canEdit && !(await enterEditorMode())) return;
     if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
     await ScheduleApi.ensureAccess();
     let cloudVersions = [];
@@ -1739,6 +2006,7 @@ async function loadVersion(versionId) {
     meta.payload = payload;
     meta.versionNumber = result.version.versionNumber;
     meta.periodKey = result.version.periodKey;
+    meta.revision = Number(result.version.revision || 0);
   }
   if (revision !== versionLoadRevision) return;
   schedule = cloneData(payload.schedule);
@@ -1756,9 +2024,9 @@ async function loadVersion(versionId) {
         if (revision !== versionLoadRevision) return;
         if (annotationResult.found) {
           preferences = cloneData(annotationResult.annotations?.preferences || {});
-          annotationStatus = "已同步本周期云端标注";
+          annotationStatus = "";
         } else {
-          annotationStatus = "选标签，再点单元格";
+          annotationStatus = "";
         }
       }
     } catch {
@@ -1779,6 +2047,7 @@ async function loadVersion(versionId) {
   renderRoomChart();
   renderWeekendStatsChart();
   updateAnnotationToolbar();
+  rememberCollabBase(Number(meta.revision || 0), syncedAnnotationAt);
   window.clearTimeout(loadingTimer);
   loading.classList.add("is-hidden");
 }
@@ -1790,6 +2059,66 @@ function clearLegacyLocalScheduleData() {
     if (/^department-schedule\.(local-versions|local-draft)/.test(key)) {
       localStorage.removeItem(key);
     }
+  }
+}
+
+function startCollabPolling() {
+  window.clearInterval(collabTimer);
+  const tick = () => {
+    syncLiveCollab();
+  };
+  collabTimer = window.setInterval(tick, 2500);
+  tick();
+}
+
+async function syncLiveCollab() {
+  if (!currentVersion?.id || !globalThis.ScheduleApi || collabApplying) return;
+  const annotationKey = annotationVersionKey();
+  let snapshot;
+  try {
+    snapshot = canEdit && ScheduleApi.hasToken()
+      ? await ScheduleApi.touchLive(currentVersion.id, annotationKey)
+      : await ScheduleApi.liveStatus(currentVersion.id, annotationKey);
+  } catch {
+    return;
+  }
+  renderPresence(snapshot.editors);
+  const revision = Number(snapshot.revision || 0);
+  const annotationAt = snapshot.annotationUpdatedAt || "";
+  if (revision === syncedRevision && annotationAt === syncedAnnotationAt) return;
+  if (!syncedRevision) {
+    syncedRevision = revision;
+    syncedAnnotationAt = annotationAt;
+    return;
+  }
+  if (scheduleSaveTimer || annotationSyncing) return;
+  const versionId = currentVersion.id;
+  collabApplying = true;
+  try {
+    const result = await ScheduleApi.getVersion(versionId);
+    if (currentVersion?.id !== versionId) return;
+    const annotation = await ScheduleApi.getAnnotations(annotationKey).catch(() => null);
+    const remoteSchedule = result.version.payload?.schedule || {};
+    const remotePreferences = annotation?.found
+      ? (annotation.annotations?.preferences || {})
+      : (result.version.payload?.preferences || {});
+    const keptLocal = rebaseOntoRemote(remoteSchedule, remotePreferences);
+    syncedRevision = Number(result.version.revision || revision);
+    syncedAnnotationAt = annotation?.annotations?.updatedAt || annotationAt;
+    currentVersion.payload = cloneData(result.version.payload);
+    currentVersion.revision = syncedRevision;
+    if (!keptLocal) {
+      collabBase = { schedule: cloneData(schedule), preferences: cloneData(preferences) };
+    }
+    renderTable();
+    renderHeatmap();
+    renderRoomChart();
+    renderWeekendStatsChart();
+    if (keptLocal && canEdit) queueSilentScheduleSave("正在合并其他人的修改…");
+  } catch {
+    // 下一轮继续拉取。
+  } finally {
+    collabApplying = false;
   }
 }
 
@@ -1809,6 +2138,7 @@ async function init() {
       || cloudVersions[0];
     await loadVersion(preferred.id);
     scheduleCloudVersionPrefetch();
+    startCollabPolling();
   } catch (error) {
     loading.textContent = `${error.message || "云端排班不可用"}`;
     loading.classList.remove("is-hidden");
@@ -1920,11 +2250,7 @@ document.querySelector("#annotation-buttons").addEventListener("click", (event) 
   if (!button) return;
   const action = button.dataset.annotation;
   annotationMode = annotationMode === action ? "" : action;
-  annotationStatus = annotationMode
-    ? (manualAssignModes.has(annotationMode)
-      ? `已选择“${annotationLabels[annotationMode]}”，点击单元格将指定排班并自动同步云端`
-      : `已选择“${annotationLabels[annotationMode]}”，请点击需要标注的人员日期`)
-    : "已退出标注模式；点击热力图可继续换班";
+  annotationStatus = "";
   heatmapSwapSource = null;
   updateAnnotationToolbar();
   renderHeatmap();

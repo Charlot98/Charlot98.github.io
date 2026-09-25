@@ -28,10 +28,25 @@ button { cursor: pointer; }
 .page-header { display: flex; justify-content: space-between; align-items: center; gap: 28px; margin-bottom: 20px; }
 h1 { margin: 0; color: var(--navy); font-size: clamp(27px, 3vw, 39px); letter-spacing: -.035em; }
 .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
-.access-card { display: flex; align-items: center; gap: 8px; padding: 8px 9px 8px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: 0 6px 20px rgb(16 51 94 / 5%); }
-.access-card span { color: #5b6f84; font-size: 11px; font-weight: 800; white-space: nowrap; }
-.access-card span.is-editor { color: var(--blue); }
-.access-card button { height: 29px; padding: 0 10px; border: 1px solid #9db3c8; border-radius: 7px; background: #f8fbfe; color: var(--navy); font-size: 11px; font-weight: 750; }
+.presence-card { display: flex; align-items: center; gap: 8px; max-width: 280px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: 0 6px 20px rgb(16 51 94 / 5%); }
+.presence-card span { color: #5b6f84; font-size: 11px; font-weight: 800; white-space: nowrap; }
+.presence-card strong { color: var(--navy); font-size: 12px; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.access-card { display: flex; align-items: center; gap: 8px; }
+.access-card span,
+.access-card button {
+  display: inline-flex;
+  align-items: center;
+  height: 35px;
+  padding: 0 13px;
+  border: 1px solid #8ca9c4;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.access-card span.is-editor { border-color: var(--navy); background: var(--navy); color: #fff; }
 .access-card button:hover { border-color: var(--blue); background: var(--blue-soft); }
 .period-card { display: grid; grid-template-columns: auto auto; align-items: center; gap: 4px 16px; min-width: 280px; padding: 14px 17px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); box-shadow: 0 8px 26px rgb(16 51 94 / 8%); }
 .period-card span { color: var(--muted); font-size: 11px; font-weight: 700; }
@@ -122,6 +137,16 @@ tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0
 .annotation-buttons button { height: 29px; padding: 0 10px; border: 1px solid #b7c8d9; border-radius: 6px; background: #fff; color: #34475c; font-size: 11px; font-weight: 700; }
 .annotation-buttons button:hover { border-color: var(--blue); background: var(--blue-soft); }
 .annotation-buttons button.is-active { border-color: var(--blue); background: var(--blue); color: #fff; box-shadow: 0 0 0 2px rgb(0 144 242 / 14%); }
+.annotation-buttons button.annotation-blue { border-color: #1766aa; background: #1766aa; color: #fff; }
+.annotation-buttons button.annotation-blue:hover { border-color: #0f5088; background: #0f5088; }
+.annotation-buttons button.annotation-blue.is-active { border-color: #0b2440; background: #0b2440; color: #fff; box-shadow: 0 0 0 2px rgb(23 102 170 / 35%); }
+.annotation-buttons button.annotation-yellow { border-color: #e0b000; background: #f2c200; color: #3d3200; }
+.annotation-buttons button.annotation-yellow:hover { border-color: #c99a00; background: #e0b000; }
+.annotation-buttons button.annotation-yellow.is-active { border-color: #8a6a00; background: #c99600; color: #fff; box-shadow: 0 0 0 2px rgb(224 176 0 / 35%); }
+.annotation-buttons button.annotation-blank { border-color: #c5d0dc; background: #fff; color: #667085; }
+.annotation-buttons button.annotation-blank:hover { border-color: #98a8b8; background: #f7fafc; }
+.annotation-buttons button.annotation-blank.is-active { border-color: #667085; background: #eef3f7; color: #243140; box-shadow: 0 0 0 2px rgb(102 112 133 / 20%); }
+body.is-annotating .highcharts-tooltip-container { display: none !important; }
 .annotation-buttons button.annotation-cancel { border-color: #d5b36c; color: #745614; }
 .annotation-buttons button.annotation-cancel.is-active { border-color: #b18319; background: #b18319; color: #fff; }
 .annotation-buttons button:disabled { cursor: not-allowed; opacity: .42; }
@@ -190,42 +215,84 @@ body.calendar-dialog-open { overflow: hidden; }
   backdrop-filter: blur(5px);
 }
 .schedule-auth-panel {
-  width: min(360px, calc(100vw - 40px));
-  padding: 24px;
-  border: 1px solid #dce4ed;
+  width: min(380px, calc(100vw - 40px));
+  padding: 22px 22px 18px;
+  border: 1px solid var(--line);
   border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 22px 70px rgba(11, 36, 64, .22);
+  background: var(--surface);
+  box-shadow: 0 18px 50px rgb(11 36 64 / 16%);
 }
-.schedule-auth-panel h2 { margin: 0 0 18px; color: var(--navy); font-size: 19px; text-align: center; }
+.schedule-auth-kicker {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.schedule-auth-panel h2 {
+  margin: 0 0 18px;
+  color: var(--navy);
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -.03em;
+  text-align: left;
+}
+.schedule-auth-form { display: grid; gap: 0; }
+.schedule-auth-form label {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.schedule-auth-form label:not(:first-of-type) { margin-top: 12px; }
 .schedule-auth-form input {
   width: 100%;
-  height: 44px;
+  height: 40px;
   padding: 0 12px;
   box-sizing: border-box;
   border: 1px solid #cbd8e7;
-  border-radius: 9px;
+  border-radius: 8px;
   outline: 0;
   color: var(--ink);
-  background: #f7fafc;
-  font-size: 16px;
+  background: #f8fbfe;
+  font-size: 14px;
 }
 .schedule-auth-form input:focus { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 3px rgb(23 102 170 / 12%); }
-.schedule-auth-hint { margin: 8px 2px 0; color: var(--muted); font-size: 11px; }
-.schedule-auth-error { min-height: 16px; margin: 5px 2px 0; color: #b64e4e; font-size: 11px; }
-.schedule-auth-actions { margin-top: 16px; display: flex; justify-content: flex-end; gap: 8px; }
-.schedule-auth-actions button {
-  min-width: 76px;
+.schedule-auth-error { min-height: 18px; margin: 8px 0 0; color: #b64e4e; font-size: 12px; }
+.schedule-auth-form .primary,
+.schedule-auth-guest,
+.schedule-auth-form button[type="button"] {
   height: 36px;
-  padding: 0 14px;
-  border: 0;
   border-radius: 8px;
-  color: #5f6c66;
-  background: #eef3f0;
+  font-size: 13px;
+  font-weight: 750;
   cursor: pointer;
 }
-.schedule-auth-actions button.primary { color: #fff; background: var(--navy); }
-.schedule-auth-actions button:hover { filter: brightness(.97); }
+.schedule-auth-form .primary {
+  margin-top: 6px;
+  border: 1px solid var(--navy);
+  background: var(--navy);
+  color: #fff;
+}
+.schedule-auth-form .primary:hover { border-color: var(--blue); background: var(--blue); }
+.schedule-auth-guest {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid #8ca9c4;
+  background: #fff;
+  color: var(--navy);
+}
+.schedule-auth-guest:hover { border-color: var(--blue); background: var(--blue-soft); }
+.schedule-auth-form button[type="button"]:last-child {
+  margin-top: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.schedule-auth-form button[type="button"]:last-child:hover { color: var(--navy); background: transparent; }
 
 @media (max-width: 780px) {
   .app-shell { padding: 18px 14px 30px; }

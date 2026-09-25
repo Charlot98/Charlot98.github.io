@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=20" />
+    <link rel="stylesheet" href="./assets/styles.css?v=26" />
   </head>
   <body>
     <main class="app-shell">
@@ -16,6 +16,10 @@
           <h1>排班总览</h1>
         </div>
         <div class="header-actions">
+          <div class="presence-card" id="presence-card" aria-label="正在编辑的人员">
+            <span>正在编辑</span>
+            <strong id="presence-names">—</strong>
+          </div>
           <div class="access-card" aria-label="当前访问账号">
             <span id="access-mode-badge">游客账号</span>
             <button id="access-mode-button" type="button">管理员登录</button>
@@ -77,21 +81,20 @@
         <div class="annotation-toolbar" aria-label="热力图标注工具">
           <div class="annotation-heading">
             <strong>标注排班</strong>
-            <span id="annotation-status" aria-live="polite">选白班/夜班/CT/超声后点单元格，将自动同步</span>
+            <span id="annotation-status" aria-live="polite"></span>
           </div>
           <div class="annotation-buttons" id="annotation-buttons">
-            <button type="button" data-annotation="day">白班</button>
-            <button type="button" data-annotation="night">夜班</button>
-            <button type="button" data-annotation="xray">X线</button>
-            <button type="button" data-annotation="ct">CT/MRI</button>
-            <button type="button" data-annotation="us">超声</button>
-            <button type="button" data-annotation="outpatient">门诊</button>
-            <button type="button" data-annotation="annual-leave">年假</button>
+            <button type="button" class="annotation-blue" data-annotation="night">夜班</button>
+            <button type="button" class="annotation-blue" data-annotation="xray">X线</button>
+            <button type="button" class="annotation-blue" data-annotation="us">超声</button>
+            <button type="button" class="annotation-blue" data-annotation="ct">CT/MRI</button>
+            <button type="button" class="annotation-yellow" data-annotation="outpatient">门诊白班/跟诊</button>
+            <button type="button" class="annotation-yellow" data-annotation="annual-leave">年假</button>
             <button type="button" data-annotation="rest">普休</button>
-            <button type="button" data-annotation="expansion">拓展</button>
+            <button type="button" class="annotation-yellow" data-annotation="expansion">拓展</button>
             <button type="button" data-annotation="no-night">不夜</button>
-            <button type="button" data-annotation="management">管理</button>
-            <button type="button" class="annotation-cancel" data-annotation="cancel">取消指定</button>
+            <button type="button" class="annotation-yellow" data-annotation="management">管理</button>
+            <button type="button" class="annotation-blank" data-annotation="blank">空白</button>
           </div>
         </div>
         <div class="heatmap-scroll">
@@ -103,7 +106,6 @@
         <header class="panel-header">
           <div>
             <h2>双周末 / 周末夜班次数</h2>
-            <p>按热力图人员顺序从左到右；双周末指同一周六日均上班，周末夜班指周六或周日夜班</p>
           </div>
         </header>
         <div class="weekend-stats-scroll">
@@ -128,7 +130,7 @@
     <script src="./assets/heatmap.js"></script>
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
-    <script src="./assets/schedule-api.js?v=3"></script>
-    <script type="module" src="./assets/app.js?v=42"></script>
+    <script src="./assets/schedule-api.js?v=6"></script>
+    <script type="module" src="./assets/app.js?v=54"></script>
   </body>
 </html>
