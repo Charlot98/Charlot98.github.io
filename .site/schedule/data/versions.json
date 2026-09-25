@@ -1,6 +1,17 @@
 {
-  "defaultVersion": "v62",
+  "defaultVersion": "v73",
   "versions": [
+    {
+      "id": "v73",
+      "label": "第73版",
+      "status": "云端修订196；含助理排班",
+      "file": "schedule-v73.json",
+      "periodKey": "2026-09-28_2026-11-01",
+      "versionNumber": 73,
+      "revision": 196,
+      "cloudVersionNumber": 73,
+      "cloudVersionId": "b3c9db5b-fdd0-4dbd-b9ec-afa8250c4070"
+    },
     {
       "id": "v62",
       "label": "第62版",
