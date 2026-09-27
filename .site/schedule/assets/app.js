@@ -46,7 +46,7 @@ const assistantDailyCaps = {
   "xray-shooting": 2,
   "ct-scan-teaching": 1,
   "ct-scan": 2,
-  "us-coordination-teaching": 1,
+  "us-coordination-teaching": 2,
 };
 
 function overCapacityColumns(dateKey) {
