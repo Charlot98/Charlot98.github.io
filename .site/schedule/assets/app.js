@@ -144,6 +144,10 @@ function updateAccessModeUI() {
   document.querySelectorAll("#annotation-buttons button").forEach((button) => {
     button.disabled = !canEdit;
   });
+  const isAdmin = account === "admin";
+  document.querySelector("#delete-version-button").hidden = !isAdmin;
+  document.querySelector("#recycle-bin-button").hidden = !isAdmin;
+  if (isAdmin) prefetchTrashedVersions();
   tableMoveSource = null;
   heatmapSwapSource = null;
   tableStatus = canEdit ? "拖动姓名换班" : "游客账号 · 只读查看";
@@ -1512,10 +1516,25 @@ async function exportExcel() {
     totalSheet.addRow(["日期", ...columns.map(([, label]) => label)]);
     const header = totalSheet.getRow(1);
     header.height = 25;
-    header.eachCell((cell) => {
-      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF175EA8" } };
-      cell.alignment = { horizontal: "center", vertical: "middle" };
+    const exportColumnFills = Object.fromEntries(columns.map(([id]) => {
+      if (id.startsWith("xray-")) return [id, "FFFFF2CC"];
+      if (id.startsWith("ct-")) return [id, "FFE0EAF6"];
+      if (id.startsWith("us-")) return [id, "FFE3ECDB"];
+      return [id, ""];
+    }));
+    const contentBorder = {
+      top: { style: "thin", color: { argb: "FF9AA8B5" } },
+      left: { style: "thin", color: { argb: "FF9AA8B5" } },
+      bottom: { style: "thin", color: { argb: "FF9AA8B5" } },
+      right: { style: "thin", color: { argb: "FF9AA8B5" } },
+    };
+    header.eachCell((cell, columnNumber) => {
+      const columnId = columnNumber === 1 ? "" : columns[columnNumber - 2]?.[0];
+      const fill = exportColumnFills[columnId];
+      cell.font = { bold: true, color: { argb: fill ? "FF243244" : "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill || "FF175EA8" } };
+      cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+      cell.border = contentBorder;
     });
     const dates = Object.keys(schedule).sort();
     dates.forEach((dateKey, index) => {
@@ -1525,10 +1544,14 @@ async function exportExcel() {
         return (id === "night" ? sortNightRoster(names) : names).join("、");
       })]);
       row.height = 31;
-      row.eachCell((cell) => {
+      row.eachCell((cell, columnNumber) => {
+        const text = String(cell.value ?? "").trim();
         cell.alignment = { vertical: "middle", wrapText: true };
-        cell.border = { bottom: { style: "thin", color: { argb: "FFD9E1EA" } }, right: { style: "thin", color: { argb: "FFD9E1EA" } } };
-        if (date.getDay() === 0 || date.getDay() === 6) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF4F9FF" } };
+        if (!text) return;
+        cell.border = contentBorder;
+        const columnId = columnNumber === 1 ? "" : columns[columnNumber - 2]?.[0];
+        const fill = exportColumnFills[columnId];
+        if (fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
       });
       if (date.getDay() === 0 && index < dates.length - 1) totalSheet.addRow([]).height = 7;
     });
@@ -1566,6 +1589,9 @@ async function exportExcel() {
     link.click();
     URL.revokeObjectURL(url);
     tableStatus = "Excel已导出";
+    renderTable();
+  } catch (error) {
+    tableStatus = `导出失败：${error.message || "请稍后重试"}`;
     renderTable();
   } finally {
     button.disabled = false;
@@ -1661,7 +1687,7 @@ async function importExcelFile(file) {
       currentVersion?.versionNumber || 0,
     ];
     const nextVersionNumber = Math.max(29, ...versionNumbers) + 1;
-    const label = `第${nextVersionNumber}版`;
+    const label = nextScheduleLabel([...versions, ...cloudVersions], currentPeriodKey);
     const payload = currentPayload(nextVersionNumber, label);
     payload.status = "Excel导入";
     const cloudResult = await ScheduleApi.createVersion(payload);
@@ -2109,6 +2135,16 @@ function versionNumberOf(item) {
     || 0;
 }
 
+function nextScheduleLabel(existingVersions, periodKey) {
+  const month = Number(String(formatPeriod(periodKey) || "2026-10").slice(5, 7));
+  const pattern = new RegExp(`^${month}月第(\\d+)版$`);
+  const next = existingVersions.reduce((max, item) => {
+    const match = String(item?.label || "").match(pattern);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0) + 1;
+  return `${month}月第${next}版`;
+}
+
 function makeCloudMeta(version, payload = null) {
   return {
     id: version.id,
@@ -2187,7 +2223,7 @@ async function saveAsNewVersion() {
       currentVersion?.versionNumber || 0,
     ];
     const nextVersionNumber = Math.max(29, ...versionNumbers) + 1;
-    const label = `第${nextVersionNumber}版`;
+    const label = nextScheduleLabel([...versions, ...cloudVersions], currentPeriodKey);
     const payload = currentPayload(nextVersionNumber, label);
     payload.status = "云端保存";
     const cloudResult = await ScheduleApi.createVersion(payload);
@@ -2471,8 +2507,126 @@ document.querySelector("#import-file").addEventListener("change", async (event) 
 });
 document.querySelector("#ics-export-button").addEventListener("click", openCalendarExportDialog);
 document.querySelector("#save-version-button")?.addEventListener("click", saveAsNewVersion);
+let trashedVersionsCache = null;
+let trashPrefetch = null;
+
+function renderRecycleList(items) {
+  const list = document.querySelector("#recycle-list");
+  const empty = document.querySelector("#recycle-empty");
+  empty.hidden = items.length > 0;
+  list.innerHTML = items.map((item) => `
+    <li>
+      <span>${item.label}</span>
+      <button class="secondary-button" type="button" data-restore="${item.id}">恢复</button>
+    </li>
+  `).join("");
+}
+
+function prefetchTrashedVersions() {
+  if (globalThis.ScheduleApi?.currentAccount?.() !== "admin" || trashPrefetch) return trashPrefetch;
+  trashPrefetch = globalThis.ScheduleApi.listTrashedVersions()
+    .then((result) => {
+      trashedVersionsCache = result.versions || [];
+      return trashedVersionsCache;
+    })
+    .finally(() => {
+      trashPrefetch = null;
+    });
+  return trashPrefetch;
+}
+
+async function openRecycleBin() {
+  const overlay = document.querySelector("#recycle-overlay");
+  const empty = document.querySelector("#recycle-empty");
+  overlay.hidden = false;
+  if (trashedVersionsCache) {
+    renderRecycleList(trashedVersionsCache);
+  } else {
+    empty.hidden = false;
+    empty.textContent = "正在读取…";
+    document.querySelector("#recycle-list").innerHTML = "";
+  }
+  const items = await prefetchTrashedVersions();
+  if (!overlay.hidden) renderRecycleList(items || []);
+}
+
+document.querySelector("#delete-version-button").addEventListener("click", async (event) => {
+  event.stopPropagation();
+  const button = event.currentTarget;
+  if (globalThis.ScheduleApi?.currentAccount?.() !== "admin" || !currentVersion?.id) {
+    tableStatus = "请先使用 admin 账号登录";
+    renderTable();
+    return;
+  }
+  if (!button.classList.contains("is-confirming")) {
+    button.classList.add("is-confirming");
+    button.textContent = "确认删除？";
+    return;
+  }
+  button.disabled = true;
+  const label = currentVersion.label || "当前版本";
+  const removedId = currentVersion.id;
+  try {
+    await globalThis.ScheduleApi.trashVersion(removedId);
+    trashedVersionsCache = [
+      { id: removedId, label },
+      ...(trashedVersionsCache || []).filter((item) => item.id !== removedId),
+    ];
+    versions = await fetchCloudVersions();
+    renderVersionOptions(versions[0]?.id || "");
+    if (versions[0]) await loadVersion(versions[0].id);
+    tableStatus = `已将${label}放入回收站`;
+    renderTable();
+  } catch (error) {
+    tableStatus = error.message || "删除失败";
+    renderTable();
+  } finally {
+    button.disabled = false;
+    button.classList.remove("is-confirming");
+    button.textContent = "删除此版本";
+  }
+});
+document.addEventListener("click", (event) => {
+  const button = document.querySelector("#delete-version-button");
+  if (!button?.classList.contains("is-confirming")) return;
+  if (event.target === button) return;
+  button.classList.remove("is-confirming");
+  button.textContent = "删除此版本";
+});
+document.querySelector("#recycle-bin-button").addEventListener("click", () => {
+  openRecycleBin().catch((error) => {
+    tableStatus = error.message || "读取回收站失败";
+    renderTable();
+  });
+});
+document.querySelector("#recycle-overlay").addEventListener("click", (event) => {
+  if (event.target.id === "recycle-overlay") event.currentTarget.hidden = true;
+});
+document.querySelector("#recycle-list").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-restore]");
+  if (!button) return;
+  button.disabled = true;
+  try {
+    const restored = await ScheduleApi.restoreVersion(button.dataset.restore);
+    trashedVersionsCache = (trashedVersionsCache || []).filter((item) => item.id !== button.dataset.restore);
+    document.querySelector("#recycle-overlay").hidden = true;
+    versions = await fetchCloudVersions();
+    const id = restored.version?.id;
+    renderVersionOptions(id || versions[0]?.id || "");
+    if (id) await loadVersion(id);
+    tableStatus = `已恢复${restored.version?.label || "该版本"}`;
+    renderTable();
+  } catch (error) {
+    button.disabled = false;
+    tableStatus = error.message || "恢复失败";
+    renderTable();
+  }
+});
 document.querySelector("#access-mode-button").addEventListener("click", toggleAccessMode);
 document.querySelector("#version-select").addEventListener("change", async (event) => {
+  const deleteButton = document.querySelector("#delete-version-button");
+  deleteButton.classList.remove("is-confirming");
+  deleteButton.textContent = "删除此版本";
   try {
     await loadVersion(event.target.value);
   } catch (error) {

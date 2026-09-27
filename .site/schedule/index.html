@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=26" />
+    <link rel="stylesheet" href="./assets/styles.css?v=33" />
   </head>
   <body>
     <main class="app-shell">
@@ -36,14 +36,16 @@
           <span>排班版本</span>
           <select id="version-select" aria-label="选择排班版本"></select>
         </label>
+        <button class="secondary-button" id="delete-version-button" type="button" hidden>删除此版本</button>
+        <button class="secondary-button" id="recycle-bin-button" type="button" hidden>回收站</button>
         <label class="search-field">
           <span>查找人员</span>
           <input id="person-search" type="search" placeholder="输入姓名" autocomplete="off" />
         </label>
         <button class="secondary-button save-button" id="save-version-button" type="button">保存为新版本</button>
-        <button class="secondary-button export-button" id="export-button" type="button">导出 Excel</button>
         <button class="secondary-button" id="import-button" type="button">导入 Excel</button>
         <input id="import-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+        <button class="secondary-button export-button" id="export-button" type="button">导出 Excel</button>
         <button class="secondary-button ics-button" id="ics-export-button" type="button">导出个人日历</button>
         <div class="summary" aria-label="排班摘要">
           <div><span>人员</span><strong id="people-count">44</strong></div>
@@ -130,11 +132,17 @@
 
     </main>
     <div class="loading-screen" id="loading-screen" aria-live="polite">正在载入排班数据…</div>
+    <div class="recycle-overlay" id="recycle-overlay" hidden>
+      <section class="recycle-panel" role="dialog" aria-modal="true" aria-label="已删除的版本">
+        <p id="recycle-empty" hidden>空</p>
+        <ul id="recycle-list"></ul>
+      </section>
+    </div>
     <script src="./assets/highcharts.js"></script>
     <script src="./assets/heatmap.js"></script>
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
-    <script src="./assets/schedule-api.js?v=6"></script>
-    <script type="module" src="./assets/app.js?v=77"></script>
+    <script src="./assets/schedule-api.js?v=8"></script>
+    <script type="module" src="./assets/app.js?v=87"></script>
   </body>
 </html>

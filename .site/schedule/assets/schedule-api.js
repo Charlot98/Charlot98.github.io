@@ -333,6 +333,21 @@
     return readJson(response, '保存云端热力图标注失败');
   }
 
+  async function listTrashedVersions() {
+    const response = await apiFetch('versions/trash');
+    return readJson(response, '读取回收站失败');
+  }
+
+  async function trashVersion(id) {
+    const response = await apiFetch(`versions/${encodeURIComponent(id)}/trash`, { method: 'POST' });
+    return readJson(response, '删除版本失败');
+  }
+
+  async function restoreVersion(id) {
+    const response = await apiFetch(`versions/${encodeURIComponent(id)}/restore`, { method: 'POST' });
+    return readJson(response, '恢复版本失败');
+  }
+
   global.ScheduleApi = {
     fetch: apiFetch,
     ensureAccess,
@@ -346,6 +361,9 @@
     touchLive,
     getAnnotations,
     saveAnnotations,
+    listTrashedVersions,
+    trashVersion,
+    restoreVersion,
     endpoint: apiUrl,
     hasToken: () => Boolean(readToken()),
     currentAccount,
