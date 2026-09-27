@@ -1208,7 +1208,7 @@ function getDoubleWeekendNightCells(currentDates) {
     saturdays.forEach((saturday) => {
       const sunday = dateKeyPlusDay(saturday, 1);
       if (!dateSet.has(sunday)) return;
-      if (!personWorksOnScheduleDay(person, saturday) || !personWorksOnScheduleDay(person, sunday)) return;
+      if (!shiftsFor(person, saturday).length || !shiftsFor(person, sunday).length) return;
       for (const dateKey of [saturday, sunday]) {
         if (hasWeekendNightShift(person, dateKey)) marked.add(`${person}::${dateKey}`);
       }
