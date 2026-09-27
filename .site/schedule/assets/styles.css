@@ -84,7 +84,7 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(27px, 3vw, 39px); letter-sp
 .panel-header > p { margin: 0; color: var(--muted); font-size: 11px; }
 .panel-header > p.has-conflicts { color: #c62828; font-weight: 800; }
 .table-scroll { overflow: auto; max-height: calc(100vh - 285px); }
-.heatmap-scroll { position: relative; overflow: auto; max-height: calc(100vh - 300px); background: #fff; }
+.heatmap-scroll { position: relative; overflow-x: hidden; overflow-y: auto; scrollbar-gutter: stable; max-height: calc(100vh - 300px); background: #fff; }
 table { width: max-content; min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; }
 th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 thead th { position: sticky; top: 0; z-index: 4; min-width: 106px; padding: 10px 8px; background: var(--blue); color: #fff; font-size: 11px; white-space: nowrap; }
@@ -163,7 +163,7 @@ body.is-guest .person-chip { cursor: default !important; user-select: text; }
 .highcharts-tooltip-container { z-index: 30 !important; }
 .highcharts-data-label text { pointer-events: none; }
 .highcharts-point.heatmap-swap-ready { cursor: pointer; }
-.highcharts-point.heatmap-no-night-empty { fill: transparent !important; }
+.highcharts-point.heatmap-clear-fill { fill: transparent !important; }
 .highcharts-point.heatmap-swap-candidate { cursor: pointer; stroke: rgb(0, 122, 214) !important; stroke-width: 3px !important; }
 .highcharts-point.heatmap-swap-selected { cursor: pointer; stroke: rgb(0, 75, 145) !important; stroke-width: 4px !important; }
 .highcharts-point.streak-six { stroke: #e0a800 !important; stroke-width: 3px !important; }

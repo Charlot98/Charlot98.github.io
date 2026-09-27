@@ -393,7 +393,7 @@ function shiftsFor(person, dateKey) {
 function effectivePreference(raw, shifts) {
   const parsed = parsePreference(raw);
   const content = parsed.content;
-  const supported = content === "rest" || content === "no-night"
+  const supported = content === "rest" || content === "no-night" || content === "annual-leave" || content === "expansion" || content === "management"
     || (content === "outpatient-follow" && shifts.includes("outpatient"))
     || shifts.some((shift) => modalityOfColumn(shift) === content);
   return serializePreference({
@@ -426,6 +426,19 @@ function syncHeatmapPreference(person, dateKey) {
   const next = serializePreference({ content, tone });
   if (next) preferences[key] = next;
   else delete preferences[key];
+}
+
+function keepHeatmapMarksAfterImport(previousPreferences) {
+  preferences = cloneData(previousPreferences || {});
+  for (const dateKey of Object.keys(schedule)) {
+    for (const person of people) {
+      const before = parsePreference(preferences[`${person}::${dateKey}`] || "");
+      if (before.content === "rest" || before.content === "no-night") continue;
+      const shifts = shiftsFor(person, dateKey);
+      if (!shifts.length) continue;
+      syncHeatmapPreference(person, dateKey);
+    }
+  }
 }
 
 function cellStyle(shifts) {
@@ -1191,6 +1204,7 @@ function mainHeatmapCategory(preference, shifts) {
   if (showShiftLabels && modality) return modality;
   if (!showShiftLabels && hasNight) return "night";
   if (parsed.content === "no-night") return shifts.length ? "day" : "none";
+  if (parsed.content === "rest") return shifts.length ? "day" : "rest";
   if (parsed.tone === "day" || parsed.tone === "night" || shifts.length) return "day";
   return "none";
 }
@@ -1249,13 +1263,13 @@ function renderHeatmap() {
   const visiblePeople = people;
   document.querySelector("#people-count").textContent = visiblePeople.length;
   const container = document.querySelector("#heatmap");
-  const panelWidth = document.querySelector("#heatmap-view").clientWidth
+  const scroll = document.querySelector(".heatmap-scroll");
+  const availableWidth = scroll?.clientWidth
+    || document.querySelector("#heatmap-view").clientWidth
     || document.querySelector(".app-shell").clientWidth;
   const chartHorizontalMargins = 86 + 16;
-  const heatmapCellSize = Math.max(
-    36,
-    Math.floor((panelWidth - chartHorizontalMargins) / axisCategories.length),
-  );
+  const fittedCellSize = Math.floor((availableWidth - chartHorizontalMargins - 12) / Math.max(axisCategories.length, 1));
+  const heatmapCellSize = Math.max(16, fittedCellSize);
   const groupGap = 0.45;
   const visibleBoundaries = groups.slice(0, -1).reduce((acc, [, names]) => {
     acc.push((acc.length ? acc[acc.length - 1] : 0) + names.length);
@@ -1288,7 +1302,6 @@ function renderHeatmap() {
     const parsed = parsePreference(effective);
     const restHonored = parsed.content === "rest" && shifts.length === 0;
     const category = mainHeatmapCategory(preference, shifts);
-    const isUnscheduledNoNight = parsed.content === "no-night" && shifts.length === 0;
     const swapCategory = swapCategoryFor(person, dateKey);
     const isSwapSelected = Boolean(heatmapSwapSource
       && person === heatmapSwapSource.person
@@ -1317,7 +1330,7 @@ function renderHeatmap() {
       : isSwapCandidate ? "heatmap-swap-candidate"
         : [
           canEdit && swapCategory ? "heatmap-swap-ready" : "",
-          isUnscheduledNoNight ? "heatmap-no-night-empty" : "",
+          (category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category))) ? "heatmap-clear-fill" : "",
           nightStreakLength ? "night-streak" : streakSeverity || "",
         ].filter(Boolean).join(" ");
     return {
@@ -1325,7 +1338,7 @@ function renderHeatmap() {
       y: yPositions[personIndex],
       value: 1,
       color: hasWhiteConflict || overCapacityShifts.length ? colors.conflict
-        : isUnscheduledNoNight ? "transparent"
+        : category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category)) ? "transparent"
           : colors[category],
       className: pointClassName,
       dataLabels: { color: heatmapLabelColor(category, hasWhiteConflict || overCapacityShifts.length > 0) },
@@ -1474,6 +1487,9 @@ function renderHeatmap() {
       states: { hover: { brightness: 0.06, borderColor: "rgba(0, 0, 0, 0.56)", borderWidth: 1 } },
       dataLabels: {
         enabled: true,
+        crop: false,
+        overflow: "allow",
+        allowOverlap: true,
         formatter() { return this.point.options.custom?.marker || ""; },
         style: { color: "#27364a", fontSize: "11px", fontWeight: "700", textOutline: "none" },
       },
@@ -1585,18 +1601,43 @@ async function exportExcel() {
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFEAF2FA" } };
       cell.alignment = { horizontal: "center", vertical: "middle" };
     });
-    const fillColors = { none: "FFE8EEF5", xray: "FF0090F2", ct: "FF00D781", us: "FFDD287A", other: "FFD7AF00", night: "FF0F4294" };
+    const fillColors = {
+      none: "FFE8EEF5",
+      xray: "FF0090F2",
+      ct: "FF00D781",
+      us: "FFDD287A",
+      other: "FFD7AF00",
+      night: "FF0F4294",
+    };
+    const darkTextCategories = new Set(["none", "rest", "other", "day"]);
+    const appearanceFor = (person, dateKey) => {
+      const shifts = shiftsFor(person, dateKey);
+      const preference = preferences[`${person}::${dateKey}`];
+      const parsed = parsePreference(effectivePreference(preference, shifts));
+      const restHonored = parsed.content === "rest" && shifts.length === 0;
+      const category = mainHeatmapCategory(preference, shifts);
+      const clear = category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category));
+      return {
+        category,
+        marker: mainHeatmapMarker(person, preference, shifts, restHonored),
+        hasNight: shifts.includes("night") || shifts.includes("outpatient-night"),
+        clear,
+      };
+    };
     people.forEach((person) => {
       const row = heatmapSheet.addRow([person, ...dates.map((dateKey) => {
-        const style = cellStyle(shiftsFor(person, dateKey));
-        return `${style.marker}${style.hasNight ? "夜" : ""}`;
+        const style = appearanceFor(person, dateKey);
+        const nightMark = style.hasNight && style.marker !== "夜" && style.marker !== "门夜" ? "夜" : "";
+        return `${style.marker}${nightMark}`;
       })]);
       row.height = 24;
       dates.forEach((dateKey, dateIndex) => {
-        const style = cellStyle(shiftsFor(person, dateKey));
+        const style = appearanceFor(person, dateKey);
         const cell = row.getCell(dateIndex + 2);
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fillColors[style.category] } };
-        cell.font = { bold: true, color: { argb: style.category === "none" ? "FF9AA7B5" : "FFFFFFFF" } };
+        cell.fill = style.clear
+          ? { type: "pattern", pattern: "none" }
+          : { type: "pattern", pattern: "solid", fgColor: { argb: fillColors[style.category] || fillColors.none } };
+        cell.font = { bold: true, color: { argb: darkTextCategories.has(style.category) ? "FF243244" : "FFFFFFFF" } };
         cell.alignment = { horizontal: "center", vertical: "middle" };
         cell.border = { top: { style: "thin", color: { argb: "FF475467" } }, left: { style: "thin", color: { argb: "FF475467" } }, bottom: { style: "thin", color: { argb: "FF475467" } }, right: { style: "thin", color: { argb: "FF475467" } } };
       });
@@ -1687,6 +1728,7 @@ async function importExcelFile(file) {
   const button = document.querySelector("#import-button");
   const originalText = button?.textContent || "导入 Excel";
   const previousSchedule = schedule;
+  const previousPreferences = preferences;
   try {
     if (button) {
       button.disabled = true;
@@ -1702,6 +1744,7 @@ async function importExcelFile(file) {
     const imported = scheduleFromWorksheet(sheet);
     schedule = imported.schedule;
     normalizeNightRosters();
+    keepHeatmapMarksAfterImport(previousPreferences);
     let cloudVersions = [];
     try { cloudVersions = await fetchCloudVersions(); } catch { cloudVersions = []; }
     const versionNumbers = [
@@ -1732,6 +1775,7 @@ async function importExcelFile(file) {
     annotationStatus = tableStatus;
     heatmapSwapStatus = "点格换班";
     rememberCollabBase(Number(cloudVersion.revision || 0), syncedAnnotationAt);
+    queueAnnotationSave();
     updateAnnotationToolbar();
     renderTable();
     renderHeatmap();
@@ -1739,6 +1783,7 @@ async function importExcelFile(file) {
     renderWeekendStatsChart();
   } catch (error) {
     schedule = previousSchedule;
+    preferences = previousPreferences;
     tableStatus = error.message === "已取消设备配对"
       ? "已取消管理员登录，本次未导入"
       : `导入失败：${error.message || "请确认文件是本页导出的排班总表"}`;
