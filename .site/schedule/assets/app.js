@@ -79,15 +79,15 @@ function normalizeNightRosters(scheduleData = schedule) {
   return changed;
 }
 const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
-const roomChartGroupNames = ["高级医师", "中级医师", "三年级", "二年级", "一年级"];
-const roomChartPeople = groups
-  .filter(([group]) => roomChartGroupNames.includes(group))
-  .flatMap(([, names]) => names);
-const roomChartRooms = [
-  ["us-room-1", "超声一号屋", "rgba(34, 160, 120, 0.75)"],
-  ["us-room-2", "超声二号屋", "rgba(215, 175, 0, 0.78)"],
-  ["us-room-3", "超声三号屋", "rgba(0, 144, 242, 0.78)"],
-  ["us-room-4", "超声四号屋", "rgba(221, 40, 122, 0.7)"],
+const workloadChartSeries = [
+  ["xray", "X线", "rgba(242, 194, 0, 0.92)", (columnId) => columnId.startsWith("xray-")],
+  ["ct", "CT/MRI", "rgba(15, 66, 148, 0.82)", (columnId) => columnId.startsWith("ct-")],
+  ["us-room-1", "超声一号屋", "rgba(34, 160, 120, 0.75)", (columnId) => columnId === "us-room-1"],
+  ["us-room-2", "超声二号屋", "rgba(215, 175, 0, 0.78)", (columnId) => columnId === "us-room-2"],
+  ["us-room-3", "超声三号屋", "rgba(0, 144, 242, 0.78)", (columnId) => columnId === "us-room-3"],
+  ["us-room-4", "超声四号屋", "rgba(221, 40, 122, 0.7)", (columnId) => columnId === "us-room-4"],
+  ["us-report", "超声报告", "rgba(46, 138, 153, 0.82)", (columnId) => columnId === "us-report"],
+  ["us-coordination", "超声统筹", "rgba(124, 92, 191, 0.82)", (columnId) => columnId === "us-coordination-teaching" || columnId === "us-new-coordination"],
 ];
 const LEGACY_LOCAL_DATA_KEYS = [
   "department-schedule.local-versions.v1",
@@ -2015,13 +2015,16 @@ function openCalendarExportDialog() {
 }
 
 function roomCountsByPerson() {
-  const emptyCounts = () => Object.fromEntries(roomChartRooms.map(([roomId]) => [roomId, 0]));
-  const counts = new Map(roomChartPeople.map((person) => [person, emptyCounts()]));
+  const emptyCounts = () => Object.fromEntries(workloadChartSeries.map(([seriesId]) => [seriesId, 0]));
+  const counts = new Map(people.map((person) => [person, emptyCounts()]));
   Object.values(schedule).forEach((day) => {
-    roomChartRooms.forEach(([roomId]) => {
-      (day[roomId] || []).forEach((person) => {
-        const entry = counts.get(person);
-        if (entry) entry[roomId] += 1;
+    workloadChartSeries.forEach(([seriesId, , , matches]) => {
+      Object.entries(day || {}).forEach(([columnId, names]) => {
+        if (!Array.isArray(names) || !matches(columnId)) return;
+        names.forEach((person) => {
+          const entry = counts.get(person);
+          if (entry) entry[seriesId] += 1;
+        });
       });
     });
   });
@@ -2042,14 +2045,14 @@ function renderRoomChart() {
   const host = document.querySelector("#room-chart");
   if (!host || !window.Highcharts) return;
   const counts = roomCountsByPerson();
-  const groupBoundaries = roomChartPeople
-    .map((person, index) => (index > 0 && groupByPerson.get(person) !== groupByPerson.get(roomChartPeople[index - 1])
+  const groupBoundaries = people
+    .map((person, index) => (index > 0 && groupByPerson.get(person) !== groupByPerson.get(people[index - 1])
       ? index - 0.5
       : null))
     .filter((value) => value !== null);
-  if (roomChart && roomChart.series.length === roomChartRooms.length) {
-    roomChartRooms.forEach(([roomId], index) => {
-      roomChart.series[index].setData(roomChartPeople.map((person) => counts.get(person)[roomId]), false);
+  if (roomChart && roomChart.series.length === workloadChartSeries.length) {
+    workloadChartSeries.forEach(([seriesId], index) => {
+      roomChart.series[index].setData(people.map((person) => counts.get(person)[seriesId]), false);
     });
     roomChart.redraw();
     return;
@@ -2065,7 +2068,7 @@ function renderRoomChart() {
     credits: { enabled: false },
     legend: { align: "right", verticalAlign: "top", itemStyle: { fontSize: "11px", fontWeight: "700" } },
     xAxis: {
-      categories: roomChartPeople,
+      categories: people,
       labels: { rotation: -60, style: { fontSize: "10px", color: "#26384f" } },
       lineColor: "#dce4ed",
       tickLength: 0,
@@ -2083,7 +2086,7 @@ function renderRoomChart() {
       formatter() {
         const rows = this.points.map((point) => `${point.series.name}：${point.y}天`).join("<br>");
         const total = this.points.reduce((sum, point) => sum + point.y, 0);
-        return `${statsTooltipTitle(this.x, roomChartPeople)}<br>${rows}<br>合计：${total}天`;
+        return `${statsTooltipTitle(this.x, people)}<br>${rows}<br>合计：${total}天`;
       },
     },
     plotOptions: {
@@ -2101,10 +2104,10 @@ function renderRoomChart() {
         },
       },
     },
-    series: roomChartRooms.map(([roomId, name, color]) => ({
+    series: workloadChartSeries.map(([seriesId, name, color]) => ({
       name,
       color,
-      data: roomChartPeople.map((person) => counts.get(person)[roomId]),
+      data: people.map((person) => counts.get(person)[seriesId]),
     })),
   });
 }
