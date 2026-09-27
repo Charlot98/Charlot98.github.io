@@ -1337,11 +1337,11 @@ function renderHeatmap() {
       x,
       y: yPositions[personIndex],
       value: 1,
-      color: hasWhiteConflict || overCapacityShifts.length ? colors.conflict
+      color: hasWhiteConflict || overCapacityShifts.length || (parsed.content === "rest" && !restHonored) ? colors.conflict
         : category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category)) ? "transparent"
           : colors[category],
       className: pointClassName,
-      dataLabels: { color: heatmapLabelColor(category, hasWhiteConflict || overCapacityShifts.length > 0) },
+      dataLabels: { color: heatmapLabelColor(category, hasWhiteConflict || overCapacityShifts.length > 0 || (parsed.content === "rest" && !restHonored)) },
       custom: {
         person,
         dateKey,
@@ -1608,6 +1608,7 @@ async function exportExcel() {
       us: "FFDD287A",
       other: "FFD7AF00",
       night: "FF0F4294",
+      conflict: "FFDC2626",
     };
     const darkTextCategories = new Set(["none", "rest", "other", "day"]);
     const appearanceFor = (person, dateKey) => {
@@ -1616,9 +1617,10 @@ async function exportExcel() {
       const parsed = parsePreference(effectivePreference(preference, shifts));
       const restHonored = parsed.content === "rest" && shifts.length === 0;
       const category = mainHeatmapCategory(preference, shifts);
-      const clear = category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category));
+      const unmetRest = parsed.content === "rest" && !restHonored;
+      const clear = !unmetRest && (category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category)));
       return {
-        category,
+        category: unmetRest ? "conflict" : category,
         marker: mainHeatmapMarker(person, preference, shifts, restHonored),
         hasNight: shifts.includes("night") || shifts.includes("outpatient-night"),
         clear,
