@@ -42,6 +42,8 @@
         </label>
         <button class="secondary-button save-button" id="save-version-button" type="button">保存为新版本</button>
         <button class="secondary-button export-button" id="export-button" type="button">导出 Excel</button>
+        <button class="secondary-button" id="import-button" type="button">导入 Excel</button>
+        <input id="import-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
         <button class="secondary-button ics-button" id="ics-export-button" type="button">导出个人日历</button>
         <div class="summary" aria-label="排班摘要">
           <div><span>人员</span><strong id="people-count">44</strong></div>
@@ -133,6 +135,6 @@
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
     <script src="./assets/schedule-api.js?v=6"></script>
-    <script type="module" src="./assets/app.js?v=75"></script>
+    <script type="module" src="./assets/app.js?v=77"></script>
   </body>
 </html>

@@ -1481,6 +1481,26 @@ function renderHeatmap() {
   });
 }
 
+function excelTextWidth(value) {
+  let width = 0;
+  for (const char of String(value ?? "")) {
+    width += char.charCodeAt(0) > 255 ? 2.1 : 1.1;
+  }
+  return width;
+}
+
+function fitWorksheetColumns(sheet, { min = 8, max = 64, padding = 2 } = {}) {
+  sheet.columns.forEach((column) => {
+    let width = min;
+    column.eachCell({ includeEmpty: false }, (cell) => {
+      String(cell.value ?? "").split(/\r?\n/).forEach((line) => {
+        width = Math.max(width, excelTextWidth(line) + padding);
+      });
+    });
+    column.width = Math.min(width, max);
+  });
+}
+
 async function exportExcel() {
   const button = document.querySelector("#export-button");
   button.disabled = true;
@@ -1512,8 +1532,7 @@ async function exportExcel() {
       });
       if (date.getDay() === 0 && index < dates.length - 1) totalSheet.addRow([]).height = 7;
     });
-    totalSheet.getColumn(1).width = 16;
-    columns.forEach((_, index) => { totalSheet.getColumn(index + 2).width = 19; });
+    fitWorksheetColumns(totalSheet);
 
     const heatmapSheet = workbook.addWorksheet("人员热力图", { views: [{ state: "frozen", xSplit: 1, ySplit: 1 }] });
     heatmapSheet.addRow(["姓名", ...dates.map((dateKey) => new Date(`${dateKey}T00:00:00`).getDate())]);
@@ -1538,8 +1557,7 @@ async function exportExcel() {
         cell.border = { top: { style: "thin", color: { argb: "FF475467" } }, left: { style: "thin", color: { argb: "FF475467" } }, bottom: { style: "thin", color: { argb: "FF475467" } }, right: { style: "thin", color: { argb: "FF475467" } } };
       });
     });
-    heatmapSheet.getColumn(1).width = 13;
-    dates.forEach((_, index) => { heatmapSheet.getColumn(index + 2).width = 4.5; });
+    fitWorksheetColumns(heatmapSheet, { min: 4.5, max: 16, padding: 1.2 });
     const buffer = await workbook.xlsx.writeBuffer();
     const url = URL.createObjectURL(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
     const link = document.createElement("a");
@@ -1552,6 +1570,135 @@ async function exportExcel() {
   } finally {
     button.disabled = false;
     button.textContent = "导出 Excel";
+  }
+}
+
+function dateKeyFromExcelValue(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return [
+      value.getFullYear(),
+      String(value.getMonth() + 1).padStart(2, "0"),
+      String(value.getDate()).padStart(2, "0"),
+    ].join("-");
+  }
+  const text = String(value ?? "").trim();
+  const match = text.match(/(\d{1,2})月(\d{1,2})日/);
+  if (!match) return "";
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  const periodStart = (currentPeriodKey || "").slice(0, 10);
+  const start = periodStart ? new Date(`${periodStart}T00:00:00`) : new Date();
+  let year = start.getFullYear();
+  const candidate = new Date(year, month - 1, day);
+  if (periodStart && candidate < new Date(year, start.getMonth() - 1, 1)) year += 1;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function scheduleFromWorksheet(sheet) {
+  const header = sheet.getRow(1);
+  const columnIds = [];
+  header.eachCell((cell, columnNumber) => {
+    if (columnNumber === 1) return;
+    const label = String(cell.value ?? "").trim();
+    const columnId = columns.find(([, columnLabel]) => columnLabel === label)?.[0];
+    if (columnId) columnIds[columnNumber] = columnId;
+  });
+  if (!columnIds.some(Boolean)) throw new Error("未识别岗位列，请使用本页导出的「排班总表」");
+  const knownPeople = new Set(people);
+  const nextSchedule = {};
+  const unknownNames = new Set();
+  let dateCount = 0;
+  sheet.eachRow((row, rowNumber) => {
+    if (rowNumber === 1) return;
+    const dateKey = dateKeyFromExcelValue(row.getCell(1).value);
+    if (!dateKey) return;
+    dateCount += 1;
+    const day = {};
+    columnIds.forEach((columnId, columnNumber) => {
+      if (!columnId) return;
+      const names = String(row.getCell(columnNumber).value ?? "")
+        .split(/[、,，\n]+/)
+        .map((name) => name.trim())
+        .filter(Boolean);
+      const kept = [];
+      names.forEach((name) => {
+        if (knownPeople.has(name)) {
+          if (!kept.includes(name)) kept.push(name);
+        } else unknownNames.add(name);
+      });
+      if (kept.length) day[columnId] = columnId === "night" ? sortNightRoster(kept) : kept;
+    });
+    nextSchedule[dateKey] = day;
+  });
+  if (!dateCount) throw new Error("没有读到日期，请确认第一列是「9月28日 周一」这样的日期");
+  return { schedule: nextSchedule, unknownNames: [...unknownNames] };
+}
+
+async function importExcelFile(file) {
+  const button = document.querySelector("#import-button");
+  const originalText = button?.textContent || "导入 Excel";
+  const previousSchedule = schedule;
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = "导入中…";
+    }
+    if (!canEdit && !(await enterEditorMode())) return;
+    if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
+    await ScheduleApi.ensureAccess();
+    const workbook = new window.ExcelJS.Workbook();
+    await workbook.xlsx.load(await file.arrayBuffer());
+    const sheet = workbook.getWorksheet("排班总表") || workbook.worksheets[0];
+    if (!sheet) throw new Error("Excel 里没有工作表");
+    const imported = scheduleFromWorksheet(sheet);
+    schedule = imported.schedule;
+    normalizeNightRosters();
+    let cloudVersions = [];
+    try { cloudVersions = await fetchCloudVersions(); } catch { cloudVersions = []; }
+    const versionNumbers = [
+      ...versions.map((item) => versionNumberOf(item)),
+      ...cloudVersions.map((item) => versionNumberOf(item)),
+      currentVersion?.versionNumber || 0,
+    ];
+    const nextVersionNumber = Math.max(29, ...versionNumbers) + 1;
+    const label = `第${nextVersionNumber}版`;
+    const payload = currentPayload(nextVersionNumber, label);
+    payload.status = "Excel导入";
+    const cloudResult = await ScheduleApi.createVersion(payload);
+    const cloudVersion = cloudResult.version;
+    const cloudPayload = cloudVersion.payload || payload;
+    const meta = makeCloudMeta(cloudVersion, cloudPayload);
+    versions = [meta, ...versions.filter((item) => item.id !== meta.id)];
+    currentVersion = meta;
+    currentPeriodKey = cloudPayload.periodKey || payload.periodKey;
+    schedule = cloneData(cloudPayload.schedule || imported.schedule);
+    normalizeNightRosters();
+    renderVersionOptions(meta.id);
+    updatePeriodDisplay(currentPeriodKey);
+    document.querySelector("#day-count").textContent = Object.keys(schedule).length;
+    const unknownNote = imported.unknownNames.length
+      ? `，已忽略${imported.unknownNames.length}个未知名：${imported.unknownNames.slice(0, 4).join("、")}`
+      : "";
+    tableStatus = `已导入并保存为${cloudVersion.label}${unknownNote}`;
+    annotationStatus = tableStatus;
+    heatmapSwapStatus = "点格换班";
+    rememberCollabBase(Number(cloudVersion.revision || 0), syncedAnnotationAt);
+    updateAnnotationToolbar();
+    renderTable();
+    renderHeatmap();
+    renderRoomChart();
+    renderWeekendStatsChart();
+  } catch (error) {
+    schedule = previousSchedule;
+    tableStatus = error.message === "已取消设备配对"
+      ? "已取消管理员登录，本次未导入"
+      : `导入失败：${error.message || "请确认文件是本页导出的排班总表"}`;
+    renderTable();
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
   }
 }
 
@@ -2314,6 +2461,14 @@ scheduleTable.addEventListener("click", (event) => {
   }
 });
 document.querySelector("#export-button").addEventListener("click", exportExcel);
+document.querySelector("#import-button").addEventListener("click", () => {
+  document.querySelector("#import-file").click();
+});
+document.querySelector("#import-file").addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (file) await importExcelFile(file);
+});
 document.querySelector("#ics-export-button").addEventListener("click", openCalendarExportDialog);
 document.querySelector("#save-version-button")?.addEventListener("click", saveAsNewVersion);
 document.querySelector("#access-mode-button").addEventListener("click", toggleAccessMode);
