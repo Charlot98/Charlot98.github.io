@@ -88,7 +88,9 @@
             <button type="button" class="annotation-blue" data-annotation="xray">X线</button>
             <button type="button" class="annotation-blue" data-annotation="us">超声</button>
             <button type="button" class="annotation-blue" data-annotation="ct">CT/MRI</button>
-            <button type="button" class="annotation-yellow" data-annotation="outpatient">门诊白班/跟诊</button>
+            <button type="button" class="annotation-yellow" data-annotation="outpatient">门诊白班</button>
+            <button type="button" class="annotation-yellow" data-annotation="outpatient-night">门诊夜班</button>
+            <button type="button" class="annotation-yellow" data-annotation="outpatient-follow">跟诊</button>
             <button type="button" class="annotation-yellow" data-annotation="annual-leave">年假</button>
             <button type="button" data-annotation="rest">普休</button>
             <button type="button" class="annotation-yellow" data-annotation="expansion">拓展</button>
@@ -113,10 +115,10 @@
         </div>
       </section>
 
-      <section class="panel" id="room-chart-view" aria-label="超声三号屋与四号屋统计">
+      <section class="panel" id="room-chart-view" aria-label="超声一至四号屋统计">
         <header class="panel-header">
           <div>
-            <h2>超声三号屋 / 四号屋人次</h2>
+            <h2>超声一至四号屋人次</h2>
           </div>
         </header>
         <div class="room-chart-scroll">
@@ -131,6 +133,6 @@
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
     <script src="./assets/schedule-api.js?v=6"></script>
-    <script type="module" src="./assets/app.js?v=54"></script>
+    <script type="module" src="./assets/app.js?v=63"></script>
   </body>
 </html>
