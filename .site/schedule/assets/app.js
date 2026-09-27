@@ -1185,6 +1185,38 @@ function getNightStreakByCell(currentDates) {
   return streaks;
 }
 
+function dateKeyPlusDay(dateKey, offsetDays) {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setDate(date.getDate() + offsetDays);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function hasWeekendNightShift(person, dateKey) {
+  const shifts = shiftsFor(person, dateKey);
+  return shifts.includes("night") || shifts.includes("outpatient-night");
+}
+
+function getDoubleWeekendNightCells(currentDates) {
+  const marked = new Set();
+  const dateSet = new Set(currentDates);
+  const saturdays = currentDates.filter((dateKey) => new Date(`${dateKey}T00:00:00`).getDay() === 6);
+  people.forEach((person) => {
+    saturdays.forEach((saturday) => {
+      const sunday = dateKeyPlusDay(saturday, 1);
+      if (!dateSet.has(sunday)) return;
+      if (!personWorksOnScheduleDay(person, saturday) || !personWorksOnScheduleDay(person, sunday)) return;
+      for (const dateKey of [saturday, sunday]) {
+        if (hasWeekendNightShift(person, dateKey)) marked.add(`${person}::${dateKey}`);
+      }
+    });
+  });
+  return marked;
+}
+
 function mainHeatmapCategory(preference, shifts) {
   if (shifts.includes("outpatient") && shifts.includes("outpatient-night")) return "outpatient-double";
   const parsed = parsePreference(effectivePreference(preference, shifts));
@@ -1255,6 +1287,7 @@ function renderHeatmap() {
   const heatmapDates = currentDates;
   const streakSeverityByCell = getStreakSeverityByCell(currentDates);
   const nightStreakByCell = getNightStreakByCell(currentDates);
+  const doubleWeekendNightCells = getDoubleWeekendNightCells(currentDates);
   const axisCategories = heatmapDates.flatMap((dateKey, dateIndex) => (
     dateIndex > 0 && dateIndex % 7 === 0
       ? ["", String(new Date(`${dateKey}T00:00:00`).getDate())]
@@ -1309,6 +1342,7 @@ function renderHeatmap() {
     const isSwapCandidate = isHeatmapSwapCandidate(person, dateKey, swapCategory);
     const streakSeverity = streakSeverityByCell.get(`${person}::${dateKey}`);
     const nightStreakLength = nightStreakByCell.get(`${person}::${dateKey}`);
+    const doubleWeekendNight = doubleWeekendNightCells.has(`${person}::${dateKey}`);
     const hasWhiteConflict = whiteShiftIdsFor(person, dateKey).length > 1;
     const overCapacityShifts = (overCapacityByDate.get(dateKey) || []).filter((columnId) => shifts.includes(columnId));
     const labels = shifts.map((shift) => shiftLabels[shift] || shift);
@@ -1323,6 +1357,7 @@ function renderHeatmap() {
     const streakDescription = streakSeverity === "streak-six" ? "；连续工作6天"
       : streakSeverity === "streak-over" ? "；连续工作超过6天" : "";
     const nightStreakDescription = nightStreakLength ? `；连续夜班${nightStreakLength}天` : "";
+    const doubleWeekendNightDescription = doubleWeekendNight ? "；双周末夜班" : "";
     const overCapacityDescription = overCapacityShifts.length
       ? `；${overCapacityShifts.map((columnId) => `${shiftLabels[columnId] || columnId}超过${assistantDailyCaps[columnId]}人`).join("、")}`
       : "";
@@ -1332,6 +1367,7 @@ function renderHeatmap() {
           canEdit && swapCategory ? "heatmap-swap-ready" : "",
           (category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category))) ? "heatmap-clear-fill" : "",
           nightStreakLength ? "night-streak" : streakSeverity || "",
+          doubleWeekendNight ? "weekend-night-border" : "",
         ].filter(Boolean).join(" ");
     return {
       x,
@@ -1346,7 +1382,7 @@ function renderHeatmap() {
         person,
         dateKey,
         dateLabel: `${day} ${weekday}`,
-        shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}${nightStreakDescription}${overCapacityDescription}`,
+        shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}${nightStreakDescription}${doubleWeekendNightDescription}${overCapacityDescription}`,
         marker: mainHeatmapMarker(person, preference, shifts, restHonored),
         noNight: parsed.content === "no-night",
         conflict: hasWhiteConflict,

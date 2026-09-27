@@ -126,6 +126,7 @@ tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0
 .streak-legend .streak-six { border-color: #e0a800; }
 .streak-legend .streak-over { border-color: #dc2626; }
 .streak-legend .night-streak { border-color: #b30021; border-width: 3px; }
+.streak-legend .weekend-night { border-color: #dc2626; }
 .shift-label-toggle { height: 32px; padding: 0 12px; border: 1px solid #7da4cc; border-radius: 6px; background: rgb(244 249 255 / 90%); color: var(--navy); font-size: 12px; font-weight: 750; white-space: nowrap; }
 .shift-label-toggle:hover { border-color: var(--blue); background: var(--blue-soft); }
 .shift-label-toggle[aria-pressed="true"] { border-color: var(--blue); background: var(--blue); color: #fff; }
@@ -169,6 +170,7 @@ body.is-guest .person-chip { cursor: default !important; user-select: text; }
 .highcharts-point.streak-six { stroke: #e0a800 !important; stroke-width: 3px !important; }
 .highcharts-point.streak-over { stroke: #dc2626 !important; stroke-width: 3px !important; }
 .highcharts-point.night-streak { stroke: #b30021 !important; stroke-width: 4px !important; }
+.highcharts-point.weekend-night-border { stroke: #dc2626 !important; stroke-width: 3px !important; }
 .highcharts-scrolling-parent { scrollbar-gutter: stable both-edges; }
 .highcharts-scrolling { overscroll-behavior: contain; }
 .no-results { padding: 34px; color: var(--muted); text-align: center; }
