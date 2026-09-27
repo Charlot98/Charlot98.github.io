@@ -214,12 +214,13 @@ function renderTable() {
   const table = document.querySelector("#schedule-table");
   const dates = Object.keys(schedule).sort();
   const conflictKeys = getWhiteShiftConflictKeys();
-  table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${columns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
+  const tableColumns = columns.filter(([id]) => id !== "rest" && id !== "no-night");
+  table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
   table.querySelector("tbody").innerHTML = dates.map((dateKey, index) => {
     const { date, day, weekday } = dateLabel(dateKey);
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     const weekEnd = date.getDay() === 0 && index < dates.length - 1;
-    const cells = columns.map(([id]) => {
+    const cells = tableColumns.map(([id]) => {
       const rawNames = (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query));
       const names = id === "night" ? sortNightRoster(rawNames) : rawNames;
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
@@ -228,7 +229,7 @@ function renderTable() {
     }).join("");
     const row = `<tr class="${weekend ? "weekend" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
     return weekEnd
-      ? `${row}<tr class="week-gap"><td colspan="${columns.length + 1}"></td></tr>`
+      ? `${row}<tr class="week-gap"><td colspan="${tableColumns.length + 1}"></td></tr>`
       : row;
   }).join("");
   const status = document.querySelector("#table-filter-state");
@@ -1512,34 +1513,54 @@ async function exportExcel() {
   try {
     const workbook = new window.ExcelJS.Workbook();
     workbook.creator = "科室排班总览";
+    const exportColumns = columns.filter(([id]) => id !== "rest" && id !== "no-night");
     const totalSheet = workbook.addWorksheet("排班总表", { views: [{ state: "frozen", xSplit: 1, ySplit: 1 }] });
-    totalSheet.addRow(["日期", ...columns.map(([, label]) => label)]);
+    totalSheet.addRow(["日期", ...exportColumns.map(([, label]) => label)]);
     const header = totalSheet.getRow(1);
     header.height = 25;
-    const exportColumnFills = Object.fromEntries(columns.map(([id]) => {
+    const exportColumnFills = Object.fromEntries(exportColumns.map(([id]) => {
       if (id.startsWith("xray-")) return [id, "FFFFF2CC"];
       if (id.startsWith("ct-")) return [id, "FFE0EAF6"];
       if (id.startsWith("us-")) return [id, "FFE3ECDB"];
       return [id, ""];
     }));
-    const contentBorder = {
-      top: { style: "thin", color: { argb: "FF9AA8B5" } },
-      left: { style: "thin", color: { argb: "FF9AA8B5" } },
-      bottom: { style: "thin", color: { argb: "FF9AA8B5" } },
-      right: { style: "thin", color: { argb: "FF9AA8B5" } },
+    const plainHeaderColumns = new Set(["night", "management", "outpatient", "outpatient-night", "expansion", "annual-leave"]);
+    const exportGroup = (columnId) => {
+      if (!columnId) return "date";
+      if (columnId.startsWith("xray-")) return "xray";
+      if (columnId.startsWith("ct-")) return "ct";
+      if (columnId.startsWith("us-")) return "us";
+      return "other";
+    };
+    const borderFor = (columnNumber, weekBoundary) => {
+      const columnId = columnNumber === 1 ? "" : exportColumns[columnNumber - 2]?.[0];
+      const nextId = exportColumns[columnNumber - 1]?.[0];
+      const thickRight = Boolean(nextId) && exportGroup(columnId) !== exportGroup(nextId);
+      const edge = (style) => ({ style, color: { argb: "FF667085" } });
+      return {
+        top: edge("thin"),
+        left: edge("thin"),
+        bottom: edge(weekBoundary ? "medium" : "thin"),
+        right: edge(thickRight ? "medium" : "thin"),
+      };
     };
     header.eachCell((cell, columnNumber) => {
-      const columnId = columnNumber === 1 ? "" : columns[columnNumber - 2]?.[0];
+      const columnId = columnNumber === 1 ? "" : exportColumns[columnNumber - 2]?.[0];
       const fill = exportColumnFills[columnId];
-      cell.font = { bold: true, color: { argb: fill ? "FF243244" : "FFFFFFFF" } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill || "FF175EA8" } };
+      if (!columnId || plainHeaderColumns.has(columnId)) {
+        cell.font = { bold: true, color: { argb: "FF000000" } };
+        cell.fill = { type: "pattern", pattern: "none" };
+      } else {
+        cell.font = { bold: true, color: { argb: fill ? "FF243244" : "FFFFFFFF" } };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill || "FF175EA8" } };
+      }
       cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
-      cell.border = contentBorder;
+      cell.border = borderFor(columnNumber, false);
     });
     const dates = Object.keys(schedule).sort();
     dates.forEach((dateKey, index) => {
       const { day, weekday, date } = dateLabel(dateKey);
-      const row = totalSheet.addRow([`${day} ${weekday}`, ...columns.map(([id]) => {
+      const row = totalSheet.addRow([`${day} ${weekday}`, ...exportColumns.map(([id]) => {
         const names = schedule[dateKey][id] || [];
         return (id === "night" ? sortNightRoster(names) : names).join("、");
       })]);
@@ -1547,9 +1568,9 @@ async function exportExcel() {
       row.eachCell((cell, columnNumber) => {
         const text = String(cell.value ?? "").trim();
         cell.alignment = { vertical: "middle", wrapText: true };
+        cell.border = borderFor(columnNumber, date.getDay() === 0);
         if (!text) return;
-        cell.border = contentBorder;
-        const columnId = columnNumber === 1 ? "" : columns[columnNumber - 2]?.[0];
+        const columnId = columnNumber === 1 ? "" : exportColumns[columnNumber - 2]?.[0];
         const fill = exportColumnFills[columnId];
         if (fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
       });
@@ -1585,7 +1606,9 @@ async function exportExcel() {
     const url = URL.createObjectURL(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = `科室排班_2026年9月_${currentVersion?.label || "当前版本"}.xlsx`;
+    const exportYear = String(formatPeriod(currentPeriodKey) || "").slice(0, 4) || "2026";
+    const exportLabel = String(currentVersion?.label || "当前版本").replace(/（云端）$/, "");
+    link.download = `科室排班 ${exportYear} ${exportLabel}.xlsx`;
     link.click();
     URL.revokeObjectURL(url);
     tableStatus = "Excel已导出";
