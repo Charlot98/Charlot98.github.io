@@ -148,6 +148,7 @@ function updateAccessModeUI() {
   document.querySelector("#delete-version-button").hidden = !isAdmin;
   document.querySelector("#recycle-bin-button").hidden = !isAdmin;
   if (isAdmin) prefetchTrashedVersions();
+  updateUndoButtons();
   tableMoveSource = null;
   heatmapSwapSource = null;
   tableStatus = canEdit ? "拖动姓名换班" : "游客账号 · 只读查看";
@@ -290,6 +291,7 @@ function canMoveAssignment(source, targetDateKey, targetColumnId) {
 
 function moveAssignment(source, targetDateKey, targetColumnId) {
   if (!canMoveAssignment(source, targetDateKey, targetColumnId)) return;
+  const undoSnapshot = captureScheduleSnapshot();
   const movesPairedNight = source.columnId !== "night"
     && targetDateKey !== source.dateKey
     && (schedule[source.dateKey].night || []).includes(source.person);
@@ -319,6 +321,7 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   renderHeatmap();
   renderRoomChart();
   renderWeekendStatsChart();
+  commitUndo(undoSnapshot);
   queueAnnotationSave();
   queueSilentScheduleSave("排班已调整，正在自动同步…");
 }
@@ -356,9 +359,11 @@ function reorderAssignment(source, targetPerson, placeAfter) {
   const columnLabel = columns.find(([id]) => id === source.columnId)?.[1] || source.columnId;
   let changed = false;
   if (next.join("\u0000") !== names.join("\u0000")) {
+    const undoSnapshot = captureScheduleSnapshot();
     schedule[source.dateKey][source.columnId] = next;
     tableStatus = `${dateLabel(source.dateKey).day}${columnLabel}已调整${source.person}的顺序`;
     changed = true;
+    commitUndo(undoSnapshot);
   } else {
     tableStatus = `${source.person}顺序未变化`;
   }
@@ -861,6 +866,7 @@ function applyHeatmapAnnotation(person, dateKey) {
   const key = `${person}::${dateKey}`;
   const mode = annotationMode;
   const before = preferences[key] || "";
+  const undoSnapshot = captureScheduleSnapshot();
   heatmapSwapSource = null;
   if (mode === "blank") {
     const changed = removePersonFromColumns(dateKey, person, () => true);
@@ -875,6 +881,7 @@ function applyHeatmapAnnotation(person, dateKey) {
     renderHeatmap();
     renderRoomChart();
     renderWeekendStatsChart();
+    commitUndo(undoSnapshot);
     queueAnnotationSave();
     if (changed) queueSilentScheduleSave();
     else updateAnnotationToolbar();
@@ -899,6 +906,7 @@ function applyHeatmapAnnotation(person, dateKey) {
     renderHeatmap();
     renderRoomChart();
     renderWeekendStatsChart();
+    commitUndo(undoSnapshot);
     queueAnnotationSave();
     if (result.changed) queueSilentScheduleSave();
     else updateAnnotationToolbar();
@@ -920,6 +928,7 @@ function applyHeatmapAnnotation(person, dateKey) {
   renderHeatmap();
   renderRoomChart();
   renderWeekendStatsChart();
+  commitUndo(undoSnapshot);
   queueAnnotationSave();
   updateAnnotationToolbar();
 }
@@ -1034,6 +1043,7 @@ function updateHeatmapSwapStatus() {
 function swapHeatmapAssignments(target) {
   const source = heatmapSwapSource;
   if (!source || !isHeatmapSwapCandidate(target.person, target.dateKey, target.category)) return;
+  const undoSnapshot = captureScheduleSnapshot();
   const sourceShiftIds = shiftIdsForSwapCategory(source.person, source.dateKey, source.category);
   const targetShiftIds = shiftIdsForSwapCategory(target.person, target.dateKey, source.category);
   const affectedSlots = new Map();
@@ -1077,7 +1087,9 @@ function swapHeatmapAssignments(target) {
   renderHeatmap();
   renderRoomChart();
   renderWeekendStatsChart();
+  commitUndo(undoSnapshot);
   queueSilentScheduleSave("换班已完成，正在自动同步…");
+  queueAnnotationSave();
 }
 
 function handleHeatmapSwapClick(custom) {
@@ -1256,9 +1268,7 @@ function mainHeatmapMarker(person, preference, shifts, restHonored) {
   if (parsed.content === "rest") return restHonored ? "休" : "待";
   if (parsed.content === "no-night" && (!showShiftLabels || !shifts.length)) return "白";
   if (!showShiftLabels) {
-    const manualMarkers = { xray: "X", ct: "CT", us: "US" };
-    return manualMarkers[parsed.content]
-      || (parsePreference(preference).tone === "night" && shifts.includes("night") ? "夜" : "");
+    return parsePreference(preference).tone === "night" && shifts.includes("night") ? "夜" : "";
   }
   if (parsed.content === "xray" || dominantModality(shifts) === "xray") return "X";
   if (parsed.content === "ct" || dominantModality(shifts) === "ct") return "CT";
@@ -1814,6 +1824,7 @@ async function importExcelFile(file) {
     heatmapSwapStatus = "点格换班";
     rememberCollabBase(Number(cloudVersion.revision || 0), syncedAnnotationAt);
     queueAnnotationSave();
+    clearUndoHistory();
     updateAnnotationToolbar();
     renderTable();
     renderHeatmap();
@@ -2234,6 +2245,125 @@ function cloneData(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+const undoStack = [];
+const redoStack = [];
+const undoLimit = 40;
+let undoOwner = null;
+
+function captureScheduleSnapshot() {
+  return { schedule: cloneData(schedule), preferences: cloneData(preferences) };
+}
+
+function updateUndoButtons() {
+  const account = canEdit ? (globalThis.ScheduleApi?.currentAccount?.() || "") : "";
+  if (undoOwner !== null && account !== undoOwner) {
+    undoStack.length = 0;
+    redoStack.length = 0;
+  }
+  undoOwner = account;
+  const undoButton = document.querySelector("#undo-button");
+  const redoButton = document.querySelector("#redo-button");
+  if (undoButton) undoButton.disabled = !canEdit || !undoStack.length;
+  if (redoButton) redoButton.disabled = !canEdit || !redoStack.length;
+}
+
+function clearUndoHistory() {
+  undoStack.length = 0;
+  redoStack.length = 0;
+  updateUndoButtons();
+}
+
+function historyDiff(fromSnapshot, toSnapshot) {
+  return {
+    schedule: Object.fromEntries(changedScheduleCells(fromSnapshot.schedule, toSnapshot.schedule)),
+    preferences: Object.fromEntries(changedPreferenceEntries(fromSnapshot.preferences, toSnapshot.preferences)),
+  };
+}
+
+function commitUndo(beforeSnapshot) {
+  if (!beforeSnapshot || !canEdit) return;
+  const afterSnapshot = captureScheduleSnapshot();
+  const redo = historyDiff(beforeSnapshot, afterSnapshot);
+  if (!Object.keys(redo.schedule).length && !Object.keys(redo.preferences).length) return;
+  undoStack.push({ undo: historyDiff(afterSnapshot, beforeSnapshot), redo });
+  if (undoStack.length > undoLimit) undoStack.shift();
+  redoStack.length = 0;
+  updateUndoButtons();
+}
+
+function scheduleCellNow(key) {
+  const splitAt = key.indexOf("::");
+  const dateKey = key.slice(0, splitAt);
+  const columnId = key.slice(splitAt + 2);
+  return (schedule[dateKey]?.[columnId] || []).join("\0");
+}
+
+function applyOwnedChange(nextValues, expectedValues) {
+  const scheduleDiff = new Map();
+  const preferenceDiff = new Map();
+  let applied = 0;
+  let skipped = 0;
+  Object.entries(nextValues.schedule || {}).forEach(([key, value]) => {
+    if (scheduleCellNow(key) !== (expectedValues.schedule?.[key] ?? "")) {
+      skipped += 1;
+      return;
+    }
+    scheduleDiff.set(key, value);
+    applied += 1;
+  });
+  Object.entries(nextValues.preferences || {}).forEach(([key, value]) => {
+    if ((preferences[key] || "") !== (expectedValues.preferences?.[key] ?? "")) {
+      skipped += 1;
+      return;
+    }
+    preferenceDiff.set(key, value);
+    applied += 1;
+  });
+  if (scheduleDiff.size) {
+    applyScheduleCellDiff(schedule, scheduleDiff);
+    normalizeNightRosters();
+  }
+  if (preferenceDiff.size) {
+    applyPreferenceDiff(preferences, preferenceDiff);
+    if (currentPeriodKey) annotationsByPeriod.set(currentPeriodKey, cloneData(preferences));
+  }
+  return { applied, skipped, schedule: scheduleDiff.size > 0, preferences: preferenceDiff.size > 0 };
+}
+
+function finishHistoryChange(result, notice) {
+  tableMoveSource = null;
+  heatmapSwapSource = null;
+  const text = result.applied ? notice : "这些修改已被其他账号改过";
+  tableStatus = text;
+  heatmapSwapStatus = text;
+  annotationStatus = text;
+  renderTable();
+  renderHeatmap();
+  renderRoomChart();
+  renderWeekendStatsChart();
+  updateAnnotationToolbar();
+  updateUndoButtons();
+  if (!result.applied) return;
+  if (result.preferences) queueAnnotationSave();
+  if (result.schedule) queueSilentScheduleSave(text);
+}
+
+function undoScheduleEdit() {
+  if (!canEdit || !undoStack.length) return;
+  const entry = undoStack.pop();
+  const result = applyOwnedChange(entry.undo, entry.redo);
+  redoStack.push(entry);
+  finishHistoryChange(result, "已撤回本账号的修改");
+}
+
+function redoScheduleEdit() {
+  if (!canEdit || !redoStack.length) return;
+  const entry = redoStack.pop();
+  const result = applyOwnedChange(entry.redo, entry.undo);
+  undoStack.push(entry);
+  finishHistoryChange(result, "已恢复本账号的修改");
+}
+
 
 function versionNumberOf(item) {
   return item?.versionNumber
@@ -2416,6 +2546,7 @@ async function loadVersion(versionId) {
   updatePeriodDisplay(payload.periodKey || currentPeriodKey);
   document.querySelector("#day-count").textContent = Object.keys(schedule).length;
   document.querySelector("#version-select").value = meta.id;
+  clearUndoHistory();
   renderTable();
   renderHeatmap();
   renderRoomChart();
@@ -2623,9 +2754,18 @@ function renderRecycleList(items) {
   list.innerHTML = items.map((item) => `
     <li>
       <span>${item.label}</span>
-      <button class="secondary-button" type="button" data-restore="${item.id}">恢复</button>
+      <div class="recycle-actions">
+        <button class="secondary-button recycle-purge" type="button" data-purge="${item.id}">删除</button>
+        <button class="secondary-button recycle-restore" type="button" data-restore="${item.id}">恢复</button>
+      </div>
     </li>
   `).join("");
+}
+
+function resetRecyclePurge(button) {
+  button.classList.remove("is-confirming");
+  button.textContent = "删除";
+  button.disabled = false;
 }
 
 function prefetchTrashedVersions() {
@@ -2699,6 +2839,12 @@ document.addEventListener("click", (event) => {
   button.classList.remove("is-confirming");
   button.textContent = "删除此版本";
 });
+document.addEventListener("click", (event) => {
+  document.querySelectorAll("#recycle-list [data-purge].is-confirming").forEach((button) => {
+    if (button === event.target || button.contains(event.target)) return;
+    resetRecyclePurge(button);
+  });
+});
 document.querySelector("#recycle-bin-button").addEventListener("click", () => {
   openRecycleBin().catch((error) => {
     tableStatus = error.message || "读取回收站失败";
@@ -2709,6 +2855,32 @@ document.querySelector("#recycle-overlay").addEventListener("click", (event) => 
   if (event.target.id === "recycle-overlay") event.currentTarget.hidden = true;
 });
 document.querySelector("#recycle-list").addEventListener("click", async (event) => {
+  const purge = event.target.closest("[data-purge]");
+  if (purge) {
+    document.querySelectorAll("#recycle-list [data-purge].is-confirming").forEach((button) => {
+      if (button !== purge) resetRecyclePurge(button);
+    });
+    if (!purge.classList.contains("is-confirming")) {
+      purge.classList.add("is-confirming");
+      purge.textContent = "确认删除？";
+      return;
+    }
+    purge.disabled = true;
+    const removedId = purge.dataset.purge;
+    const label = trashedVersionsCache?.find((item) => item.id === removedId)?.label || "该版本";
+    try {
+      await globalThis.ScheduleApi.purgeVersion(removedId);
+      trashedVersionsCache = (trashedVersionsCache || []).filter((item) => item.id !== removedId);
+      renderRecycleList(trashedVersionsCache);
+      tableStatus = `已从数据库删除${label}`;
+      renderTable();
+    } catch (error) {
+      resetRecyclePurge(purge);
+      tableStatus = error.message || "彻底删除失败";
+      renderTable();
+    }
+    return;
+  }
   const button = event.target.closest("[data-restore]");
   if (!button) return;
   button.disabled = true;
@@ -2762,5 +2934,20 @@ window.addEventListener("resize", () => {
   heatmapResizeTimer = setTimeout(() => {
     if (!document.querySelector("#heatmap-view").classList.contains("is-hidden")) renderHeatmap();
   }, 120);
+});
+document.querySelector("#undo-button").addEventListener("click", undoScheduleEdit);
+document.querySelector("#redo-button").addEventListener("click", redoScheduleEdit);
+window.addEventListener("keydown", (event) => {
+  const typing = event.target.closest("input, textarea, select, [contenteditable='true']");
+  if (typing) return;
+  const meta = event.metaKey || event.ctrlKey;
+  if (!meta || event.altKey) return;
+  const key = event.key.toLowerCase();
+  const undo = key === "z" && !event.shiftKey;
+  const redo = (key === "z" && event.shiftKey) || key === "y";
+  if (!undo && !redo) return;
+  event.preventDefault();
+  if (undo) undoScheduleEdit();
+  else redoScheduleEdit();
 });
 initializeAccessMode().finally(init);

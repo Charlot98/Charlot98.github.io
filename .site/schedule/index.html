@@ -7,7 +7,7 @@
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=36" />
+    <link rel="stylesheet" href="./assets/styles.css?v=42" />
   </head>
   <body>
     <main class="app-shell">
@@ -42,6 +42,12 @@
           <span>查找人员</span>
           <input id="person-search" type="search" placeholder="输入姓名" autocomplete="off" />
         </label>
+        <button class="secondary-button history-button" id="undo-button" type="button" disabled aria-label="撤回" title="撤回（Ctrl+Z 或 ⌘Z）">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="secondary-button history-button" id="redo-button" type="button" disabled aria-label="恢复" title="恢复（Ctrl+Shift+Z、⌘Shift+Z 或 Ctrl+Y）">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <button class="secondary-button save-button" id="save-version-button" type="button">保存为新版本</button>
         <button class="secondary-button" id="import-button" type="button">导入 Excel</button>
         <input id="import-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
@@ -56,9 +62,6 @@
 
       <section class="panel" id="table-view" aria-label="排班总表">
         <header class="panel-header">
-          <div>
-            <h2>每日岗位安排</h2>
-          </div>
           <p id="table-filter-state">拖动姓名换班</p>
         </header>
         <div class="table-scroll">
@@ -71,8 +74,7 @@
 
       <section class="panel" id="heatmap-view" aria-label="人员排班热力图">
         <header class="panel-header heatmap-header">
-          <div>
-            <h2>人员每日排班</h2>
+          <div class="heatmap-meta">
             <p id="heatmap-swap-status">点格换班</p>
             <div class="streak-legend" aria-label="连续工作提示">
               <span><i class="streak-six"></i>连上6天</span>
@@ -143,7 +145,7 @@
     <script src="./assets/heatmap.js"></script>
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
-    <script src="./assets/schedule-api.js?v=8"></script>
-    <script type="module" src="./assets/app.js?v=100"></script>
+    <script src="./assets/schedule-api.js?v=9"></script>
+    <script type="module" src="./assets/app.js?v=107"></script>
   </body>
 </html>

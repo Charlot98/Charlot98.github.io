@@ -348,6 +348,11 @@
     return readJson(response, '恢复版本失败');
   }
 
+  async function purgeVersion(id) {
+    const response = await apiFetch(`versions/${encodeURIComponent(id)}/purge`, { method: 'POST' });
+    return readJson(response, '彻底删除版本失败');
+  }
+
   global.ScheduleApi = {
     fetch: apiFetch,
     ensureAccess,
@@ -364,6 +369,7 @@
     listTrashedVersions,
     trashVersion,
     restoreVersion,
+    purgeVersion,
     endpoint: apiUrl,
     hasToken: () => Boolean(readToken()),
     currentAccount,
