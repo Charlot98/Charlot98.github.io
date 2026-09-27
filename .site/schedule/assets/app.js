@@ -8,6 +8,7 @@ const columns = [
   ["us-report", "超声报告"], ["us-coordination-teaching", "超声统筹带教"],
   ["us-new-coordination", "超声新人统筹"], ["night", "夜班"],
   ["outpatient", "门诊白班/跟诊"], ["outpatient-night", "门诊夜班"], ["management", "管理"], ["annual-leave", "年假"], ["expansion", "拓展"],
+  ["rest", "普休"], ["no-night", "不夜"],
 ];
 
 const groups = [
@@ -242,7 +243,7 @@ function hasWhiteShift(person, dateKey) {
   return Object.entries(schedule[dateKey] || {}).some(([shiftId, names]) => (
     shiftId !== "night"
     && shiftId !== "outpatient-night"
-    && !["annual-leave", "expansion"].includes(shiftId)
+    && !["annual-leave", "expansion", "rest", "no-night"].includes(shiftId)
     && names.includes(person)
   ));
 }
@@ -252,6 +253,7 @@ function whiteShiftIdsFor(person, dateKey) {
     .filter(([shiftId, names]) => (
       shiftId !== "night"
       && shiftId !== "outpatient-night"
+      && !["rest", "no-night"].includes(shiftId)
       && names.includes(person)
     ))
     .map(([shiftId]) => shiftId);
@@ -378,23 +380,21 @@ function updateDropHighlights(activeCell = null) {
 
 function shiftsFor(person, dateKey) {
   return Object.entries(schedule[dateKey] || {})
-    .filter(([, names]) => names.includes(person))
+    .filter(([shiftId, names]) => names.includes(person) && shiftId !== "rest" && shiftId !== "no-night")
     .map(([shift]) => shift);
 }
 
-function alignAnnualLeaveToSchedule() {
-  let changed = false;
-  Object.entries(preferences).forEach(([key, raw]) => {
-    if (parsePreference(raw).content !== "annual-leave") return;
-    const splitAt = key.lastIndexOf("::");
-    if (splitAt < 0) return;
-    const person = key.slice(0, splitAt);
-    const dateKey = key.slice(splitAt + 2);
-    if (!schedule[dateKey] || (schedule[dateKey]["annual-leave"] || []).includes(person)) return;
-    addPersonToColumn(dateKey, "annual-leave", person);
-    changed = true;
+// 排班标签必须由当前版本的表格支持；跨版本的旧标注不能制造虚假班次。
+function effectivePreference(raw, shifts) {
+  const parsed = parsePreference(raw);
+  const content = parsed.content;
+  const supported = content === "rest" || content === "no-night"
+    || (content === "outpatient-follow" && shifts.includes("outpatient"))
+    || shifts.some((shift) => modalityOfColumn(shift) === content);
+  return serializePreference({
+    content: supported ? content : undefined,
+    tone: shifts.includes("night") ? "night" : undefined,
   });
-  return changed;
 }
 
 function syncHeatmapPreference(person, dateKey) {
@@ -402,6 +402,7 @@ function syncHeatmapPreference(person, dateKey) {
   const before = parsePreference(preferences[key] || "");
   const shifts = shiftsFor(person, dateKey);
   const sticky = before.content === "rest" || before.content === "no-night";
+  if (sticky) return;
   let content = sticky ? before.content : undefined;
   let tone;
   if (shifts.includes("outpatient-night")) {
@@ -469,12 +470,12 @@ const assistantManualColumns = {
   王成龙: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
   路萌: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
   马析淳: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
-  安姝嫣: { xray: "xray-shooting", us: "us-new-coordination" },
-  李晓阳: { xray: "xray-shooting", us: "us-new-coordination" },
-  杨俊杰: { xray: "xray-shooting", us: "us-new-coordination" },
-  苏镜秋: { xray: "xray-shooting", us: "us-new-coordination" },
-  闫娜: { xray: "xray-shooting", us: "us-new-coordination" },
-  段艺涵: { xray: "xray-shooting", us: "us-new-coordination" },
+  安姝嫣: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
+  李晓阳: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
+  杨俊杰: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
+  苏镜秋: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
+  闫娜: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
+  段艺涵: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
 };
 
 function assistantManualColumn(person, mode) {
@@ -485,16 +486,19 @@ function modalityOfColumn(columnId) {
   if (columnId.startsWith("xray-")) return "xray";
   if (columnId.startsWith("ct-")) return "ct";
   if (columnId.startsWith("us-")) return "us";
-  if (columnId === "night" || columnId === "outpatient" || columnId === "outpatient-night" || columnId === "annual-leave" || columnId === "management" || columnId === "expansion") return columnId;
+  if (columnId === "night" || columnId === "outpatient" || columnId === "outpatient-night" || columnId === "annual-leave" || columnId === "management" || columnId === "expansion" || columnId === "rest" || columnId === "no-night") return columnId;
   return "";
 }
 
 function manualColumnFor(person, mode) {
   if (mode === "night") return "night";
   if (mode === "outpatient" || mode === "outpatient-follow") return "outpatient";
+  if (mode === "outpatient-night") return "outpatient-night";
   if (mode === "annual-leave") return "annual-leave";
   if (mode === "management") return "management";
   if (mode === "expansion") return "expansion";
+  if (mode === "rest") return "rest";
+  if (mode === "no-night") return "no-night";
   if (assistantManualColumns[person]) return assistantManualColumn(person, mode);
   const group = groupByPerson.get(person) || "";
   if (mode === "xray") {
@@ -505,7 +509,7 @@ function manualColumnFor(person, mode) {
   if (mode === "ct") {
     if (group === "高级医师") return "ct-review";
     if (group === "二年级") return "ct-scan";
-    if (group === "一年级") return "";
+    if (group === "一年级") return "ct-scan";
     return "ct-report";
   }
   if (mode === "us") {
@@ -636,8 +640,10 @@ function applyManualScheduleAssignment(person, dateKey, mode) {
   if (!manualAssignModes.has(mode)) return { changed: false, added: false };
   const column = manualColumnFor(person, mode);
   if (!column) return { changed: false, added: false };
-  const alreadyThere = (schedule[dateKey]?.[column] || []).includes(person);
-  const markedAs = parsePreference(preferences[`${person}::${dateKey}`] || "").content;
+  const family = modalityOfColumn(column);
+  const alreadyThere = shiftsFor(person, dateKey).some((shift) => modalityOfColumn(shift) === family);
+  const markedAs = parsePreference(preferences[`${person}::${dateKey}`] || "").content === "outpatient-follow"
+    ? "outpatient-follow" : "outpatient";
   const sharesOutpatientColumn = mode === "outpatient" || mode === "outpatient-follow";
   if (alreadyThere && sharesOutpatientColumn) {
     if (markedAs === mode) {
@@ -650,7 +656,7 @@ function applyManualScheduleAssignment(person, dateKey, mode) {
   }
   if (alreadyThere) {
     return {
-      changed: removePersonFromColumns(dateKey, person, (columnId) => columnId === column),
+      changed: removePersonFromColumns(dateKey, person, (columnId) => modalityOfColumn(columnId) === family),
       added: false,
     };
   }
@@ -677,7 +683,7 @@ function preferenceForTableToggle(raw, mode, added) {
       tone: parsed.tone,
     });
   }
-  if (mode === "annual-leave" || mode === "expansion" || mode === "outpatient-night" || mode === "outpatient-follow") return mode;
+  if (mode === "annual-leave" || mode === "expansion" || mode === "rest" || mode === "no-night" || mode === "outpatient-night" || mode === "outpatient-follow") return mode;
   return serializePreference({ content: mode, tone: parsed.tone });
 }
 
@@ -867,6 +873,7 @@ function applyHeatmapAnnotation(person, dateKey) {
     const value = preferenceForTableToggle(before, mode, result.added);
     if (value) preferences[key] = value;
     else delete preferences[key];
+    syncHeatmapPreference(person, dateKey);
     const actionLabel = result.added ? "已排入" : "已撤销";
     heatmapSwapStatus = `${person} ${dateLabel(dateKey).day}${actionLabel}“${annotationLabels[mode]}”`;
     annotationStatus = `${heatmapSwapStatus}，正在自动同步…`;
@@ -1024,6 +1031,11 @@ function swapHeatmapAssignments(target) {
     }))];
   });
   if (source.category === "night") normalizeNightRosters();
+  for (const person of new Set([source.person, target.person])) {
+    for (const dateKey of new Set([source.dateKey, target.dateKey])) {
+      syncHeatmapPreference(person, dateKey);
+    }
+  }
 
   const keptNights = source.category === "night" ? [] : [
     hasNightShift(source.person, source.dateKey) ? source.person : "",
@@ -1156,21 +1168,25 @@ function getNightStreakByCell(currentDates) {
 }
 
 function mainHeatmapCategory(preference, shifts) {
-  const parsed = parsePreference(preference);
+  if (shifts.includes("outpatient") && shifts.includes("outpatient-night")) return "outpatient-double";
+  const parsed = parsePreference(effectivePreference(preference, shifts));
+  const modality = dominantModality(shifts)
+    || (["xray", "ct", "us"].includes(parsed.content) ? parsed.content : "");
   const hasNight = shifts.includes("night")
     || shifts.includes("outpatient-night")
     || parsed.content === "outpatient-night"
     || (parsed.content === "outpatient" && parsed.tone === "night")
     || parsed.tone === "night";
+  const showsYellow = shifts.includes("annual-leave") || parsed.content === "annual-leave"
+    || shifts.includes("expansion") || parsed.content === "expansion"
+    || shifts.includes("outpatient") || parsed.content === "outpatient" || parsed.content === "outpatient-follow"
+    || shifts.includes("outpatient-night") || parsed.content === "outpatient-night";
+  if (shifts.includes("management") || parsed.content === "management") return "other";
+  if (showsYellow && !(modality && showShiftLabels)) return "other";
+  if (showShiftLabels && modality) return modality;
   if (!showShiftLabels && hasNight) return "night";
-  const labeledModality = dominantModality(shifts)
-    || (["xray", "ct", "us"].includes(parsed.content) ? parsed.content : "");
-  if (showShiftLabels && labeledModality) return labeledModality;
-  if (["annual-leave", "expansion", "management", "outpatient", "outpatient-follow", "outpatient-night"].includes(parsed.content)) {
-    return "other";
-  }
   if (parsed.content === "no-night") return shifts.length ? "day" : "none";
-  if (parsed.tone === "day" || shifts.length) return "day";
+  if (parsed.tone === "day" || parsed.tone === "night" || shifts.length) return "day";
   return "none";
 }
 
@@ -1179,22 +1195,39 @@ function heatmapLabelColor(category, hasWhiteConflict) {
 }
 
 function mainHeatmapMarker(person, preference, shifts, restHonored) {
-  const parsed = parsePreference(preference);
-  if (parsed.content === "annual-leave") return "年";
+  const parsed = parsePreference(effectivePreference(preference, shifts));
+  if (parsed.content === "annual-leave" || shifts.includes("annual-leave")) return "年";
   if (shifts.includes("outpatient-night") || parsed.content === "outpatient-night" || (parsed.content === "outpatient" && parsed.tone === "night" && !shifts.includes("night"))) return "门夜";
-  if (shifts.includes("outpatient-follow") || parsed.content === "outpatient-follow") return "跟";
-  if (parsed.content === "expansion") return "拓";
-  if (parsed.content === "management") return "管";
-  if (parsed.content === "outpatient") return "门";
+  if (parsed.content === "outpatient-follow") return "跟";
+  if (parsed.content === "expansion" || shifts.includes("expansion")) return "拓";
+  if (parsed.content === "management" || shifts.includes("management")) return "管";
+  if (parsed.content === "outpatient" || shifts.includes("outpatient")) return "门";
   if (parsed.content === "rest") return restHonored ? "休" : "待";
-  if (parsed.content === "no-night") return "白";
-  const showModality = showShiftLabels || assistants.has(person);
-  if (!showModality) return "";
+  if (parsed.content === "no-night" && (!showShiftLabels || !shifts.length)) return "白";
+  if (!showShiftLabels) {
+    const manualMarkers = { xray: "X", ct: "CT", us: "US" };
+    return manualMarkers[parsed.content]
+      || (parsePreference(preference).tone === "night" && shifts.includes("night") ? "夜" : "");
+  }
   if (parsed.content === "xray" || dominantModality(shifts) === "xray") return "X";
   if (parsed.content === "ct" || dominantModality(shifts) === "ct") return "CT";
   if (parsed.content === "us" || dominantModality(shifts) === "us") return "US";
   if (showShiftLabels && (shifts.includes("night") || parsed.tone === "night")) return "夜";
   return "";
+}
+
+function alignHeatmapDateLabels(chart, axis) {
+  const centers = new Map();
+  for (const point of chart.series[0]?.points || []) {
+    const shape = point.shapeArgs;
+    if (shape && !centers.has(point.x)) {
+      centers.set(point.x, chart.plotLeft + shape.x + shape.width / 2);
+    }
+  }
+  axis.querySelectorAll("[data-axis-x]").forEach((label) => {
+    const center = centers.get(Number(label.dataset.axisX));
+    if (Number.isFinite(center)) label.style.left = `${center}px`;
+  });
 }
 
 function renderHeatmap() {
@@ -1231,6 +1264,7 @@ function renderHeatmap() {
     day: "rgba(0, 144, 242, 0.56)",
     night: "rgba(15, 66, 148, 0.88)",
     other: "rgba(215, 175, 0, 0.50)",
+    "outpatient-double": "rgba(215, 175, 0, 0.85)",
     previous: "rgba(100, 116, 139, 0.42)",
     none: "rgba(232, 238, 245, 0.92)",
     xray: "rgba(0, 144, 242, 0.62)",
@@ -1239,13 +1273,14 @@ function renderHeatmap() {
     conflict: "rgba(220, 38, 38, 0.78)",
   };
   const shiftLabels = Object.fromEntries(columns);
-  Object.assign(shiftLabels, { "annual-leave": "年假", expansion: "拓展", outpatient: "门诊白班/跟诊", "outpatient-night": "门诊夜班", management: "管理" });
+  Object.assign(shiftLabels, { "annual-leave": "年假", expansion: "拓展", rest: "普休", "no-night": "不夜", outpatient: "门诊白班/跟诊", "outpatient-night": "门诊夜班", management: "管理" });
   const overCapacityByDate = new Map(heatmapDates.map((dateKey) => [dateKey, overCapacityColumns(dateKey)]));
   const points = visiblePeople.flatMap((person, personIndex) => heatmapDates.map((dateKey, dateIndex) => {
     const x = dateIndex + Math.floor(dateIndex / 7);
     const shifts = shiftsFor(person, dateKey);
     const preference = preferences[`${person}::${dateKey}`];
-    const parsed = parsePreference(preference);
+    const effective = effectivePreference(preference, shifts);
+    const parsed = parsePreference(effective);
     const restHonored = parsed.content === "rest" && shifts.length === 0;
     const category = mainHeatmapCategory(preference, shifts);
     const isUnscheduledNoNight = parsed.content === "no-night" && shifts.length === 0;
@@ -1263,7 +1298,7 @@ function renderHeatmap() {
     const baseShiftDescription = parsed.content === "rest"
       ? restHonored ? "普通休息（已满足）" : `${labels.join("、")}；普通休息未满足`
       : labels.length ? labels.join("、") : "无排班";
-    const preferenceDescription = describePreference(preference);
+    const preferenceDescription = describePreference(effective);
     const shiftDescription = preferenceDescription
       ? `${baseShiftDescription}；标注：${preferenceDescription}`
       : baseShiftDescription;
@@ -1326,7 +1361,7 @@ function renderHeatmap() {
   const frozenXAxis = document.createElement("div");
   frozenXAxis.className = "heatmap-frozen-x";
   frozenXAxis.innerHTML = axisCategories.map((label, index) => label
-    ? `<span style="left:${86 + (index + 0.5) * heatmapCellSize}px">${label}</span>`
+    ? `<span data-axis-x="${index}" style="left:${86 + (index + 0.5) * heatmapCellSize}px">${label}</span>`
     : "").join("");
   const frozenYAxis = document.createElement("div");
   frozenYAxis.className = "heatmap-frozen-y";
@@ -1350,6 +1385,9 @@ function renderHeatmap() {
       marginBottom: 28,
       marginLeft: 86,
       alignTicks: false,
+      events: {
+        render() { alignHeatmapDateLabels(this, frozenXAxis); },
+      },
     },
     title: { text: undefined },
     accessibility: { enabled: false },
@@ -1705,6 +1743,11 @@ function refreshLiveCharts() {
   renderWeekendStatsChart();
 }
 
+function statsTooltipTitle(x, names) {
+  const person = typeof x === "number" ? names[x] : x;
+  return `<b>${person || ""}</b>`;
+}
+
 function renderRoomChart() {
   const host = document.querySelector("#room-chart");
   if (!host || !window.Highcharts) return;
@@ -1750,7 +1793,7 @@ function renderRoomChart() {
       formatter() {
         const rows = this.points.map((point) => `${point.series.name}：${point.y}天`).join("<br>");
         const total = this.points.reduce((sum, point) => sum + point.y, 0);
-        return `<b>${this.x}</b>（${groupByPerson.get(this.x) || ""}）<br>${rows}<br>合计：${total}天`;
+        return `${statsTooltipTitle(this.x, roomChartPeople)}<br>${rows}<br>合计：${total}天`;
       },
     },
     plotOptions: {
@@ -1867,7 +1910,7 @@ function renderWeekendStatsChart() {
       shared: true,
       formatter() {
         const rows = this.points.map((point) => `${point.series.name}：${point.y}次`).join("<br>");
-        return `<b>${this.x}</b>（${groupByPerson.get(this.x) || ""}）<br>${rows}`;
+        return `${statsTooltipTitle(this.x, people)}<br>${rows}`;
       },
     },
     plotOptions: {
@@ -2077,7 +2120,6 @@ async function loadVersion(versionId) {
     annotationsByPeriod.set(currentPeriodKey, cloneData(preferences));
   }
   if (revision !== versionLoadRevision) return;
-  const annualLeaveAligned = alignAnnualLeaveToSchedule();
   tableMoveSource = null;
   tableStatus = canEdit ? "拖动姓名换班" : "游客账号 · 只读查看";
   heatmapSwapSource = null;
@@ -2091,7 +2133,6 @@ async function loadVersion(versionId) {
   renderWeekendStatsChart();
   updateAnnotationToolbar();
   rememberCollabBase(Number(meta.revision || 0), syncedAnnotationAt);
-  if (annualLeaveAligned && canEdit) queueSilentScheduleSave("正在同步已有年假…");
   window.clearTimeout(loadingTimer);
   loading.classList.add("is-hidden");
 }
@@ -2286,6 +2327,7 @@ document.querySelector("#version-select").addEventListener("change", async (even
 document.querySelector("#shift-label-toggle").addEventListener("click", (event) => {
   showShiftLabels = !showShiftLabels;
   event.currentTarget.setAttribute("aria-pressed", String(showShiftLabels));
+  event.currentTarget.textContent = showShiftLabels ? "隐藏标签" : "显示标签";
   renderHeatmap();
 });
 document.querySelector("#annotation-buttons").addEventListener("click", (event) => {
