@@ -185,6 +185,57 @@
         };
     }
 
+    /** 自定义词条：结论用全称（无全称用缩写），所见优先用词条里填写的所见文本 */
+    let customTermRules = new Map();
+
+    function makeCustomTermRule(item) {
+        const abbreviation = String(item?.abbreviation || '').trim().toUpperCase();
+        if (!abbreviation) return null;
+        const label = String(item.fullName || '').trim() || abbreviation;
+        const findings = String(item.findings || '').trim().replace(/[；;。，,、\s]+$/u, '');
+        return {
+            abbreviation,
+            findingsLabel: findings || label,
+            conclusion: (teethStr) => genericConclusion(teethStr, label)
+        };
+    }
+
+    function setCustomTerms(terms) {
+        customTermRules = new Map();
+        (terms || []).forEach(item => {
+            const rule = makeCustomTermRule(item);
+            if (rule) customTermRules.set(rule.abbreviation, rule);
+        });
+    }
+
+    /** 新建/编辑词条时预览该词条在报告中的所见与结论 */
+    function previewCustomTerm(item, teeth) {
+        const rule = makeCustomTermRule(item);
+        if (!rule || !teeth?.length) return null;
+        return {
+            findings: rule.findingsLabel + '：' + formatTeethRange(teeth),
+            conclusion: rule.conclusion(formatTeethList(teeth))
+        };
+    }
+
+    function getCustomTermRule(term) {
+        if (customTermRules.has(term)) return customTermRules.get(term);
+        if (!term.startsWith('疑')) return null;
+        const baseRule = customTermRules.get(term.slice(1));
+        if (!baseRule) return null;
+        return {
+            findingsLabel: '疑' + baseRule.findingsLabel,
+            conclusion: (teethStr) => formatSuspectedConclusion(baseRule.conclusion(teethStr), teethStr)
+        };
+    }
+
+    function resolveReportRule(term) {
+        return getReportRule(term) || getGenericReportRule(term) || getCustomTermRule(term) || {
+            findingsLabel: term,
+            conclusion: (teethStr) => genericConclusion(teethStr, term)
+        };
+    }
+
     function normalizeTermList(raw) {
         if (!raw) return [];
         return raw
@@ -319,10 +370,7 @@
         getOrderedReportTerms(map).forEach(term => {
             const teeth = map[term];
             if (!teeth || !teeth.length) return;
-            const rule = getReportRule(term) || getGenericReportRule(term) || {
-                findingsLabel: term,
-                conclusion: (teethStr) => genericConclusion(teethStr, term)
-            };
+            const rule = resolveReportRule(term);
             const teethStr = formatTeethList(teeth);
             findingsLines.push(rule.findingsLabel + '：' + formatTeethRange(teeth));
             conclusionLines.push(typeof rule.conclusion === 'function' ? rule.conclusion(teethStr) : rule.conclusion);
@@ -342,10 +390,7 @@
         getOrderedReportTerms(map).forEach(term => {
             const teeth = map[term];
             if (!teeth || !teeth.length) return;
-            const rule = getReportRule(term) || getGenericReportRule(term) || {
-                findingsLabel: term,
-                conclusion: (teethStr) => genericConclusion(teethStr, term)
-            };
+            const rule = resolveReportRule(term);
 
             const teethStr = formatTeethList(teeth);
             findingsLines.push(rule.findingsLabel + '：' + formatTeethRange(teeth));
@@ -376,6 +421,10 @@
 
     function hasReportRule(term) {
         return !!getReportRule(term);
+    }
+
+    function isBuiltinReportTerm(term) {
+        return !!(getReportRule(term) || getGenericReportRule(term));
     }
 
     /** 图例排序：已配置报告规则的术语靠前（顺序与报告优先级一致） */
@@ -459,6 +508,7 @@
     global.DentalReport = {
         updateReport,
         hasReportRule,
+        isBuiltinReportTerm,
         sortLegendTerms,
         applyMissingToothRule,
         REPORT_EMPTY_TEXT,
@@ -469,6 +519,8 @@
         getOrderedReportTerms,
         REPORT_RULES,
         buildReport,
+        setCustomTerms,
+        previewCustomTerm,
         resolveTermAlias,
         normalizeTermList,
         termAllowedOnTooth,

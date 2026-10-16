@@ -7,7 +7,7 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/pub.css?v=20260817-5">
     <link rel="stylesheet" href="css/history.css?v=20260817-11">
-    <link rel="stylesheet" href="css/app-ui.css?v=20261016-2">
+    <link rel="stylesheet" href="css/app-ui.css?v=20261016-3">
     <link rel="prefetch" href="js/vendor/highcharts-12.4.0.js">
     <link rel="prefetch" href="js/vendor/highcharts-treemap-12.4.0.js">
     <link rel="prefetch" href="js/vendor/highcharts-heatmap-12.4.0.js">
@@ -30,6 +30,8 @@
                         <div class="legend-grid" id="legendGrid">
                             <div class="legend-primary-grid" id="legendPrimaryGrid">
                                 <button type="button" class="legend-add-btn" id="legendAddBtn" onclick="openTermModal()" title="新建标签" aria-label="新建标签">＋</button>
+                                <button type="button" class="legend-add-btn legend-edit-btn" id="legendEditBtn" onclick="toggleTermEditMode()" title="编辑缩写词" aria-label="编辑缩写词" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.17 6.81a1 1 0 0 0-3.99-3.99L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg></button>
+                                <span class="legend-edit-hint" id="legendEditHint">点击带 ✎ 的自定义标签修改或删除</span>
                             </div>
                             <div class="legend-other-grid" id="legendOtherGrid"></div>
                         </div>
@@ -308,16 +310,23 @@
 
     <div id="termModal" class="term-modal" hidden>
         <div class="term-modal-backdrop" onclick="closeTermModal()"></div>
-        <form class="term-modal-panel" onsubmit="addCustomTerm(event)" role="dialog" aria-modal="true" aria-labelledby="termModalTitle">
+        <form class="term-modal-panel" onsubmit="saveCustomTerm(event)" onkeydown="if (event.key === 'Escape') closeTermModal()" role="dialog" aria-modal="true" aria-labelledby="termModalTitle">
             <div class="term-modal-header">
                 <div><h2 id="termModalTitle">新建标签</h2></div>
           
                 <button type="button" onclick="closeTermModal()" aria-label="关闭">×</button>
             </div>
-            <label class="term-field"><span>缩写 <b>*</b></span><input id="termAbbreviationInput" maxlength="30" autocomplete="off" placeholder="例如：DTR 或 中文标签" oninput="updateTermFullNameRequirement()"></label>
-            <label class="term-field"><span>全称 <b id="termFullNameRequired">*</b></span><input id="termFullNameInput" maxlength="60" autocomplete="off" placeholder="例如：牙本质修复"></label>
+            <label class="term-field"><span>缩写 <b>*</b></span><input id="termAbbreviationInput" maxlength="30" autocomplete="off" placeholder="例如：DTR 或 中文标签" oninput="onTermModalInput()"></label>
+            <label class="term-field"><span>全称（结论） <b id="termFullNameRequired">*</b></span><input id="termFullNameInput" maxlength="60" autocomplete="off" placeholder="例如：牙本质修复" oninput="onTermModalInput()"></label>
+            <label class="term-field"><span>所见</span><input id="termFindingsInput" maxlength="120" autocomplete="off" placeholder="例如：齿根周围牙周袋增宽（留空则沿用结论）" oninput="onTermModalInput()"></label>
             <p class="term-modal-hint" id="termModalHint">英文或数字缩写需要填写全称</p>
+            <div class="term-modal-preview" id="termModalPreview" hidden>
+                <span id="termPreviewLabel">报告预览</span>
+                <p><b>所见</b><span id="termPreviewFindings"></span></p>
+                <p><b>结论</b><span id="termPreviewConclusion"></span></p>
+            </div>
             <div class="term-modal-actions">
+                <button type="button" class="danger" id="termDeleteButton" onclick="deleteCustomTerm()" hidden>删除</button>
                 <button type="button" onclick="closeTermModal()">取消</button>
                 <button type="submit" class="primary" id="termSubmitButton">添加标签</button>
             </div>
@@ -326,7 +335,7 @@
 
     <script src="js/supabase-config.js?v=20260804-1"></script>
     <script src="js/dental-api.js?v=20261016-2"></script>
-    <script src="js/report.js?v=20260817-2"></script>
+    <script src="js/report.js?v=20261016-1"></script>
     <script src="js/history-app.js?v=20260817-9"></script>
     <script>
         const CHART_IMAGES = {
@@ -523,15 +532,8 @@
                 const response = await fetchWithTimeout(CUSTOM_TERMS_API, { cache: 'no-store' });
                 if (!response.ok) return;
                 const data = await response.json();
-                const nextTerms = Array.isArray(data.terms)
-                    ? data.terms.map(term => typeof term === 'string'
-                        ? { abbreviation: term, fullName: '' }
-                        : term).filter(term => term?.abbreviation)
-                    : [];
-                const signature = JSON.stringify(nextTerms);
-                if (signature === customTermsSignature) return;
-                customTerms = nextTerms;
-                customTermsSignature = signature;
+                if (!Array.isArray(data.terms)) return;
+                if (!applyCustomTerms(data.terms)) return;
                 if (render) {
                     const selected = activeLegendTerm;
                     initLegend();
@@ -542,54 +544,218 @@
             }
         }
 
-        function openTermModal() {
+        /** 更新自定义词条并同步报告规则；内容没有变化时返回 false */
+        function applyCustomTerms(rawTerms) {
+            const nextTerms = rawTerms
+                .map(term => typeof term === 'string'
+                    ? { abbreviation: term, fullName: '', findings: '' }
+                    : { abbreviation: term?.abbreviation, fullName: term?.fullName || '', findings: term?.findings || '' })
+                .filter(term => term.abbreviation);
+            const signature = JSON.stringify(nextTerms);
+            if (signature === customTermsSignature) return false;
+            customTerms = nextTerms;
+            customTermsSignature = signature;
+            DentalReport.setCustomTerms(customTerms);
+            DentalReport.updateReport();
+            return true;
+        }
+
+        let editingTermAbbreviation = null;
+        let termModalError = '';
+        let termDeleteConfirmTimeout = null;
+
+        function findCustomTerm(abbreviation) {
+            return customTerms.find(item => item.abbreviation === abbreviation) || null;
+        }
+
+        function isBuiltinTerm(abbreviation) {
+            return ANNOTATION_TERMS.includes(abbreviation) || DentalReport.isBuiltinReportTerm(abbreviation);
+        }
+
+        /** 当前牙表中使用该词条（含“疑”）的牙位 */
+        function teethUsingTerm(abbreviation) {
+            return Object.entries(inputData || {})
+                .filter(([, value]) => normalizeTermList(value).some(term => term === abbreviation || term === '疑' + abbreviation))
+                .map(([tooth]) => tooth);
+        }
+
+        function readTermModalValues() {
+            return {
+                abbreviation: editingTermAbbreviation
+                    || document.getElementById('termAbbreviationInput').value.trim().toUpperCase(),
+                fullName: document.getElementById('termFullNameInput').value.trim(),
+                findings: document.getElementById('termFindingsInput').value.trim()
+            };
+        }
+
+        function openTermModal(term = null, error = '') {
             const modal = document.getElementById('termModal');
             if (!modal) return;
+            editingTermAbbreviation = term?.abbreviation || null;
+            termModalError = error;
+            const abbreviationInput = document.getElementById('termAbbreviationInput');
             modal.hidden = false;
-            document.getElementById('termAbbreviationInput').value = '';
-            document.getElementById('termFullNameInput').value = '';
-            updateTermFullNameRequirement();
-            requestAnimationFrame(() => document.getElementById('termAbbreviationInput').focus());
+            abbreviationInput.value = term?.abbreviation || '';
+            abbreviationInput.readOnly = !!term;
+            document.getElementById('termFullNameInput').value = term?.fullName || '';
+            document.getElementById('termFindingsInput').value = term?.findings || '';
+            document.getElementById('termModalTitle').textContent = term ? '编辑标签' : '新建标签';
+            document.getElementById('termSubmitButton').textContent = term ? '保存修改' : '添加标签';
+            document.getElementById('termDeleteButton').hidden = !term;
+            resetTermDeleteButton();
+            const focusTarget = term ? 'termFullNameInput' : 'termAbbreviationInput';
+            requestAnimationFrame(() => document.getElementById(focusTarget).focus());
         }
 
         function closeTermModal() {
             const modal = document.getElementById('termModal');
             if (modal) modal.hidden = true;
+            editingTermAbbreviation = null;
+            termModalError = '';
+            resetTermDeleteButton();
         }
 
-        function updateTermFullNameRequirement() {
-            const abbreviation = document.getElementById('termAbbreviationInput')?.value.trim() || '';
+        function onTermModalInput() {
+            termModalError = '';
+            resetTermDeleteButton();
+        }
+
+        function setTermModalError(message) {
+            termModalError = message;
+            updateTermModalState();
+        }
+
+        function updateTermModalState() {
+            const { abbreviation, fullName, findings } = readTermModalValues();
             const hasChinese = /[\u3400-\u9fff]/.test(abbreviation);
-            const fullName = document.getElementById('termFullNameInput');
+            const fullNameInput = document.getElementById('termFullNameInput');
             const requiredMark = document.getElementById('termFullNameRequired');
             const hint = document.getElementById('termModalHint');
-            if (fullName) fullName.required = !hasChinese;
+            if (fullNameInput) fullNameInput.required = !hasChinese;
             if (requiredMark) requiredMark.hidden = hasChinese;
-            if (hint) hint.textContent = hasChinese ? '中文缩写可直接作为报告关键词，全称可以不填' : '英文或数字缩写需要填写全称';
+            if (hint) {
+                const deleteButton = document.getElementById('termDeleteButton');
+                let text;
+                if (termModalError) {
+                    text = termModalError;
+                } else if (deleteButton?.classList.contains('confirm-mode')) {
+                    const used = teethUsingTerm(abbreviation).length;
+                    text = `再次点击“确认删除”将删除「${abbreviation}」` +
+                        (used ? `；当前牙表有 ${used} 个牙位在用，删除后报告改为直接显示缩写` : '');
+                } else if (editingTermAbbreviation) {
+                    text = `缩写不可修改；${hasChinese ? '全称可以不填，' : ''}所见留空时沿用结论`;
+                } else {
+                    text = `${hasChinese ? '中文缩写可直接作为结论，全称可以不填' : '英文或数字缩写需要填写全称'}；所见留空时沿用结论`;
+                }
+                hint.textContent = text;
+                hint.classList.toggle('term-modal-hint--error', !!termModalError ||
+                    !!deleteButton?.classList.contains('confirm-mode'));
+            }
+            updateTermPreview(abbreviation, fullName, findings);
         }
 
-        async function addCustomTerm(event) {
-            event?.preventDefault();
-            const abbreviation = document.getElementById('termAbbreviationInput').value.trim().toUpperCase();
-            const fullName = document.getElementById('termFullNameInput').value.trim();
-            const hasChinese = /[\u3400-\u9fff]/.test(abbreviation);
-            if (!abbreviation || (!hasChinese && !fullName)) return;
-            const submitButton = document.getElementById('termSubmitButton');
-            submitButton.disabled = true;
-            submitButton.textContent = '正在添加...';
+        function updateTermPreview(abbreviation, fullName, findings) {
+            const preview = document.getElementById('termModalPreview');
+            if (!preview) return;
+            const usedTeeth = abbreviation ? teethUsingTerm(abbreviation).filter(tooth =>
+                normalizeTermList(inputData[tooth]).includes(abbreviation)) : [];
+            const teeth = usedTeeth.length ? usedTeeth : ['107', '108'];
+            const result = abbreviation && !isBuiltinTerm(abbreviation)
+                ? DentalReport.previewCustomTerm({ abbreviation, fullName, findings }, teeth)
+                : null;
+            preview.hidden = !result;
+            if (!result) return;
+            document.getElementById('termPreviewLabel').textContent = usedTeeth.length ? '报告预览（当前牙表）' : '报告预览（示例牙位）';
+            document.getElementById('termPreviewFindings').textContent = result.findings;
+            document.getElementById('termPreviewConclusion').textContent = result.conclusion;
+        }
+
+        function resetTermDeleteButton() {
+            if (termDeleteConfirmTimeout) {
+                clearTimeout(termDeleteConfirmTimeout);
+                termDeleteConfirmTimeout = null;
+            }
+            const button = document.getElementById('termDeleteButton');
+            if (button) {
+                button.classList.remove('confirm-mode');
+                button.textContent = '删除';
+                button.disabled = false;
+            }
+            updateTermModalState();
+        }
+
+        function finishTermRequest(data) {
+            if (Array.isArray(data.terms)) applyCustomTerms(data.terms);
+            initLegend();
+            closeTermModal();
+        }
+
+        async function deleteCustomTerm() {
+            const abbreviation = editingTermAbbreviation;
+            const button = document.getElementById('termDeleteButton');
+            if (!abbreviation || !button) return;
+            if (!button.classList.contains('confirm-mode')) {
+                termModalError = '';
+                button.classList.add('confirm-mode');
+                button.textContent = '确认删除';
+                updateTermModalState();
+                termDeleteConfirmTimeout = setTimeout(resetTermDeleteButton, 4000);
+                return;
+            }
+            clearTimeout(termDeleteConfirmTimeout);
+            termDeleteConfirmTimeout = null;
+            button.disabled = true;
+            button.textContent = '正在删除...';
             try {
                 const response = await DentalApi.fetch(CUSTOM_TERMS_API, {
-                    method: 'POST',
+                    method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ abbreviation, fullName })
+                    body: JSON.stringify({ abbreviation })
                 });
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.message || '添加失败');
-                customTerms = Array.isArray(data.terms)
-                    ? data.terms.map(term => typeof term === 'string' ? { abbreviation: term, fullName: '' } : term)
-                    : customTerms;
-                customTermsSignature = JSON.stringify(customTerms);
-                initLegend();
+                if (!response.ok) throw new Error(data.message || '删除失败');
+                if (activeLegendTerm === abbreviation) setActiveLegendTerm(null);
+                finishTermRequest(data);
+            } catch (error) {
+                button.classList.remove('confirm-mode');
+                button.textContent = '删除';
+                button.disabled = false;
+                setTermModalError(`删除失败：${error.message}`);
+            }
+        }
+
+        async function saveCustomTerm(event) {
+            event?.preventDefault();
+            const editing = !!editingTermAbbreviation;
+            const { abbreviation, fullName, findings } = readTermModalValues();
+            const hasChinese = /[\u3400-\u9fff]/.test(abbreviation);
+            if (!abbreviation || (!hasChinese && !fullName)) return;
+            if (!editing) {
+                if (isBuiltinTerm(abbreviation)) {
+                    setTermModalError(`「${abbreviation}」是内置术语，可直接使用，不需要新建`);
+                    return;
+                }
+                const existing = findCustomTerm(abbreviation);
+                if (existing) {
+                    openTermModal(existing, `「${abbreviation}」已存在，已切换为编辑`);
+                    return;
+                }
+            }
+            const submitButton = document.getElementById('termSubmitButton');
+            const idleLabel = editing ? '保存修改' : '添加标签';
+            submitButton.disabled = true;
+            submitButton.textContent = editing ? '正在保存...' : '正在添加...';
+            try {
+                const response = await DentalApi.fetch(CUSTOM_TERMS_API, {
+                    method: editing ? 'PATCH' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ abbreviation, fullName, findings })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || (editing ? '保存失败' : '添加失败'));
+                finishTermRequest(data);
+                if (editing) return;
+                setTermEditMode(false);
                 const legend = document.querySelector('.legend');
                 const moreButton = document.getElementById('legendMoreBtn');
                 legend?.classList.remove('legend--collapsed');
@@ -599,13 +765,31 @@
                     moreButton.setAttribute('aria-expanded', 'true');
                 }
                 setActiveLegendTerm(data.added || abbreviation);
-                closeTermModal();
             } catch (error) {
-                alert(`添加标签失败：${error.message}`);
+                setTermModalError(`${editing ? '保存' : '添加'}失败：${error.message}`);
             } finally {
                 submitButton.disabled = false;
-                submitButton.textContent = '添加标签';
+                submitButton.textContent = idleLabel;
             }
+        }
+
+        let termEditMode = false;
+
+        function setTermEditMode(enabled) {
+            termEditMode = !!enabled;
+            document.querySelector('.legend')?.classList.toggle('legend--editing', termEditMode);
+            const button = document.getElementById('legendEditBtn');
+            if (button) {
+                const label = termEditMode ? '完成编辑' : '编辑缩写词';
+                button.title = label;
+                button.setAttribute('aria-label', label);
+                button.setAttribute('aria-pressed', String(termEditMode));
+            }
+            if (termEditMode) setActiveLegendTerm(null);
+        }
+
+        function toggleTermEditMode() {
+            setTermEditMode(!termEditMode);
         }
 
         function setSaveStatus(text, state = '') {
@@ -1450,6 +1634,7 @@
             const button = document.getElementById('legendMoreBtn');
             if (!legend || !button) return;
             const collapsed = legend.classList.toggle('legend--collapsed');
+            if (collapsed) setTermEditMode(false);
             const label = collapsed ? '展开其他术语' : '收起其他术语';
             button.title = label;
             button.setAttribute('aria-label', label);
@@ -2250,7 +2435,11 @@
             const primaryGrid = document.getElementById('legendPrimaryGrid');
             const otherGrid = document.getElementById('legendOtherGrid');
             const addBtn = document.getElementById('legendAddBtn');
+            const editBtn = document.getElementById('legendEditBtn');
+            const editHint = document.getElementById('legendEditHint');
             addBtn?.remove();
+            editBtn?.remove();
+            editHint?.remove();
             primaryGrid.innerHTML = '';
             otherGrid.innerHTML = '';
 
@@ -2440,15 +2629,31 @@
                     item.dataset.english = info.english;
                     item.dataset.aliases = term === 'AL' ? 'PD' : term === '0' ? 'O' : '';
                     item.textContent = info.display || term + '-' + info.chinese;
+                    const editable = !!customInfo && !termInfo[term] && !DentalReport.isBuiltinReportTerm(term);
+                    if (editable) {
+                        item.classList.add('legend-item--custom');
+                        if (customInfo.findings) item.title = `所见：${customInfo.findings}`;
+                    }
                     item.addEventListener('click', function (e) {
                         e.preventDefault();
                         e.stopPropagation();
+                        if (termEditMode) {
+                            if (editable) openTermModal(customInfo);
+                            return;
+                        }
                         setActiveLegendTerm(activeLegendTerm === term ? null : term);
                     });
 
                     (hasReportRule ? primaryGrid : otherGrid).appendChild(item);
             });
             if (addBtn) primaryGrid.appendChild(addBtn);
+            if (editBtn) primaryGrid.appendChild(editBtn);
+            if (editHint) {
+                editHint.textContent = document.querySelector('.legend-item--custom')
+                    ? '点击带 ✎ 的自定义标签修改或删除'
+                    : '暂无可编辑的自定义标签';
+                primaryGrid.appendChild(editHint);
+            }
             syncUsedLegendTerms();
         }
 
