@@ -7,7 +7,7 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/pub.css?v=20260817-5">
     <link rel="stylesheet" href="css/history.css?v=20260817-11">
-    <link rel="stylesheet" href="css/app-ui.css?v=20260817-7">
+    <link rel="stylesheet" href="css/app-ui.css?v=20261016-2">
     <link rel="prefetch" href="js/vendor/highcharts-12.4.0.js">
     <link rel="prefetch" href="js/vendor/highcharts-treemap-12.4.0.js">
     <link rel="prefetch" href="js/vendor/highcharts-heatmap-12.4.0.js">
@@ -36,9 +36,9 @@
                         <button type="button" class="legend-more-btn" id="legendMoreBtn" onclick="toggleOtherTerms()" title="展开其他术语" aria-label="展开其他术语" aria-expanded="false"><span aria-hidden="true">▾</span></button>
                         <div class="term-search-actions">
                             <label class="term-search">
-                                <span aria-hidden="true">⌕</span>
+                                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
                                 <input type="search" id="legendSearch" class="legend-search" placeholder="检索缩写或中文" autocomplete="off" aria-label="检索术语缩写或中文" aria-keyshortcuts="Control+K Meta+K">
-                                <kbd class="search-shortcut" aria-hidden="true">Ctrl+K</kbd>
+                                <span class="search-shortcut" aria-hidden="true"></span>
                             </label>
                         </div>
                     </div>
@@ -118,7 +118,7 @@
                     <div><span>全部牙表</span><strong id="totalCount">—</strong></div>
                     <div><span>今日新增</span><strong id="todayCount">—</strong></div>
                 </div>
-                <label class="search-box"><span aria-hidden="true">⌕</span><input type="search" id="searchInput" placeholder="搜索检查编号、家长名或宠物名" autocomplete="off" aria-label="搜索历史牙表" aria-keyshortcuts="Control+K Meta+K"><kbd class="search-shortcut" aria-hidden="true">Ctrl+K</kbd></label>
+                <label class="search-box"><svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><input type="search" id="searchInput" placeholder="搜索检查编号、家长名或宠物名" autocomplete="off" aria-label="搜索历史牙表" aria-keyshortcuts="Control+K Meta+K"><span class="search-shortcut" aria-hidden="true"></span></label>
                 <div class="filter-tabs" id="speciesFilters" role="group" aria-label="牙表类型筛选">
                     <button type="button" class="active" data-type="">全部</button>
                     <button type="button" data-type="dog">犬</button>
@@ -325,7 +325,7 @@
     </div>
 
     <script src="js/supabase-config.js?v=20260804-1"></script>
-    <script src="js/dental-api.js?v=20260810-4"></script>
+    <script src="js/dental-api.js?v=20261016-2"></script>
     <script src="js/report.js?v=20260817-2"></script>
     <script src="js/history-app.js?v=20260817-9"></script>
     <script>
@@ -1459,9 +1459,13 @@
 
         function setupSearchShortcut() {
             const isApple = /Mac|iPhone|iPad/.test(navigator.platform || '');
-            const hint = isApple ? '⌘K' : 'Ctrl+K';
+            const keys = [isApple ? '⌘' : 'Ctrl', 'K'];
             document.querySelectorAll('.search-shortcut').forEach(el => {
-                el.textContent = hint;
+                el.replaceChildren(...keys.map(key => {
+                    const kbd = document.createElement('kbd');
+                    kbd.textContent = key;
+                    return kbd;
+                }));
             });
             document.addEventListener('keydown', event => {
                 if (event.defaultPrevented || event.repeat) return;
@@ -2416,7 +2420,10 @@
             if (currentChartType === 'rabbit') loadRabbitPosterImages();
             document.getElementById('chartImage').src = CHART_IMAGES[currentChartType];
             initLegend();
-            setInterval(() => loadCustomTerms(true), 30000);
+            // 后台轮询只在已登录时进行，避免未登录时反复弹出密码框。
+            setInterval(() => {
+                if (DentalApi.hasToken()) loadCustomTerms(true);
+            }, 30000);
             setupLegendSearch();
             setupSearchShortcut();
             setupLegendHorizontalScroll();

@@ -27,10 +27,21 @@
         return localStorage.getItem(TOKEN_KEY) || '';
     }
 
+    // 请求浏览器把本站存储标记为持久，避免内存紧张时被自动清理；
+    // 若用户设置了“退出浏览器时清除站点数据”，则不受此影响。
+    function requestPersistentStorage() {
+        try {
+            global.navigator?.storage?.persist?.().catch(() => {});
+        } catch (_) {
+            // 浏览器不支持时忽略。
+        }
+    }
+
     function saveToken(token, meta) {
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(TOKEN_META_KEY, JSON.stringify(meta || {}));
         sessionStorage.removeItem(LEGACY_PASSWORD_KEY);
+        requestPersistentStorage();
     }
 
     function clearToken() {
@@ -39,11 +50,17 @@
         sessionStorage.removeItem(LEGACY_PASSWORD_KEY);
     }
 
+    // 清理上一版曾写入的明文密码。
+    try { localStorage.removeItem(LEGACY_PASSWORD_KEY); } catch (_) {}
+    if (readToken()) requestPersistentStorage();
+
     function deviceName() {
         return String(global.navigator?.userAgent || 'browser').slice(0, 100);
     }
 
-    function requestPairingPassword() {
+    // 弹出密码框并在框内完成配对：密码错误时保留弹窗并提示，不会关闭后再次弹出。
+    // 其他标签页完成配对后（令牌写入 localStorage），本弹窗会自动关闭并复用该令牌。
+    function requestPairingPassword(pair) {
         return new Promise((resolve, reject) => {
             const overlay = document.createElement('div');
             overlay.className = 'dental-auth-overlay';
@@ -88,32 +105,60 @@
             panel.append(title, form);
             overlay.appendChild(panel);
 
+            let busy = false;
             const cleanup = () => {
                 document.removeEventListener('keydown', handleKeydown);
+                global.removeEventListener('storage', handleStorage);
                 document.body.classList.remove('dental-auth-open');
                 overlay.remove();
             };
             const cancelPairing = () => {
+                if (busy) return;
                 cleanup();
                 reject(new Error('已取消设备配对'));
             };
             const handleKeydown = (event) => {
                 if (event.key === 'Escape') cancelPairing();
             };
+            const handleStorage = (event) => {
+                if (event.key !== TOKEN_KEY || !event.newValue) return;
+                cleanup();
+                resolve(event.newValue);
+            };
 
-            form.addEventListener('submit', (event) => {
+            form.addEventListener('submit', async (event) => {
                 event.preventDefault();
+                if (busy) return;
                 const password = input.value.trim();
                 if (!password) {
                     error.textContent = '请输入密码';
                     input.focus();
                     return;
                 }
-                cleanup();
-                resolve(password);
+                busy = true;
+                error.textContent = '';
+                input.disabled = true;
+                confirm.disabled = true;
+                confirm.textContent = '验证中...';
+                try {
+                    const token = await pair(password);
+                    cleanup();
+                    resolve(token);
+                } catch (pairError) {
+                    busy = false;
+                    input.disabled = false;
+                    confirm.disabled = false;
+                    confirm.textContent = '确认';
+                    error.textContent = pairError?.status === 401
+                        ? '密码错误，请重试'
+                        : (pairError?.message || '登录失败，请重试');
+                    input.select();
+                    input.focus();
+                }
             });
             cancel.addEventListener('click', cancelPairing);
             document.addEventListener('keydown', handleKeydown);
+            global.addEventListener('storage', handleStorage);
             document.body.classList.add('dental-auth-open');
             document.body.appendChild(overlay);
             input.focus();
@@ -135,7 +180,9 @@
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-            throw new Error(payload.message || '设备配对失败');
+            const error = new Error(payload.message || '设备配对失败');
+            error.status = response.status;
+            throw error;
         }
         const token = String(payload.token || '').trim().toLowerCase();
         if (!/^[a-f0-9]{64}$/.test(token)) {
@@ -148,16 +195,15 @@
         return token;
     }
 
-    async function ensureAccess() {
+    // prompt: false 时仅检查是否已登录，不弹出密码框（用于后台轮询）。
+    async function ensureAccess({ prompt = true } = {}) {
         const existing = readToken();
         if (existing) return existing;
+        if (!prompt) throw new Error('尚未登录');
         if (!pairingPromise) {
-            pairingPromise = Promise.resolve()
-                .then(requestPairingPassword)
-                .then(pairDevice)
-                .finally(() => {
-                    pairingPromise = null;
-                });
+            pairingPromise = requestPairingPassword(pairDevice).finally(() => {
+                pairingPromise = null;
+            });
         }
         return pairingPromise;
     }
@@ -208,6 +254,7 @@
     global.DentalApi = {
         fetch: apiFetch,
         ensureAccess,
+        hasToken: () => Boolean(readToken()),
         clearAccess: clearToken,
         logout,
         endpoint: apiUrl,

@@ -280,21 +280,36 @@ body.view-history .workspace { display: none; }
 .term-bar .legend-more-btn[aria-expanded="true"] span { transform: rotate(180deg); }
 
 .term-search-actions { grid-column: 3; grid-row: 1; align-self: start; display: flex; align-items: center; gap: 7px; }
-.term-search { width: 196px; height: 34px; padding: 0 8px 0 10px; display: flex; align-items: center; gap: 6px; border: 1px solid #dce5e0; border-radius: 8px; color: #82908a; background: #f8faf9; }
+/* 检索框：参考 my-docs 的 soft 样式（无边框、浅底、6px 圆角、左侧放大镜、右侧快捷键分键显示） */
+.term-search { width: 196px; height: 34px; padding: 0 8px 0 10px; display: flex; align-items: center; gap: 6px; border: 0; border-radius: 6px; color: #4d5b55; background: #f1f5f3; transition: background-color .15s ease; }
+.term-search,
+.search-box { border: 0; border-radius: 6px; color: #4d5b55; background: #f1f5f3; transition: background-color .15s ease; }
+.term-search:hover,
+.term-search:focus-within,
+.search-box:hover,
+.search-box:focus-within { background: #e8eeeb; }
 .term-search .legend-search { width: 100%; min-width: 0; height: auto; padding: 0; border: 0; outline: 0; background: transparent; font-size: 11px; }
 .term-search .legend-search:focus { border: 0; }
-.search-shortcut {
-    flex: 0 0 auto;
-    padding: 1px 5px;
-    border: 1px solid #d7e1dc;
+.search-icon { flex: 0 0 auto; width: 16px; height: 16px; margin-right: 1px; color: #4d5b55; }
+.term-search .legend-search::placeholder,
+.search-box input::placeholder { color: #82908a; }
+.search-shortcut { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 2px; }
+.search-shortcut kbd {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+    min-width: 20px;
+    padding: 0 4px;
     border-radius: 4px;
-    color: #7d8983;
-    background: #fff;
-    font-size: 10px;
+    color: #3a4741;
+    background: transparent;
+    box-shadow: inset 0 0 0 1px #d3ddd8;
+    font-size: 11px;
     font-family: inherit;
-    font-weight: 600;
-    line-height: 1.3;
-    letter-spacing: 0;
+    font-weight: 500;
+    line-height: 1;
 }
 .term-search:focus-within .search-shortcut,
 .search-box:focus-within .search-shortcut { visibility: hidden; }
@@ -326,7 +341,7 @@ body.view-history .workspace { display: none; }
 .patient-inline label { min-width: 220px; display: flex; align-items: center; gap: 9px; }
 .owner-search-field { position: relative; min-width: 280px; }
 .owner-search-field > label { width: 100%; min-width: 0; }
-.patient-inline label > span { flex: 0 0 auto; margin: 0; color: #6f7c76; font-size: 10px; font-weight: 600; }
+.patient-inline label > span { flex: 0 0 auto; margin: 0; color: #6f7c76; font-size: 14px; font-weight: 600; }
 .patient-inline .owner-name-input {
     width: 100%;
     min-width: 0;
@@ -338,7 +353,7 @@ body.view-history .workspace { display: none; }
     box-shadow: none;
     color: var(--ui-ink);
     background: transparent;
-    font-size: 14px;
+    font-size: 18px;
 }
 .patient-inline .owner-name-input:focus {
     border-bottom-color: var(--ui-primary);
