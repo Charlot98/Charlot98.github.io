@@ -7,7 +7,7 @@
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/pub.css?v=20260817-5">
     <link rel="stylesheet" href="css/history.css?v=20260817-11">
-    <link rel="stylesheet" href="css/app-ui.css?v=20261016-3">
+    <link rel="stylesheet" href="css/app-ui.css?v=20261016-4">
     <link rel="prefetch" href="js/vendor/highcharts-12.4.0.js">
     <link rel="prefetch" href="js/vendor/highcharts-treemap-12.4.0.js">
     <link rel="prefetch" href="js/vendor/highcharts-heatmap-12.4.0.js">
@@ -581,8 +581,7 @@
 
         function readTermModalValues() {
             return {
-                abbreviation: editingTermAbbreviation
-                    || document.getElementById('termAbbreviationInput').value.trim().toUpperCase(),
+                abbreviation: document.getElementById('termAbbreviationInput').value.trim().toUpperCase(),
                 fullName: document.getElementById('termFullNameInput').value.trim(),
                 findings: document.getElementById('termFindingsInput').value.trim()
             };
@@ -596,15 +595,13 @@
             const abbreviationInput = document.getElementById('termAbbreviationInput');
             modal.hidden = false;
             abbreviationInput.value = term?.abbreviation || '';
-            abbreviationInput.readOnly = !!term;
             document.getElementById('termFullNameInput').value = term?.fullName || '';
             document.getElementById('termFindingsInput').value = term?.findings || '';
             document.getElementById('termModalTitle').textContent = term ? '编辑标签' : '新建标签';
             document.getElementById('termSubmitButton').textContent = term ? '保存修改' : '添加标签';
             document.getElementById('termDeleteButton').hidden = !term;
             resetTermDeleteButton();
-            const focusTarget = term ? 'termFullNameInput' : 'termAbbreviationInput';
-            requestAnimationFrame(() => document.getElementById(focusTarget).focus());
+            requestAnimationFrame(() => document.getElementById('termAbbreviationInput').focus());
         }
 
         function closeTermModal() {
@@ -639,11 +636,13 @@
                 if (termModalError) {
                     text = termModalError;
                 } else if (deleteButton?.classList.contains('confirm-mode')) {
-                    const used = teethUsingTerm(abbreviation).length;
-                    text = `再次点击“确认删除”将删除「${abbreviation}」` +
+                    const used = teethUsingTerm(editingTermAbbreviation).length;
+                    text = `再次点击“确认删除”将删除「${editingTermAbbreviation}」` +
                         (used ? `；当前牙表有 ${used} 个牙位在用，删除后报告改为直接显示缩写` : '');
+                } else if (editingTermAbbreviation && abbreviation && abbreviation !== editingTermAbbreviation) {
+                    text = `缩写将由「${editingTermAbbreviation}」改为「${abbreviation}」，当前牙表同步替换；已保存的历史牙表仍保留原缩写`;
                 } else if (editingTermAbbreviation) {
-                    text = `缩写不可修改；${hasChinese ? '全称可以不填，' : ''}所见留空时沿用结论`;
+                    text = '';
                 } else {
                     text = `${hasChinese ? '中文缩写可直接作为结论，全称可以不填' : '英文或数字缩写需要填写全称'}；所见留空时沿用结论`;
                 }
@@ -657,8 +656,9 @@
         function updateTermPreview(abbreviation, fullName, findings) {
             const preview = document.getElementById('termModalPreview');
             if (!preview) return;
-            const usedTeeth = abbreviation ? teethUsingTerm(abbreviation).filter(tooth =>
-                normalizeTermList(inputData[tooth]).includes(abbreviation)) : [];
+            const usedTerm = editingTermAbbreviation || abbreviation;
+            const usedTeeth = usedTerm ? teethUsingTerm(usedTerm).filter(tooth =>
+                normalizeTermList(inputData[tooth]).includes(usedTerm)) : [];
             const teeth = usedTeeth.length ? usedTeeth : ['107', '108'];
             const result = abbreviation && !isBuiltinTerm(abbreviation)
                 ? DentalReport.previewCustomTerm({ abbreviation, fullName, findings }, teeth)
@@ -682,6 +682,20 @@
                 button.disabled = false;
             }
             updateTermModalState();
+        }
+
+        /** 缩写改名后同步替换当前牙表中的旧缩写（含“疑”） */
+        function renameTermInChart(previous, next) {
+            if (activeLegendTerm === previous) setActiveLegendTerm(next);
+            if (viewOnlyMode) return;
+            document.querySelectorAll('.tooth-input').forEach(input => {
+                const list = normalizeTermList(input.value);
+                if (!list.some(term => term === previous || term === '疑' + previous)) return;
+                applyToothTermList(input, list.map(term => term === previous
+                    ? next
+                    : term === '疑' + previous ? '疑' + next : term));
+            });
+            syncUsedLegendTerms();
         }
 
         function finishTermRequest(data) {
@@ -730,12 +744,18 @@
             const { abbreviation, fullName, findings } = readTermModalValues();
             const hasChinese = /[\u3400-\u9fff]/.test(abbreviation);
             if (!abbreviation || (!hasChinese && !fullName)) return;
-            if (!editing) {
+            const previous = editingTermAbbreviation;
+            const renamed = editing && abbreviation !== previous;
+            if (!editing || renamed) {
                 if (isBuiltinTerm(abbreviation)) {
-                    setTermModalError(`「${abbreviation}」是内置术语，可直接使用，不需要新建`);
+                    setTermModalError(`「${abbreviation}」是内置术语，不能用作自定义缩写`);
                     return;
                 }
                 const existing = findCustomTerm(abbreviation);
+                if (existing && renamed) {
+                    setTermModalError(`「${abbreviation}」已存在，请换一个缩写`);
+                    return;
+                }
                 if (existing) {
                     openTermModal(existing, `「${abbreviation}」已存在，已切换为编辑`);
                     return;
@@ -749,11 +769,14 @@
                 const response = await DentalApi.fetch(CUSTOM_TERMS_API, {
                     method: editing ? 'PATCH' : 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ abbreviation, fullName, findings })
+                    body: JSON.stringify(editing
+                        ? { abbreviation: previous, newAbbreviation: abbreviation, fullName, findings }
+                        : { abbreviation, fullName, findings })
                 });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.message || (editing ? '保存失败' : '添加失败'));
                 finishTermRequest(data);
+                if (renamed) renameTermInChart(previous, abbreviation);
                 if (editing) return;
                 setTermEditMode(false);
                 const legend = document.querySelector('.legend');
