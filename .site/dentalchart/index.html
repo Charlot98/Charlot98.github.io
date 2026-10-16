@@ -645,6 +645,26 @@
             );
         }
 
+        // 上次保存或载入时的内容签名，用于判断是否有未保存修改。
+        let lastSavedSignature = '';
+        function chartSignature(payload) {
+            const inputData = payload.inputData || {};
+            const sortedInput = {};
+            Object.keys(inputData).filter(key => inputData[key]).sort().forEach(key => {
+                sortedInput[key] = inputData[key];
+            });
+            return JSON.stringify([
+                String(payload.ownerName || '').trim(),
+                String(payload.petName || '').trim(),
+                payload.chartType || '',
+                sortedInput
+            ]);
+        }
+
+        function hasUnsavedChanges() {
+            return chartSignature(getCurrentChartPayload()) !== lastSavedSignature;
+        }
+
         function historyDateKey(value) {
             const date = new Date(Number(value));
             return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
@@ -832,6 +852,7 @@
                 medicalRecordId: currentMedicalRecordId,
                 selectedVersion: selectedHistoryVersion,
                 editSessionId,
+                savedSignature: lastSavedSignature,
                 url: chartPageUrl(),
                 statusText: status?.textContent || '尚未保存',
                 statusState: status?.dataset.state || ''
@@ -870,6 +891,7 @@
                 currentMedicalRecordId = snapshot.medicalRecordId || '';
                 selectedHistoryVersion = Number(snapshot.selectedVersion) || null;
                 editSessionId = snapshot.editSessionId || createEditSessionId();
+                lastSavedSignature = snapshot.savedSignature || '';
                 currentChartType = ['dog', 'cat', 'rabbit'].includes(snapshot.chartType) ? snapshot.chartType : 'dog';
                 inputData = { ...(snapshot.inputData || {}) };
                 document.getElementById('ownerNameInput').value = snapshot.ownerName || '';
@@ -1204,6 +1226,7 @@
                 });
                 if (!response.ok) throw new Error((await response.json()).message || '保存失败');
                 const saved = await response.json();
+                lastSavedSignature = chartSignature(payload);
                 currentMedicalRecordId = saved.medicalRecordId || currentMedicalRecordId || saved.id;
                 if (!currentChartId) {
                     currentChartId = saved.id;
@@ -1279,6 +1302,12 @@
                 document.getElementById('ownerNameInput').value = record.ownerName || '';
                 document.getElementById('petNameInput').value = record.petName || '';
                 currentChartType = record.chartType || 'dog';
+                lastSavedSignature = chartSignature({
+                    ownerName: record.ownerName,
+                    petName: record.petName,
+                    chartType: currentChartType,
+                    inputData: record.inputData
+                });
                 if (followupMode) {
                     currentChartId = '';
                     selectedHistoryVersion = null;
@@ -2080,7 +2109,8 @@
         let clearConfirmTimeout = null;
 
         // 清空所有（二次确认：图标切换，无弹窗）
-        function clearAll() {
+        // 有未保存的填写内容时先自动保存再清空；空白牙表不自动保存。
+        async function clearAll() {
             const btn = document.querySelector('.btn-clear');
 
             // 查看历史病例时，单击即退出查看并开始一份新的空白牙表。
@@ -2092,6 +2122,7 @@
                 currentMedicalRecordId = '';
                 selectedHistoryVersion = null;
                 inputData = {};
+                lastSavedSignature = '';
                 editSessionId = createEditSessionId();
                 document.getElementById('ownerNameInput').value = '';
                 document.getElementById('petNameInput').value = '';
@@ -2121,7 +2152,24 @@
                     clearConfirmTimeout = null;
                 }
 
+                let autoSaved = false;
+                if (hasChartContent(getCurrentChartPayload()) && hasUnsavedChanges()) {
+                    resetClearButton();
+                    setWorkflowBusy(true);
+                    setSaveStatus('正在保存...', 'saving');
+                    try {
+                        await waitForCacheSyncIdle();
+                        cacheSyncDirty = false;
+                        autoSaved = await saveChartToServer();
+                    } finally {
+                        setWorkflowBusy(false);
+                    }
+                    // 保存失败时保留当前内容，状态栏已显示失败原因。
+                    if (!autoSaved) return;
+                }
+
                 inputData = {};
+                lastSavedSignature = '';
                 currentChartId = '';
                 currentMedicalRecordId = '';
                 selectedHistoryVersion = null;
@@ -2141,7 +2189,7 @@
                 });
                 DentalReport.updateReport();
                 resetLegendState();
-                setSaveStatus('尚未保存');
+                setSaveStatus(autoSaved ? '已自动保存上一份牙表' : '尚未保存', autoSaved ? 'saved' : '');
                 if (activeReportTab === 'history') loadHistoricalReports(true);
 
                 // 重置按钮状态
