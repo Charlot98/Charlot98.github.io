@@ -744,6 +744,10 @@
             const { abbreviation, fullName, findings } = readTermModalValues();
             const hasChinese = /[\u3400-\u9fff]/.test(abbreviation);
             if (!abbreviation || (!hasChinese && !fullName)) return;
+            if (/[\s,，;；、/]/u.test(abbreviation)) {
+                setTermModalError('缩写不能包含空格、逗号、分号、顿号或斜杠，否则填写时会被拆成多个词条');
+                return;
+            }
             const previous = editingTermAbbreviation;
             const renamed = editing && abbreviation !== previous;
             if (!editing || renamed) {
