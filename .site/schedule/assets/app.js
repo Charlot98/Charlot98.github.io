@@ -214,10 +214,18 @@ async function toggleAccessMode() {
   }
 }
 
-// 超声带教模式下报告人员已并入1—4号屋，总表与导出不再单列超声报告。
+const coordinationColumnId = "us-coordination";
+const coordinationSourceColumns = ["us-coordination-teaching", "us-new-coordination"];
+const coordinationColumnFor = (person) => groupByPerson.get(person) === "新助理" ? "us-new-coordination" : "us-coordination-teaching";
+const coordinationEntries = (day) => coordinationSourceColumns.flatMap((columnId) => (day?.[columnId] || []).map((name) => ({ name, columnId })));
+const storedColumnId = (columnId, person) => columnId === coordinationColumnId ? coordinationColumnFor(person) : columnId;
+
+// 超声带教模式下报告人员已并入1—4号屋，总表与导出不再单列超声报告。超声统筹带教与新人统筹合并显示。
 function scheduleTableColumns() {
-  return columns.filter(([id]) => id !== "rest" && id !== "no-night"
-    && !(ultrasoundSupervisionEnabled && id === "us-report"));
+  return columns
+    .filter(([id]) => id !== "rest" && id !== "no-night" && id !== "us-new-coordination"
+      && !(ultrasoundSupervisionEnabled && id === "us-report"))
+    .map(([id, label]) => id === "us-coordination-teaching" ? [coordinationColumnId, "超声统筹"] : [id, label]);
 }
 
 function applyUltrasoundAllocation() {
@@ -241,13 +249,16 @@ function renderTable() {
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     const weekEnd = date.getDay() === 0 && index < dates.length - 1;
     const cells = tableColumns.map(([id]) => {
-      const pairs = ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey]).filter((pair) => pair.room === id) : [];
-      const rawNames = (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query)
+      const isCoordination = id === coordinationColumnId;
+      const roster = isCoordination ? coordinationEntries(schedule[dateKey]).filter(({ name }) => !query || name.includes(query)) : null;
+      const pairs = !isCoordination && ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey]).filter((pair) => pair.room === id) : [];
+      const rawNames = roster ? roster.map(({ name }) => name) : (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query)
         || pairs.some((pair) => (pair.teacher === name || pair.learner === name) && (pair.teacher.includes(query) || pair.learner.includes(query))));
       const names = id === "night" ? sortNightRoster(rawNames) : rawNames;
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
       const nightLike = id === "night" || id === "outpatient-night";
-      const chip = (name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`;
+      const columnOf = (name) => roster?.find((item) => item.name === name)?.columnId || id;
+      const chip = (name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${columnOf(name)}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === columnOf(name) ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`;
       const entries = ultrasoundSupervisionEnabled && id.startsWith("us-room-") ? roomRosterEntries(schedule[dateKey], id, names) : names.map((name) => [name]);
       const content = entries.map((entry) => entry.length === 2
         ? `<span class="supervision-pair">${chip(entry[0])}<span class="supervision-slash">/</span>${chip(entry[1])}</span>`
@@ -303,9 +314,10 @@ function getWhiteShiftConflictKeys() {
 }
 
 function canMoveAssignment(source, targetDateKey, targetColumnId) {
+  const storedTarget = storedColumnId(targetColumnId, source?.person);
   if (!canEdit || !source || !schedule[targetDateKey]) return false;
-  if ((schedule[targetDateKey][targetColumnId] || []).includes(source.person)) return false;
-  if (ultrasoundSupervisionEnabled && !canMoveSupervisedAssignment(schedule, source, targetDateKey, targetColumnId)) return false;
+  if ((schedule[targetDateKey][storedTarget] || []).includes(source.person)) return false;
+  if (ultrasoundSupervisionEnabled && !canMoveSupervisedAssignment(schedule, source, targetDateKey, storedTarget)) return false;
   if (source.columnId === "night") {
     const sameWeek = weekNumber(source.dateKey) === weekNumber(targetDateKey);
     const canTakeNight = hasWhiteShift(source.person, targetDateKey)
@@ -318,6 +330,7 @@ function canMoveAssignment(source, targetDateKey, targetColumnId) {
 }
 
 function moveAssignment(source, targetDateKey, targetColumnId) {
+  const storedTarget = storedColumnId(targetColumnId, source?.person);
   if (!canMoveAssignment(source, targetDateKey, targetColumnId)) return;
   const undoSnapshot = captureScheduleSnapshot();
   const movesPairedNight = source.columnId !== "night"
@@ -325,7 +338,7 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
     && (schedule[source.dateKey].night || []).includes(source.person);
   schedule[source.dateKey][source.columnId] = (schedule[source.dateKey][source.columnId] || [])
     .filter((person) => person !== source.person);
-  schedule[targetDateKey][targetColumnId] = [...new Set([...(schedule[targetDateKey][targetColumnId] || []), source.person])];
+  schedule[targetDateKey][storedTarget] = [...new Set([...(schedule[targetDateKey][storedTarget] || []), source.person])];
   if (movesPairedNight) {
     schedule[source.dateKey].night = (schedule[source.dateKey].night || [])
       .filter((person) => person !== source.person);
@@ -336,7 +349,7 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   }
   syncHeatmapPreference(source.person, source.dateKey);
   syncHeatmapPreference(source.person, targetDateKey);
-  const targetLabel = columns.find(([id]) => id === targetColumnId)?.[1] || targetColumnId;
+  const targetLabel = targetColumnId === coordinationColumnId ? "超声统筹" : (columns.find(([id]) => id === storedTarget)?.[1] || storedTarget);
   tableStatus = source.columnId === "night"
     ? `${source.person}夜班已移至${dateLabel(targetDateKey).day}`
     : movesPairedNight
@@ -1671,7 +1684,7 @@ async function exportExcel() {
     dates.forEach((dateKey, index) => {
       const { day, weekday, date } = dateLabel(dateKey);
       const row = totalSheet.addRow([`${day} ${weekday}`, ...exportColumns.map(([id]) => {
-        const names = schedule[dateKey][id] || [];
+        const names = id === coordinationColumnId ? coordinationEntries(schedule[dateKey]).map(({ name }) => name) : (schedule[dateKey][id] || []);
         if (ultrasoundSupervisionEnabled && id.startsWith("us-room-")) {
           return roomRosterEntries(schedule[dateKey], id, names).map((entry) => entry.join("/")).join("、");
         }
@@ -1789,7 +1802,7 @@ function scheduleFromWorksheet(sheet) {
   header.eachCell((cell, columnNumber) => {
     if (columnNumber === 1) return;
     const label = String(cell.value ?? "").trim();
-    const columnId = columns.find(([, columnLabel]) => columnLabel === label)?.[0];
+    const columnId = label === "超声统筹" ? coordinationColumnId : columns.find(([, columnLabel]) => columnLabel === label)?.[0];
     if (columnId) columnIds[columnNumber] = columnId;
   });
   if (!columnIds.some(Boolean)) throw new Error("未识别岗位列，请使用本页导出的「排班总表」");
@@ -1815,7 +1828,15 @@ function scheduleFromWorksheet(sheet) {
           if (!kept.includes(name)) kept.push(name);
         } else unknownNames.add(name);
       });
-      if (kept.length) day[columnId] = columnId === "night" ? sortNightRoster(kept) : kept;
+      if (!kept.length) return;
+      if (columnId === coordinationColumnId) {
+        kept.forEach((name) => {
+          const target = coordinationColumnFor(name);
+          day[target] = [...new Set([...(day[target] || []), name])];
+        });
+        return;
+      }
+      day[columnId] = columnId === "night" ? sortNightRoster(kept) : kept;
     });
     nextSchedule[dateKey] = day;
   });
