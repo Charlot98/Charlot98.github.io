@@ -1,7 +1,7 @@
 {
   "periodKey": "2026-11-02_2026-12-06",
   "label": "11月微调版",
-  "version": 3,
+  "version": 4,
   "status": "夜班与超声带教微调",
   "preferences": {
     "刘蕾::2026-11-02": "rest",
@@ -189,7 +189,6 @@
         "路萌"
       ],
       "us-new-coordination": [
-        "李晓阳",
         "苏镜秋",
         "闫娜",
         "段艺涵"
@@ -266,7 +265,8 @@
       "us-report": [],
       "us-new-coordination": [
         "杨俊杰",
-        "苏镜秋"
+        "苏镜秋",
+        "安姝嫣"
       ],
       "ct-scan-teaching": [
         "杨思琪"
@@ -334,7 +334,6 @@
       ],
       "us-report": [],
       "us-new-coordination": [
-        "安姝嫣",
         "李晓阳",
         "杨俊杰"
       ],
@@ -411,8 +410,6 @@
       "us-new-coordination": [
         "安姝嫣",
         "李晓阳",
-        "苏镜秋",
-        "闫娜",
         "段艺涵"
       ],
       "night": [
@@ -462,7 +459,6 @@
       ],
       "us-new-coordination": [
         "安姝嫣",
-        "杨俊杰",
         "闫娜",
         "段艺涵"
       ],
@@ -529,7 +525,8 @@
       ],
       "us-new-coordination": [
         "安姝嫣",
-        "李晓阳"
+        "李晓阳",
+        "苏镜秋"
       ],
       "xray-shooting": [
         "沈烨",
@@ -677,7 +674,6 @@
       ],
       "us-report": [],
       "us-new-coordination": [
-        "李晓阳",
         "杨俊杰",
         "闫娜"
       ],
@@ -769,9 +765,7 @@
       ],
       "us-new-coordination": [
         "安姝嫣",
-        "李晓阳",
-        "杨俊杰",
-        "苏镜秋"
+        "李晓阳"
       ],
       "outpatient-night": [
         "刘蕾"
@@ -831,8 +825,7 @@
       ],
       "us-new-coordination": [
         "安姝嫣",
-        "杨俊杰",
-        "段艺涵"
+        "杨俊杰"
       ],
       "us-report": [],
       "ct-scan-teaching": [
@@ -903,7 +896,6 @@
         "李晓阳"
       ],
       "us-new-coordination": [
-        "安姝嫣",
         "苏镜秋",
         "段艺涵"
       ],
@@ -975,9 +967,7 @@
         "马析淳"
       ],
       "us-new-coordination": [
-        "李晓阳",
         "杨俊杰",
-        "闫娜",
         "段艺涵"
       ],
       "night": [
@@ -1188,8 +1178,6 @@
         "赵家琳"
       ],
       "us-new-coordination": [
-        "安姝嫣",
-        "李晓阳",
         "杨俊杰",
         "闫娜",
         "段艺涵"
@@ -1262,8 +1250,7 @@
       ],
       "us-new-coordination": [
         "李晓阳",
-        "杨俊杰",
-        "苏镜秋"
+        "杨俊杰"
       ],
       "us-report": [],
       "ct-scan-teaching": [
@@ -1339,7 +1326,6 @@
         "马析淳"
       ],
       "us-new-coordination": [
-        "安姝嫣",
         "李晓阳",
         "苏镜秋",
         "段艺涵"
@@ -1393,8 +1379,7 @@
       ],
       "us-new-coordination": [
         "安姝嫣",
-        "李晓阳",
-        "闫娜"
+        "李晓阳"
       ],
       "xray-shooting": [
         "梁思思",
@@ -1470,8 +1455,7 @@
       "us-report": [],
       "us-new-coordination": [
         "杨俊杰",
-        "闫娜",
-        "段艺涵"
+        "闫娜"
       ],
       "us-coordination-teaching": [
         "刘越",
@@ -1531,7 +1515,8 @@
       "us-report": [],
       "us-new-coordination": [
         "苏镜秋",
-        "段艺涵"
+        "段艺涵",
+        "安姝嫣"
       ],
       "xray-teaching": [
         "张明扬",
@@ -1678,7 +1663,6 @@
       ],
       "us-report": [],
       "us-new-coordination": [
-        "安姝嫣",
         "苏镜秋",
         "闫娜",
         "段艺涵"
@@ -1759,8 +1743,7 @@
       "us-report": [],
       "us-new-coordination": [
         "安姝嫣",
-        "李晓阳",
-        "杨俊杰"
+        "李晓阳"
       ],
       "us-coordination-teaching": [
         "杨思琪",
@@ -1829,7 +1812,6 @@
       "us-report": [],
       "us-new-coordination": [
         "李晓阳",
-        "苏镜秋",
         "段艺涵"
       ],
       "xray-shooting": [
@@ -1908,9 +1890,7 @@
         "马析淳"
       ],
       "us-new-coordination": [
-        "安姝嫣",
         "杨俊杰",
-        "闫娜",
         "段艺涵"
       ],
       "night": [
@@ -1978,10 +1958,8 @@
       ],
       "us-new-coordination": [
         "安姝嫣",
-        "杨俊杰",
         "苏镜秋",
-        "闫娜",
-        "段艺涵"
+        "闫娜"
       ],
       "night": [
         "刘蕾",
@@ -2038,7 +2016,8 @@
       "us-report": [],
       "us-new-coordination": [
         "杨俊杰",
-        "苏镜秋"
+        "苏镜秋",
+        "安姝嫣"
       ],
       "xray-teaching": [
         "杨思琪",
@@ -2097,7 +2076,8 @@
       ],
       "us-new-coordination": [
         "李晓阳",
-        "闫娜"
+        "闫娜",
+        "杨俊杰"
       ],
       "xray-shooting": [
         "林雨睿",
@@ -2175,7 +2155,6 @@
         "马析淳"
       ],
       "us-new-coordination": [
-        "安姝嫣",
         "杨俊杰",
         "苏镜秋",
         "闫娜"
@@ -2257,7 +2236,6 @@
         "赵家慧"
       ],
       "us-new-coordination": [
-        "李晓阳",
         "杨俊杰",
         "段艺涵"
       ],
@@ -2326,7 +2304,6 @@
       "us-new-coordination": [
         "安姝嫣",
         "李晓阳",
-        "苏镜秋",
         "闫娜"
       ],
       "ct-scan-teaching": [
@@ -2403,8 +2380,6 @@
         "路萌"
       ],
       "us-new-coordination": [
-        "安姝嫣",
-        "杨俊杰",
         "苏镜秋",
         "段艺涵"
       ],
@@ -2473,10 +2448,8 @@
         "马析淳"
       ],
       "us-new-coordination": [
-        "李晓阳",
         "杨俊杰",
-        "闫娜",
-        "段艺涵"
+        "闫娜"
       ],
       "night": [
         "刘蕾",
@@ -2532,7 +2505,8 @@
       ],
       "us-new-coordination": [
         "李晓阳",
-        "段艺涵"
+        "段艺涵",
+        "安姝嫣"
       ],
       "xray-teaching": [
         "杨思琪",
@@ -2594,7 +2568,8 @@
       "us-report": [],
       "us-new-coordination": [
         "安姝嫣",
-        "苏镜秋"
+        "苏镜秋",
+        "李晓阳"
       ],
       "xray-shooting": [
         "梁思思",
