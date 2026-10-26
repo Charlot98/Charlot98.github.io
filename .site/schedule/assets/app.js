@@ -1,4 +1,5 @@
-import { previousWeekStaffByDate } from "./previous-week-staff.js";
+import { previousWeekStaffByDate } from "./previous-week-staff.js?v=2";
+import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid } from "./ultrasound-supervision.js?v=1";
 const columns = [
   ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],
@@ -114,6 +115,8 @@ let annotationSaveRevision = 0;
 let versionLoadRevision = 0;
 let heatmapLayoutKey = "";
 let canEdit = false;
+let ultrasoundSupervisionEnabled = false;
+let supervisionWarnings = [];
 const annotationsByPeriod = new Map();
 
 const dateLabel = (dateKey) => {
@@ -211,22 +214,45 @@ async function toggleAccessMode() {
   }
 }
 
+// 超声带教模式下报告人员已并入1—4号屋，总表与导出不再单列超声报告。
+function scheduleTableColumns() {
+  return columns.filter(([id]) => id !== "rest" && id !== "no-night"
+    && !(ultrasoundSupervisionEnabled && id === "us-report"));
+}
+
+function applyUltrasoundAllocation() {
+  if (!ultrasoundSupervisionEnabled) {
+    supervisionWarnings = [];
+    return 0;
+  }
+  const result = allocateUltrasoundReports(schedule, { preferPengColocation: false });
+  supervisionWarnings = result.unassigned;
+  return result.moves.length;
+}
+
 function renderTable() {
   const table = document.querySelector("#schedule-table");
   const dates = Object.keys(schedule).sort();
   const conflictKeys = getWhiteShiftConflictKeys();
-  const tableColumns = columns.filter(([id]) => id !== "rest" && id !== "no-night");
+  const tableColumns = scheduleTableColumns();
   table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
   table.querySelector("tbody").innerHTML = dates.map((dateKey, index) => {
     const { date, day, weekday } = dateLabel(dateKey);
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     const weekEnd = date.getDay() === 0 && index < dates.length - 1;
     const cells = tableColumns.map(([id]) => {
-      const rawNames = (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query));
+      const pairs = ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey]).filter((pair) => pair.room === id) : [];
+      const rawNames = (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query)
+        || pairs.some((pair) => (pair.teacher === name || pair.learner === name) && (pair.teacher.includes(query) || pair.learner.includes(query))));
       const names = id === "night" ? sortNightRoster(rawNames) : rawNames;
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
       const nightLike = id === "night" || id === "outpatient-night";
-      return `<td data-date="${dateKey}" data-column="${id}" class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? names.map((name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`).join("") : `<span class="empty-cell">—</span>`}</td>`;
+      const chip = (name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${id}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === id ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`;
+      const entries = ultrasoundSupervisionEnabled && id.startsWith("us-room-") ? roomRosterEntries(schedule[dateKey], id, names) : names.map((name) => [name]);
+      const content = entries.map((entry) => entry.length === 2
+        ? `<span class="supervision-pair">${chip(entry[0])}<span class="supervision-slash">/</span>${chip(entry[1])}</span>`
+        : chip(entry[0])).join("");
+      return `<td data-date="${dateKey}" data-column="${id}" class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
     const row = `<tr class="${weekend ? "weekend" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
     return weekEnd
@@ -235,7 +261,8 @@ function renderTable() {
   }).join("");
   const status = document.querySelector("#table-filter-state");
   const conflictMessage = conflictKeys.size ? ` · ${conflictKeys.size}处同日多白班冲突` : "";
-  status.textContent = `${query ? `仅显示“${query}” · ` : ""}${tableStatus}${conflictMessage}`;
+  const supervisionMessage = supervisionWarnings.length ? ` · ${supervisionWarnings.length}名报告人员待配带教` : "";
+  status.textContent = `${query ? `仅显示“${query}” · ` : ""}${tableStatus}${conflictMessage}${supervisionMessage}`;
   status.classList.toggle("has-conflicts", conflictKeys.size > 0);
 }
 
@@ -278,6 +305,7 @@ function getWhiteShiftConflictKeys() {
 function canMoveAssignment(source, targetDateKey, targetColumnId) {
   if (!canEdit || !source || !schedule[targetDateKey]) return false;
   if ((schedule[targetDateKey][targetColumnId] || []).includes(source.person)) return false;
+  if (ultrasoundSupervisionEnabled && !canMoveSupervisedAssignment(schedule, source, targetDateKey, targetColumnId)) return false;
   if (source.columnId === "night") {
     const sameWeek = weekNumber(source.dateKey) === weekNumber(targetDateKey);
     const canTakeNight = hasWhiteShift(source.person, targetDateKey)
@@ -369,6 +397,7 @@ function reorderAssignment(source, targetPerson, placeAfter) {
   }
   tableMoveSource = null;
   renderTable();
+  if (changed && ultrasoundSupervisionEnabled && source.columnId.startsWith("us-room-")) renderHeatmap();
   if (changed) queueSilentScheduleSave("顺序已调整，正在自动同步…");
 }
 
@@ -889,6 +918,7 @@ function applyHeatmapAnnotation(person, dateKey) {
   }
   if (manualAssignModes.has(mode)) {
     const result = applyManualScheduleAssignment(person, dateKey, mode);
+    if (result.changed) applyUltrasoundAllocation();
     if (!result.changed && !manualColumnFor(person, mode)) {
       heatmapSwapStatus = `${person}没有对应的“${annotationLabels[mode]}”岗位`;
       annotationStatus = heatmapSwapStatus;
@@ -1030,7 +1060,21 @@ function isHeatmapSwapCandidate(person, dateKey, category) {
     && targetHasOnlySelectedShift
     && (sameConcreteShifts || crossUsRooms)
     && canReceiveSwapDay(person, source.dateKey, false)
-    && canReceiveSwapDay(source.person, dateKey, false);
+    && canReceiveSwapDay(source.person, dateKey, false)
+    && swapKeepsSupervision(source, { person, dateKey }, sourceShiftIds, targetShiftIds);
+}
+
+function swapKeepsSupervision(source, target, sourceShiftIds, targetShiftIds) {
+  if (!ultrasoundSupervisionEnabled) return true;
+  const swapped = (dateKey, shiftIds, from, to) => {
+    const day = cloneData(schedule[dateKey] || {});
+    shiftIds.forEach((shiftId) => {
+      day[shiftId] = (day[shiftId] || []).map((name) => (name === from ? to : name));
+    });
+    return day;
+  };
+  return supervisionLayoutValid(swapped(source.dateKey, sourceShiftIds, source.person, target.person))
+    && supervisionLayoutValid(swapped(target.dateKey, targetShiftIds, target.person, source.person));
 }
 
 function updateHeatmapSwapStatus() {
@@ -1141,7 +1185,7 @@ function handleHeatmapSwapClick(custom) {
 }
 
 function isWorkDay(person, dateKey) {
-  if (previousWeekStaffByDate[dateKey]) return previousWeekStaffByDate[dateKey].includes(person);
+  if (!schedule[dateKey] && previousWeekStaffByDate[dateKey]) return previousWeekStaffByDate[dateKey].includes(person);
   const parsed = parsePreference(preferences[`${person}::${dateKey}`]);
   return shiftsFor(person, dateKey).length > 0
     || ["annual-leave", "outpatient", "expansion", "management"].includes(parsed.content)
@@ -1150,7 +1194,7 @@ function isWorkDay(person, dateKey) {
 }
 
 function getStreakSeverityByCell(currentDates) {
-  const allDates = [...Object.keys(previousWeekStaffByDate), ...currentDates].sort();
+  const allDates = [...new Set([...Object.keys(previousWeekStaffByDate), ...currentDates])].sort();
   const currentDateSet = new Set(currentDates);
   const severity = new Map();
   people.forEach((person) => {
@@ -1361,9 +1405,13 @@ function renderHeatmap() {
       ? restHonored ? "普通休息（已满足）" : `${labels.join("、")}；普通休息未满足`
       : labels.length ? labels.join("、") : "无排班";
     const preferenceDescription = describePreference(effective);
-    const shiftDescription = preferenceDescription
+    const pair = ultrasoundSupervisionEnabled
+      ? supervisionPairs(schedule[dateKey] || {}).find((item) => item.learner === person || item.teacher === person)
+      : null;
+    const supervisionDescription = pair ? (pair.learner === person ? `；带教：${pair.teacher}` : `；跟诊：${pair.learner}`) : "";
+    const shiftDescription = (preferenceDescription
       ? `${baseShiftDescription}；标注：${preferenceDescription}`
-      : baseShiftDescription;
+      : baseShiftDescription) + supervisionDescription;
     const streakDescription = streakSeverity === "streak-six" ? "；连续工作6天"
       : streakSeverity === "streak-over" ? "；连续工作超过6天" : "";
     const nightStreakDescription = nightStreakLength ? `；连续夜班${nightStreakLength}天` : "";
@@ -1575,7 +1623,7 @@ async function exportExcel() {
   try {
     const workbook = new window.ExcelJS.Workbook();
     workbook.creator = "科室排班总览";
-    const exportColumns = columns.filter(([id]) => id !== "rest" && id !== "no-night");
+    const exportColumns = scheduleTableColumns();
     const totalSheet = workbook.addWorksheet("排班总表", { views: [{ state: "frozen", xSplit: 1, ySplit: 1 }] });
     totalSheet.addRow(["日期", ...exportColumns.map(([, label]) => label)]);
     const header = totalSheet.getRow(1);
@@ -1624,6 +1672,9 @@ async function exportExcel() {
       const { day, weekday, date } = dateLabel(dateKey);
       const row = totalSheet.addRow([`${day} ${weekday}`, ...exportColumns.map(([id]) => {
         const names = schedule[dateKey][id] || [];
+        if (ultrasoundSupervisionEnabled && id.startsWith("us-room-")) {
+          return roomRosterEntries(schedule[dateKey], id, names).map((entry) => entry.join("/")).join("、");
+        }
         return (id === "night" ? sortNightRoster(names) : names).join("、");
       })]);
       row.height = 31;
@@ -1755,7 +1806,7 @@ function scheduleFromWorksheet(sheet) {
     columnIds.forEach((columnId, columnNumber) => {
       if (!columnId) return;
       const names = String(row.getCell(columnNumber).value ?? "")
-        .split(/[、,，\n]+/)
+        .split(/[、,，/\n]+/)
         .map((name) => name.trim())
         .filter(Boolean);
       const kept = [];
@@ -1792,6 +1843,7 @@ async function importExcelFile(file) {
     const imported = scheduleFromWorksheet(sheet);
     schedule = imported.schedule;
     normalizeNightRosters();
+    applyUltrasoundAllocation();
     keepHeatmapMarksAfterImport(previousPreferences);
     let cloudVersions = [];
     try { cloudVersions = await fetchCloudVersions(); } catch { cloudVersions = []; }
@@ -2242,6 +2294,40 @@ function formatPeriod(periodKey) {
 function updatePeriodDisplay(periodKey = currentPeriodKey) {
   const label = document.querySelector("#period-label");
   if (label) label.textContent = formatPeriod(periodKey);
+  updatePeriodNav(periodKey);
+}
+
+function knownPeriodKeys() {
+  return [...new Set(versions.map((item) => item.periodKey).filter(Boolean))].sort();
+}
+
+function updatePeriodNav(periodKey = currentPeriodKey) {
+  const keys = knownPeriodKeys();
+  const index = keys.indexOf(periodKey);
+  const previous = document.querySelector("#previous-period-button");
+  const next = document.querySelector("#next-period-button");
+  if (previous) previous.disabled = index <= 0;
+  if (next) next.disabled = index < 0 || index >= keys.length - 1;
+}
+
+function rememberPeriodInUrl(periodKey) {
+  if (!periodKey) return;
+  const url = new URL(window.location.href);
+  if (url.searchParams.get("period") === periodKey) return;
+  url.searchParams.set("period", periodKey);
+  window.history.replaceState(null, "", url);
+}
+
+async function switchPeriod(step) {
+  const keys = knownPeriodKeys();
+  const target = keys[keys.indexOf(currentPeriodKey) + step];
+  const meta = target && versions.find((item) => item.periodKey === target);
+  if (!meta) return;
+  try {
+    await loadVersion(meta.id);
+  } catch (error) {
+    document.querySelector("#loading-screen").textContent = error.message;
+  }
 }
 
 function cloneData(value) {
@@ -2432,6 +2518,7 @@ function currentPayload(versionNumber, label) {
     status: "云端保存",
     periodKey: currentPeriodKey || `${dates[0]}_${dates.at(-1)}`,
     savedAt: new Date().toISOString(),
+    ...(ultrasoundSupervisionEnabled ? { ultrasoundSupervision: { enabled: true } } : {}),
     preferences: cloneData(preferences),
     schedule: cloneData(schedule),
   };
@@ -2439,8 +2526,11 @@ function currentPayload(versionNumber, label) {
 
 function renderVersionOptions(selectedId) {
   const select = document.querySelector("#version-select");
-  select.innerHTML = versions.map((item) => `<option value="${item.id}">${item.label}</option>`).join("");
+  const periodKey = versions.find((item) => item.id === selectedId)?.periodKey || currentPeriodKey;
+  const periodVersions = versions.filter((item) => !periodKey || item.periodKey === periodKey);
+  select.innerHTML = periodVersions.map((item) => `<option value="${item.id}">${item.label}</option>`).join("");
   if (selectedId) select.value = selectedId;
+  updatePeriodNav(periodKey);
 }
 
 async function saveAsNewVersion() {
@@ -2518,6 +2608,8 @@ async function loadVersion(versionId) {
   if (revision !== versionLoadRevision) return;
   schedule = cloneData(payload.schedule);
   normalizeNightRosters();
+  ultrasoundSupervisionEnabled = Boolean(payload.ultrasoundSupervision?.enabled);
+  applyUltrasoundAllocation();
   preferences = cloneData(payload.preferences || {});
   currentVersion = meta;
   currentPeriodKey = payload.periodKey || meta.periodKey || "";
@@ -2548,7 +2640,8 @@ async function loadVersion(versionId) {
   heatmapSwapStatus = canEdit ? "点格换班" : "游客账号 · 只读查看";
   updatePeriodDisplay(payload.periodKey || currentPeriodKey);
   document.querySelector("#day-count").textContent = Object.keys(schedule).length;
-  document.querySelector("#version-select").value = meta.id;
+  renderVersionOptions(meta.id);
+  rememberPeriodInUrl(currentPeriodKey);
   clearUndoHistory();
   renderTable();
   renderHeatmap();
@@ -2642,7 +2735,9 @@ async function init() {
     versions = cloudVersions;
     renderVersionOptions();
     document.querySelector("#people-count").textContent = people.length;
-    const preferred = cloudVersions.find((item) => item.periodKey === "2026-09-28_2026-11-01")
+    const requestedPeriod = new URLSearchParams(window.location.search).get("period");
+    const preferred = cloudVersions.find((item) => requestedPeriod && item.periodKey === requestedPeriod)
+      || cloudVersions.find((item) => item.periodKey === "2026-09-28_2026-11-01")
       || cloudVersions[0];
     await loadVersion(preferred.id);
     scheduleCloudVersionPrefetch();
@@ -2822,8 +2917,9 @@ document.querySelector("#delete-version-button").addEventListener("click", async
       ...(trashedVersionsCache || []).filter((item) => item.id !== removedId),
     ];
     versions = await fetchCloudVersions();
-    renderVersionOptions(versions[0]?.id || "");
-    if (versions[0]) await loadVersion(versions[0].id);
+    const fallback = versions.find((item) => item.periodKey === currentPeriodKey) || versions[0];
+    renderVersionOptions(fallback?.id || "");
+    if (fallback) await loadVersion(fallback.id);
     tableStatus = `已将${label}放入回收站`;
     renderTable();
   } catch (error) {
@@ -2904,6 +3000,8 @@ document.querySelector("#recycle-list").addEventListener("click", async (event) 
   }
 });
 document.querySelector("#access-mode-button").addEventListener("click", toggleAccessMode);
+document.querySelector("#previous-period-button").addEventListener("click", () => switchPeriod(-1));
+document.querySelector("#next-period-button").addEventListener("click", () => switchPeriod(1));
 document.querySelector("#version-select").addEventListener("change", async (event) => {
   const deleteButton = document.querySelector("#delete-version-button");
   deleteButton.classList.remove("is-confirming");
