@@ -87,7 +87,6 @@ const workloadChartSeries = [
   ["us-room-2", "超声二号屋", "rgba(215, 175, 0, 0.78)", (columnId) => columnId === "us-room-2"],
   ["us-room-3", "超声三号屋", "rgba(0, 144, 242, 0.78)", (columnId) => columnId === "us-room-3"],
   ["us-room-4", "超声四号屋", "rgba(221, 40, 122, 0.7)", (columnId) => columnId === "us-room-4"],
-  ["us-report", "超声报告", "rgba(46, 138, 153, 0.82)", (columnId) => columnId === "us-report"],
   ["us-coordination", "超声统筹", "rgba(124, 92, 191, 0.82)", (columnId) => columnId === "us-coordination-teaching" || columnId === "us-new-coordination"],
 ];
 const LEGACY_LOCAL_DATA_KEYS = [
@@ -220,11 +219,10 @@ const coordinationColumnFor = (person) => groupByPerson.get(person) === "新助�
 const coordinationEntries = (day) => coordinationSourceColumns.flatMap((columnId) => (day?.[columnId] || []).map((name) => ({ name, columnId })));
 const storedColumnId = (columnId, person) => columnId === coordinationColumnId ? coordinationColumnFor(person) : columnId;
 
-// 超声带教模式下报告人员已并入1—4号屋，总表与导出不再单列超声报告。超声统筹带教与新人统筹合并显示。
+// 总表与导出不单列超声报告。超声统筹带教与新人统筹合并显示。
 function scheduleTableColumns() {
   return columns
-    .filter(([id]) => id !== "rest" && id !== "no-night" && id !== "us-new-coordination"
-      && !(ultrasoundSupervisionEnabled && id === "us-report"))
+    .filter(([id]) => id !== "rest" && id !== "no-night" && id !== "us-new-coordination" && id !== "us-report")
     .map(([id, label]) => id === "us-coordination-teaching" ? [coordinationColumnId, "超声统筹"] : [id, label]);
 }
 
