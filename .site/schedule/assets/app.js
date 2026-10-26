@@ -2549,7 +2549,7 @@ async function publishLocalSchedule() {
     return false;
   }
   const versionNumber = Math.max(29, currentVersion?.versionNumber || 0, ...[...versions, ...cloudVersions].map(versionNumberOf)) + 1;
-  const label = currentVersion?.label?.replace(/（云端）$/, "") || "预排班-第1版";
+  const label = nextScheduleLabel([...versions, ...cloudVersions], periodKey);
   const payload = currentPayload(versionNumber, label);
   payload.status = "云端保存";
   const cloudResult = await ScheduleApi.createVersion(payload);
