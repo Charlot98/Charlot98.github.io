@@ -2310,12 +2310,40 @@ function updatePeriodNav(periodKey = currentPeriodKey) {
   if (next) next.disabled = index < 0 || index >= keys.length - 1;
 }
 
+function periodMonth(periodKey) {
+  const dates = String(periodKey || "").split("_").filter((part) => /^\d{4}-\d{2}-\d{2}$/.test(part));
+  if (dates.length < 2) return "";
+  const counts = new Map();
+  const cursor = new Date(`${dates[0]}T00:00:00`);
+  const last = new Date(`${dates[1]}T00:00:00`);
+  if (Number.isNaN(cursor.getTime()) || Number.isNaN(last.getTime()) || cursor > last) return "";
+  while (cursor <= last) {
+    const month = String(cursor.getMonth() + 1);
+    counts.set(month, (counts.get(month) || 0) + 1);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || Number(b[0]) - Number(a[0]))[0][0];
+}
+
+function requestedPeriodToken() {
+  const query = new URLSearchParams(window.location.search).get("period");
+  if (query) return query;
+  const match = window.location.pathname.match(/\/schedule\/(0?[1-9]|1[0-2])\/?$/);
+  return match ? String(Number(match[1])) : "";
+}
+
+function versionMatchesRequest(item, token) {
+  if (!token) return false;
+  if (item.periodKey === token || item.periodKey.startsWith(`${token}_`) || item.periodKey.startsWith(token)) return true;
+  return /^\d{1,2}$/.test(token) && periodMonth(item.periodKey) === token;
+}
+
 function rememberPeriodInUrl(periodKey) {
-  if (!periodKey) return;
-  const url = new URL(window.location.href);
-  if (url.searchParams.get("period") === periodKey) return;
-  url.searchParams.set("period", periodKey);
-  window.history.replaceState(null, "", url);
+  const month = periodMonth(periodKey);
+  if (!month) return;
+  const path = `/schedule/${month}`;
+  if (window.location.pathname === path && !window.location.search) return;
+  window.history.replaceState(null, "", path);
 }
 
 async function switchPeriod(step) {
@@ -2747,9 +2775,8 @@ async function init() {
     if (!versions.length) throw new Error("云端暂无排班版本");
     renderVersionOptions();
     document.querySelector("#people-count").textContent = people.length;
-    const requestedPeriod = new URLSearchParams(window.location.search).get("period");
-    const matchesRequest = (item) => requestedPeriod && (item.periodKey === requestedPeriod || item.periodKey.startsWith(`${requestedPeriod}_`) || item.periodKey.startsWith(requestedPeriod));
-    const preferred = versions.find(matchesRequest)
+    const requestedPeriod = requestedPeriodToken();
+    const preferred = versions.find((item) => versionMatchesRequest(item, requestedPeriod))
       || versions.find((item) => item.periodKey === "2026-11-02_2026-12-06")
       || versions.find((item) => item.periodKey === "2026-09-28_2026-11-01")
       || versions[0];
