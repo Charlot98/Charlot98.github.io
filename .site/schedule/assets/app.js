@@ -1,5 +1,5 @@
 import { previousWeekStaffByDate } from "./previous-week-staff.js?v=2";
-import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid } from "./ultrasound-supervision.js?v=1";
+import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid } from "./ultrasound-supervision.js?v=2";
 const columns = [
   ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],

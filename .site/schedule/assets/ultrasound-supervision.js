@@ -33,14 +33,15 @@ export function roomRosterEntries(day, room, names = day[room] || []) {
   return names.filter(person => !pairedLearners.has(person)).map(person => byTeacher.has(person) ? [person,byTeacher.get(person)] : [person]);
 }
 
-// 每屋最多1名报告跟诊，且每名跟诊都配到同屋带教。
+// 1、3、4号屋最多1名报告跟诊，2号屋可临时多放；有跟诊的屋必须有带教。
 export function supervisionLayoutValid(day) {
   if (!day) return true;
-  const learnersInRooms = rooms.reduce((count, room) => {
-    const learners = (day[room] || []).filter(isLearner).length;
-    return learners > 1 ? Infinity : count + learners;
-  }, 0);
-  return learnersInRooms === supervisionPairs(day).length;
+  return rooms.every((room) => {
+    const learners = (day[room] || []).filter(isLearner);
+    if (!learners.length) return true;
+    if (room !== "us-room-2" && learners.length > 1) return false;
+    return staffTeachers(day, room).length > 0;
+  });
 }
 
 function colocatePeng(day, moves) {
@@ -117,8 +118,9 @@ export function canMoveSupervisedAssignment(schedule,source,targetDate,targetRoo
   const sourceDay = schedule[source.dateKey], targetDay = schedule[targetDate];
   const sourceIsRoom = rooms.includes(source.columnId), targetIsRoom = rooms.includes(targetRoom);
   if (isLearner(source.person) && (sourceIsRoom || source.columnId === 'us-report')) {
-    if (!targetIsRoom || targetDate !== source.dateKey) return false;
-    if (!(targetDay[targetRoom] || []).every(person => !isLearner(person) || person === source.person)) return false;
+    if (!targetIsRoom) return false;
+    const occupied = (targetDay[targetRoom] || []).some(person => isLearner(person) && person !== source.person);
+    if (occupied && targetRoom !== 'us-room-2') return false;
     if (!staffTeachers(targetDay,targetRoom).length) return false;
   }
   if (sourceIsRoom && teachers.has(source.person) && (targetDate !== source.dateKey || targetRoom !== source.columnId)) {
