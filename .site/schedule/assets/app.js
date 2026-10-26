@@ -2673,7 +2673,7 @@ function startCollabPolling() {
 }
 
 async function syncLiveCollab() {
-  if (!currentVersion?.id || !globalThis.ScheduleApi || collabApplying) return;
+  if (!currentVersion?.cloud || !currentVersion?.id || !globalThis.ScheduleApi || collabApplying) return;
   const annotationKey = annotationVersionKey();
   let snapshot;
   try {
@@ -2730,15 +2730,29 @@ async function init() {
     loading.textContent = "正在从云端载入排班…";
     loading.classList.remove("is-hidden");
     if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
-    const cloudVersions = await fetchCloudVersions();
-    if (!cloudVersions.length) throw new Error("云端暂无排班版本");
-    versions = cloudVersions;
+    const [cloudVersions, localNovember] = await Promise.all([
+      fetchCloudVersions().catch(() => []),
+      fetch("./data/schedule-refined-20261102.json").then((response) => response.ok ? response.json() : null).catch(() => null),
+    ]);
+    const localVersions = localNovember?.schedule ? [{
+      id: "local-20261102",
+      label: "预排班-第1版",
+      status: "本地",
+      versionNumber: localNovember.version || 0,
+      periodKey: localNovember.periodKey,
+      cloud: false,
+      payload: localNovember,
+    }] : [];
+    versions = [...localVersions, ...cloudVersions];
+    if (!versions.length) throw new Error("云端暂无排班版本");
     renderVersionOptions();
     document.querySelector("#people-count").textContent = people.length;
     const requestedPeriod = new URLSearchParams(window.location.search).get("period");
-    const preferred = cloudVersions.find((item) => requestedPeriod && item.periodKey === requestedPeriod)
-      || cloudVersions.find((item) => item.periodKey === "2026-09-28_2026-11-01")
-      || cloudVersions[0];
+    const matchesRequest = (item) => requestedPeriod && (item.periodKey === requestedPeriod || item.periodKey.startsWith(`${requestedPeriod}_`) || item.periodKey.startsWith(requestedPeriod));
+    const preferred = versions.find(matchesRequest)
+      || versions.find((item) => item.periodKey === "2026-11-02_2026-12-06")
+      || versions.find((item) => item.periodKey === "2026-09-28_2026-11-01")
+      || versions[0];
     await loadVersion(preferred.id);
     scheduleCloudVersionPrefetch();
     startCollabPolling();
