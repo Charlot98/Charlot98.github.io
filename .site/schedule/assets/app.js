@@ -760,9 +760,23 @@ function queueSilentScheduleSave(notice = "正在同步当前版本…") {
   if (filterState) filterState.textContent = tableStatus;
   window.clearTimeout(scheduleSaveTimer);
   scheduleSaveTimer = window.setTimeout(() => {
+    scheduleSaveTimer = 0;
     scheduleSaveQueue = scheduleSaveQueue.catch(() => {}).then(async () => {
       if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
       await ScheduleApi.ensureAccess();
+      const created = await publishLocalSchedule();
+      if (created) {
+        if (revision === scheduleSaveRevision) {
+          const done = `已更新${currentVersion.label}`;
+          annotationStatus = done;
+          tableStatus = done;
+          heatmapSwapStatus = done;
+          updateAnnotationToolbar();
+          renderTable();
+          renderHeatmap();
+        }
+        return;
+      }
       if (!currentVersion?.cloud || !currentVersion?.id) {
         throw new Error("当前没有可更新的云端版本");
       }
@@ -2517,6 +2531,45 @@ function nextScheduleLabel(existingVersions, periodKey) {
   return `${month}月第${next}版`;
 }
 
+async function publishLocalSchedule() {
+  if (currentVersion?.cloud && currentVersion?.id) return false;
+  const periodKey = currentPeriodKey;
+  const cloudVersions = await fetchCloudVersions().catch(() => []);
+  const existing = cloudVersions
+    .filter((item) => item.periodKey === periodKey)
+    .sort((left, right) => String(right.createdAt || "").localeCompare(String(left.createdAt || "")))[0];
+  if (existing) {
+    const result = await ScheduleApi.getVersion(existing.id);
+    const meta = makeCloudMeta(result.version, result.version.payload);
+    meta.revision = Number(result.version.revision || 0);
+    versions = [meta, ...versions.filter((item) => item.id !== "local-20261102" && item.id !== meta.id)];
+    currentVersion = meta;
+    syncedRevision = meta.revision;
+    renderVersionOptions(meta.id);
+    return false;
+  }
+  const versionNumber = Math.max(29, currentVersion?.versionNumber || 0, ...[...versions, ...cloudVersions].map(versionNumberOf)) + 1;
+  const label = currentVersion?.label?.replace(/（云端）$/, "") || "预排班-第1版";
+  const payload = currentPayload(versionNumber, label);
+  payload.status = "云端保存";
+  const cloudResult = await ScheduleApi.createVersion(payload);
+  const cloudVersion = cloudResult.version;
+  const cloudPayload = cloudVersion.payload || payload;
+  const meta = makeCloudMeta(cloudVersion, cloudPayload);
+  meta.revision = Number(cloudVersion.revision || 0);
+  versions = [meta, ...versions.filter((item) => item.id !== "local-20261102" && item.id !== meta.id)];
+  currentVersion = meta;
+  currentPeriodKey = cloudPayload.periodKey || periodKey;
+  syncedRevision = meta.revision;
+  collabBase = {
+    schedule: cloneData(cloudPayload.schedule || {}),
+    preferences: cloneData(cloudPayload.preferences || {}),
+  };
+  renderVersionOptions(meta.id);
+  updatePeriodDisplay(currentPeriodKey);
+  return true;
+}
+
 function makeCloudMeta(version, payload = null) {
   return {
     id: version.id,
@@ -2781,7 +2834,8 @@ async function init() {
       fetchCloudVersions().catch(() => []),
       fetch("./data/schedule-refined-20261102.json?v=6").then((response) => response.ok ? response.json() : null).catch(() => null),
     ]);
-    const localVersions = localNovember?.schedule ? [{
+    const hasCloudNovember = cloudVersions.some((item) => item.periodKey === localNovember?.periodKey);
+    const localVersions = localNovember?.schedule && !hasCloudNovember ? [{
       id: "local-20261102",
       label: "预排班-第1版",
       status: "本地",
