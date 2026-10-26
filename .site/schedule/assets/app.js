@@ -2832,19 +2832,34 @@ async function init() {
     if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
     const [cloudVersions, localNovember] = await Promise.all([
       fetchCloudVersions().catch(() => []),
-      fetch("./data/schedule-refined-20261102.json?v=6").then((response) => response.ok ? response.json() : null).catch(() => null),
+      fetch("./data/schedule-refined-20261102.json?v=7").then((response) => response.ok ? response.json() : null).catch(() => null),
     ]);
-    const hasCloudNovember = cloudVersions.some((item) => item.periodKey === localNovember?.periodKey);
-    const localVersions = localNovember?.schedule && !hasCloudNovember ? [{
+    const localPeriod = localNovember?.periodKey;
+    let newerCloudNovember = null;
+    const listedNovember = cloudVersions.find((item) => item.periodKey === localPeriod);
+    if (listedNovember && localNovember?.schedule) {
+      try {
+        const result = await ScheduleApi.getVersion(listedNovember.id);
+        const revision = Number(result.version?.revision || 0);
+        if (revision > Number(localNovember.basedOnCloudRevision || 0)) {
+          newerCloudNovember = makeCloudMeta(result.version, result.version.payload);
+          newerCloudNovember.revision = revision;
+        }
+      } catch {
+        newerCloudNovember = null;
+      }
+    }
+    const localVersions = localNovember?.schedule && !newerCloudNovember ? [{
       id: "local-20261102",
-      label: "预排班-第1版",
+      label: localNovember.label || "11月第1版",
       status: "本地",
       versionNumber: localNovember.version || 0,
       periodKey: localNovember.periodKey,
       cloud: false,
       payload: localNovember,
     }] : [];
-    versions = [...localVersions, ...cloudVersions];
+    const visibleCloud = cloudVersions.filter((item) => item.periodKey !== localPeriod);
+    versions = [...(newerCloudNovember ? [newerCloudNovember] : []), ...localVersions, ...visibleCloud];
     if (!versions.length) throw new Error("云端暂无排班版本");
     renderVersionOptions();
     document.querySelector("#people-count").textContent = people.length;
