@@ -2832,7 +2832,7 @@ async function init() {
     if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
     const [cloudVersions, localNovember] = await Promise.all([
       fetchCloudVersions().catch(() => []),
-      fetch("./data/schedule-refined-20261102.json?v=7").then((response) => response.ok ? response.json() : null).catch(() => null),
+      fetch("./data/schedule-refined-20261102.json?v=8").then((response) => response.ok ? response.json() : null).catch(() => null),
     ]);
     const localPeriod = localNovember?.periodKey;
     let newerCloudNovember = null;
