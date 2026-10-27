@@ -1059,19 +1059,31 @@ function canReceiveNight(person, dateKey) {
     && parsePreference(preferences[`${person}::${dateKey}`]).content !== "no-night";
 }
 
+function crossModalitySwapGroup(person) {
+  const group = groupByPerson.get(person);
+  if (["高级医师", "中级医师", "三年级"].includes(group)) return "三年级及中高级医师";
+  if (group === "二年级" || group === "新助理") return group;
+  if (group === "老助理") return "非新助理";
+  return "";
+}
+
 function isHeatmapSwapCandidate(person, dateKey, category) {
   if (!canEdit || !heatmapSwapSource || !category) return false;
   const source = heatmapSwapSource;
-  if (person === source.person
-    || dateKey === source.dateKey
-    || groupByPerson.get(person) !== source.group) return false;
+  if (person === source.person || dateKey === source.dateKey) return false;
+  const sameGroup = groupByPerson.get(person) === source.group;
+  const sourceSwapGroup = crossModalitySwapGroup(source.person);
+  const crossModalityAllowed = Boolean(sourceSwapGroup)
+    && sourceSwapGroup === crossModalitySwapGroup(person);
+  if (!sameGroup && !crossModalityAllowed) return false;
   if (source.category === "night") {
-    return isNightOnlyCell(source.person, source.dateKey)
+    return sameGroup
+      && isNightOnlyCell(source.person, source.dateKey)
       && hasNightShift(person, dateKey)
       && canReceiveNight(person, source.dateKey)
       && canReceiveNight(source.person, dateKey);
   }
-  if (category !== source.category) return false;
+  if (category === "night" || (!crossModalityAllowed && category !== source.category)) return false;
   const sourceShiftIds = shiftIdsForSwapCategory(source.person, source.dateKey, source.category).sort();
   const targetShiftIds = shiftIdsForSwapCategory(person, dateKey, category).sort();
   const sourceHasOnlySelectedShift = whiteShiftIdsFor(source.person, source.dateKey).length === sourceShiftIds.length;
@@ -1083,7 +1095,7 @@ function isHeatmapSwapCandidate(person, dateKey, category) {
     && [sourceShiftIds, targetShiftIds].every((ids) => ids.every((shiftId) => shiftId.startsWith("us-room-")));
   return sourceHasOnlySelectedShift
     && targetHasOnlySelectedShift
-    && (sameConcreteShifts || crossUsRooms)
+    && ((crossModalityAllowed && sameLength) || sameConcreteShifts || crossUsRooms)
     && canReceiveSwapDay(person, source.dateKey, false)
     && canReceiveSwapDay(source.person, dateKey, false)
     && swapKeepsSupervision(source, { person, dateKey }, sourceShiftIds, targetShiftIds);
@@ -1114,7 +1126,7 @@ function swapHeatmapAssignments(target) {
   if (!source || !isHeatmapSwapCandidate(target.person, target.dateKey, target.category)) return;
   const undoSnapshot = captureScheduleSnapshot();
   const sourceShiftIds = shiftIdsForSwapCategory(source.person, source.dateKey, source.category);
-  const targetShiftIds = shiftIdsForSwapCategory(target.person, target.dateKey, source.category);
+  const targetShiftIds = shiftIdsForSwapCategory(target.person, target.dateKey, target.category);
   const affectedSlots = new Map();
   sourceShiftIds.forEach((shiftId) => affectedSlots.set(`${source.dateKey}::${shiftId}`, { dateKey: source.dateKey, shiftId }));
   targetShiftIds.forEach((shiftId) => affectedSlots.set(`${target.dateKey}::${shiftId}`, { dateKey: target.dateKey, shiftId }));
@@ -1182,12 +1194,16 @@ function handleHeatmapSwapClick(custom) {
       group: groupByPerson.get(custom.person),
     };
     const isUnmetRest = parsePreference(preferences[`${custom.person}::${custom.dateKey}`]).content === "rest";
-    const matchNote = custom.category === "us" ? "同班种（超声屋可跨屋互换）" : "同班种";
+    const crossSwapGroup = crossModalitySwapGroup(custom.person);
+    const groupNote = crossSwapGroup || "同等级";
+    const matchNote = crossSwapGroup
+      ? "X线、CT/MRI或超声班"
+      : custom.category === "us" ? "同班种（超声屋可跨屋互换）" : "同班种";
     heatmapSwapStatus = custom.category === "night"
       ? `已选择${custom.person} ${custom.dateLabel} 夜班，蓝框为同等级、当日有夜班且双方均可接夜班的人员，白班留在原日期`
       : isUnmetRest
-        ? `已选择${custom.person} ${custom.dateLabel}未满足的指定休息，蓝框为同等级、${matchNote}且双方日期均可休息的换班人员，夜班保留在原日期`
-        : `已选择${custom.person} ${custom.dateLabel} ${swapCategoryLabels[custom.category]}，蓝框为同等级、${matchNote}且双方日期均可休息的换班人员，夜班保留在原日期`;
+        ? `已选择${custom.person} ${custom.dateLabel}未满足的指定休息，蓝框为${groupNote}的${matchNote}且双方互换日期均可接班的人员，夜班保留在原日期`
+        : `已选择${custom.person} ${custom.dateLabel} ${swapCategoryLabels[custom.category]}，蓝框为${groupNote}的${matchNote}且双方互换日期均可接班的人员，夜班保留在原日期`;
     renderHeatmap();
     return;
   }
@@ -1205,7 +1221,7 @@ function handleHeatmapSwapClick(custom) {
   heatmapSwapSource = null;
   heatmapSwapStatus = wasNightSelection
     ? "所选单元格不满足同等级、当日有夜班且双方均可接夜班的互换条件，已取消选择"
-    : "所选单元格不满足同等级、同班种及双方当日空闲的互换条件，已取消选择";
+    : "所选单元格不满足人员范围、班种、接班日期或带教条件，已取消选择";
   renderHeatmap();
 }
 
