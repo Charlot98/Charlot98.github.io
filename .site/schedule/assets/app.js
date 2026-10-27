@@ -2659,9 +2659,14 @@ async function saveAsNewVersion() {
     const cloudVersion = cloudResult.version;
     const cloudPayload = cloudVersion.payload || payload;
     const meta = makeCloudMeta(cloudVersion, cloudPayload);
-    versions = [meta, ...versions.filter((item) => item.id !== meta.id)];
+    const knownVersions = new Map([...versions, ...cloudVersions].map((item) => [item.id, item]));
+    knownVersions.set(meta.id, meta);
+    versions = [...knownVersions.values()].sort((left, right) => versionNumberOf(right) - versionNumberOf(left));
     currentVersion = meta;
     currentPeriodKey = cloudPayload.periodKey || payload.periodKey;
+    meta.revision = Number(cloudVersion.revision || 1);
+    rememberCollabBase(meta.revision, syncedAnnotationAt);
+    clearUndoHistory();
     renderVersionOptions(meta.id);
     updatePeriodDisplay(currentPeriodKey);
     tableStatus = `已另存为${cloudVersion.label}`;
