@@ -1,5 +1,5 @@
 import { previousWeekStaffByDate } from "./previous-week-staff.js?v=2";
-import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid } from "./ultrasound-supervision.js?v=2";
+import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid } from "./ultrasound-supervision.js?v=3";
 const columns = [
   ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],
@@ -1433,7 +1433,7 @@ function renderHeatmap() {
     const pair = ultrasoundSupervisionEnabled
       ? supervisionPairs(schedule[dateKey] || {}).find((item) => item.learner === person || item.teacher === person)
       : null;
-    const supervisionDescription = pair ? (pair.learner === person ? `；带教：${pair.teacher}` : `；跟诊：${pair.learner}`) : "";
+    const supervisionDescription = pair ? (pair.learner === person ? `；带教：${pair.teacher}` : `；报告：${pair.learner}`) : "";
     const shiftDescription = (preferenceDescription
       ? `${baseShiftDescription}；标注：${preferenceDescription}`
       : baseShiftDescription) + supervisionDescription;
@@ -1448,7 +1448,7 @@ function renderHeatmap() {
       : isSwapCandidate ? "heatmap-swap-candidate"
         : [
           canEdit && swapCategory ? "heatmap-swap-ready" : "",
-          (category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category))) ? "heatmap-clear-fill" : "",
+          (category === "rest" || (parsed.content === "no-night" && !shifts.length)) ? "heatmap-clear-fill" : "",
           nightStreakLength ? "night-streak" : streakSeverity || "",
           doubleWeekendNight ? "weekend-night-border" : "",
         ].filter(Boolean).join(" ");
@@ -1457,7 +1457,7 @@ function renderHeatmap() {
       y: yPositions[personIndex],
       value: 1,
       color: hasWhiteConflict || overCapacityShifts.length || (parsed.content === "rest" && !restHonored) ? colors.conflict
-        : category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category)) ? "transparent"
+        : category === "rest" || (parsed.content === "no-night" && !shifts.length) ? "transparent"
           : colors[category],
       className: pointClassName,
       dataLabels: { color: heatmapLabelColor(category, hasWhiteConflict || overCapacityShifts.length > 0 || (parsed.content === "rest" && !restHonored)) },
@@ -1740,7 +1740,7 @@ async function exportExcel() {
       const restHonored = parsed.content === "rest" && shifts.length === 0;
       const category = mainHeatmapCategory(preference, shifts);
       const unmetRest = parsed.content === "rest" && !restHonored;
-      const clear = !unmetRest && (category === "rest" || (parsed.content === "no-night" && ["day", "none"].includes(category)));
+      const clear = !unmetRest && (category === "rest" || (parsed.content === "no-night" && shifts.length === 0));
       return {
         category: unmetRest ? "conflict" : category,
         marker: mainHeatmapMarker(person, preference, shifts, restHonored),

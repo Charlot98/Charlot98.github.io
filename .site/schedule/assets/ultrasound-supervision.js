@@ -33,7 +33,7 @@ export function roomRosterEntries(day, room, names = day[room] || []) {
   return names.filter(person => !pairedLearners.has(person)).map(person => byTeacher.has(person) ? [person,byTeacher.get(person)] : [person]);
 }
 
-// 1、3、4号屋最多1名报告跟诊，2号屋可临时多放；有跟诊的屋必须有带教。
+// 1、3、4号屋最多1名报告人员，2号屋可临时多放；有报告人员的屋必须有带教。
 export function supervisionLayoutValid(day) {
   if (!day) return true;
   return rooms.every((room) => {
@@ -106,7 +106,7 @@ export function allocateUltrasoundReports(schedule, {preferPengColocation = true
       day['us-report'] = day['us-report'].filter(person => person !== learner);
       day[room] = [...(day[room] || [])];
       day[room].splice(day[room].indexOf(teacher)+1,0,learner);
-      dayMoves.push({person:learner,teacher,from:'us-report',to:room,reason:'一对一超声跟诊'});
+      dayMoves.push({person:learner,teacher,from:'us-report',to:room,reason:'一对一超声报告'});
     }
     for (const person of pending.filter(person => (day['us-report'] || []).includes(person))) unassigned.push({date,person,reason:'可用带教屋位不足'});
     moves.push(...dayMoves.map(move => ({date,...move})));
