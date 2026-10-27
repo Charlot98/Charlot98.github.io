@@ -2840,21 +2840,8 @@ async function init() {
       fetch("./data/schedule-refined-20261102.json?v=8").then((response) => response.ok ? response.json() : null).catch(() => null),
     ]);
     const localPeriod = localNovember?.periodKey;
-    let newerCloudNovember = null;
-    const listedNovember = cloudVersions.find((item) => item.periodKey === localPeriod);
-    if (listedNovember && localNovember?.schedule) {
-      try {
-        const result = await ScheduleApi.getVersion(listedNovember.id);
-        const revision = Number(result.version?.revision || 0);
-        if (revision > Number(localNovember.basedOnCloudRevision || 0)) {
-          newerCloudNovember = makeCloudMeta(result.version, result.version.payload);
-          newerCloudNovember.revision = revision;
-        }
-      } catch {
-        newerCloudNovember = null;
-      }
-    }
-    const localVersions = localNovember?.schedule && !newerCloudNovember ? [{
+    const hasCloudNovember = cloudVersions.some((item) => item.periodKey === localPeriod);
+    const localVersions = localNovember?.schedule && !hasCloudNovember ? [{
       id: "local-20261102",
       label: localNovember.label || "11月第1版",
       status: "本地",
@@ -2863,8 +2850,7 @@ async function init() {
       cloud: false,
       payload: localNovember,
     }] : [];
-    const visibleCloud = cloudVersions.filter((item) => item.periodKey !== localPeriod);
-    versions = [...(newerCloudNovember ? [newerCloudNovember] : []), ...localVersions, ...visibleCloud];
+    versions = [...cloudVersions, ...localVersions];
     if (!versions.length) throw new Error("云端暂无排班版本");
     renderVersionOptions();
     document.querySelector("#people-count").textContent = people.length;
