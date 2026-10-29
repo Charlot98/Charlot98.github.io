@@ -10,12 +10,12 @@ const isLearner = person => reportLearners.includes(person);
 const roomOf = (day, person) => rooms.find(room => (day[room] || []).includes(person));
 const staffTeachers = (day, room) => (day[room] || []).filter(person => teachers.has(person));
 
-export function displayReportName(person) {
-  return isLearner(person) ? `/${person}` : person;
+export function displayReportName(person, columnId = '') {
+  return isLearner(person) && columnId.startsWith('us-') ? `/${person}` : person;
 }
 
 export function reportRosterEntryText(entry) {
-  return entry.map(displayReportName).join('');
+  return entry.map(person => displayReportName(person, 'us-report')).join('');
 }
 
 export function supervisionPairs(day) {
