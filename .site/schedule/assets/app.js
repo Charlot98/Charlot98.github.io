@@ -1,5 +1,5 @@
 import { previousWeekStaffByDate } from "./previous-week-staff.js?v=2";
-import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid } from "./ultrasound-supervision.js?v=3";
+import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid, displayReportName, reportRosterEntryText } from "./ultrasound-supervision.js?v=4";
 const columns = [
   ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],
@@ -256,10 +256,10 @@ function renderTable() {
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
       const nightLike = id === "night" || id === "outpatient-night";
       const columnOf = (name) => roster?.find((item) => item.name === name)?.columnId || id;
-      const chip = (name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${columnOf(name)}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === columnOf(name) ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`;
+      const chip = (name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${columnOf(name)}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === columnOf(name) ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${displayReportName(name)}</span>`;
       const entries = ultrasoundSupervisionEnabled && id.startsWith("us-room-") ? roomRosterEntries(schedule[dateKey], id, names) : names.map((name) => [name]);
-      const content = entries.map((entry) => entry.length === 2
-        ? `<span class="supervision-pair">${chip(entry[0])}<span class="supervision-slash">/</span>${chip(entry[1])}</span>`
+      const content = entries.map((entry) => entry.length > 1
+        ? `<span class="supervision-pair">${entry.map(chip).join("")}</span>`
         : chip(entry[0])).join("");
       return `<td data-date="${dateKey}" data-column="${id}" class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
@@ -323,7 +323,7 @@ function canMoveAssignment(source, targetDateKey, targetColumnId) {
     if (targetColumnId === "outpatient-night") return sameWeek && canTakeNight;
     return targetColumnId === "night" && sameWeek && canTakeNight;
   }
-  if (targetColumnId === "night") return false;
+  if (targetColumnId === "night" || targetColumnId === "outpatient-night") return false;
   return true;
 }
 
@@ -1446,10 +1446,11 @@ function renderHeatmap() {
       ? restHonored ? "普通休息（已满足）" : `${labels.join("、")}；普通休息未满足`
       : labels.length ? labels.join("、") : "无排班";
     const preferenceDescription = describePreference(effective);
-    const pair = ultrasoundSupervisionEnabled
-      ? supervisionPairs(schedule[dateKey] || {}).find((item) => item.learner === person || item.teacher === person)
-      : null;
-    const supervisionDescription = pair ? (pair.learner === person ? `；带教：${pair.teacher}` : `；报告：${pair.learner}`) : "";
+    const pairs = ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey] || {}) : [];
+    const learnerPair = pairs.find((item) => item.learner === person);
+    const supervisedReports = pairs.filter((item) => item.teacher === person).map((item) => displayReportName(item.learner));
+    const supervisionDescription = learnerPair ? `；带教：${learnerPair.teacher}`
+      : supervisedReports.length ? `；报告：${supervisedReports.join("、")}` : "";
     const shiftDescription = (preferenceDescription
       ? `${baseShiftDescription}；标注：${preferenceDescription}`
       : baseShiftDescription) + supervisionDescription;
@@ -1479,6 +1480,7 @@ function renderHeatmap() {
       dataLabels: { color: heatmapLabelColor(category, hasWhiteConflict || overCapacityShifts.length > 0 || (parsed.content === "rest" && !restHonored)) },
       custom: {
         person,
+        personLabel: displayReportName(person),
         dateKey,
         dateLabel: `${day} ${weekday}`,
         shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}${nightStreakDescription}${doubleWeekendNightDescription}${overCapacityDescription}`,
@@ -1520,7 +1522,7 @@ function renderHeatmap() {
   frozenYAxis.className = "heatmap-frozen-y";
   const yAxisRange = yPositions.at(-1) + 1.1;
   frozenYAxis.innerHTML = yPositions.map((position, index) => (
-    `<span style="top:${48 + ((position + 0.55) / yAxisRange) * (chartHeight - 48 - 28)}px">${visiblePeople[index]}</span>`
+    `<span style="top:${48 + ((position + 0.55) / yAxisRange) * (chartHeight - 48 - 28)}px">${displayReportName(visiblePeople[index])}</span>`
   )).join("");
   refreshLiveCharts();
   stage.append(chartHost, frozenXAxis, frozenYAxis);
@@ -1588,7 +1590,7 @@ function renderHeatmap() {
       outside: true,
       useHTML: true,
       headerFormat: "",
-      pointFormat: "<b>{point.custom.person}</b><br>{point.custom.dateLabel}<br>{point.custom.shifts}",
+      pointFormat: "<b>{point.custom.personLabel}</b><br>{point.custom.dateLabel}<br>{point.custom.shifts}",
       backgroundColor: "rgba(255, 255, 255, 0.98)",
       borderColor: "#b8c8da",
       borderRadius: 8,
@@ -1714,9 +1716,9 @@ async function exportExcel() {
       const row = totalSheet.addRow([`${day} ${weekday}`, ...exportColumns.map(([id]) => {
         const names = id === coordinationColumnId ? coordinationEntries(schedule[dateKey]).map(({ name }) => name) : (schedule[dateKey][id] || []);
         if (ultrasoundSupervisionEnabled && id.startsWith("us-room-")) {
-          return roomRosterEntries(schedule[dateKey], id, names).map((entry) => entry.join("/")).join("、");
+          return roomRosterEntries(schedule[dateKey], id, names).map(reportRosterEntryText).join("、");
         }
-        return (id === "night" ? sortNightRoster(names) : names).join("、");
+        return (id === "night" ? sortNightRoster(names) : names).map(displayReportName).join("、");
       })]);
       row.height = 31;
       row.eachCell((cell, columnNumber) => {
@@ -1765,7 +1767,7 @@ async function exportExcel() {
       };
     };
     people.forEach((person) => {
-      const row = heatmapSheet.addRow([person, ...dates.map((dateKey) => {
+      const row = heatmapSheet.addRow([displayReportName(person), ...dates.map((dateKey) => {
         const style = appearanceFor(person, dateKey);
         const nightMark = style.hasNight && style.marker !== "夜" && style.marker !== "门夜" ? "夜" : "";
         return `${style.marker}${nightMark}`;
@@ -2139,7 +2141,7 @@ function refreshLiveCharts() {
 
 function statsTooltipTitle(x, names) {
   const person = typeof x === "number" ? names[x] : x;
-  return `<b>${person || ""}</b>`;
+  return `<b>${displayReportName(person || "")}</b>`;
 }
 
 function renderRoomChart() {
@@ -2169,7 +2171,7 @@ function renderRoomChart() {
     credits: { enabled: false },
     legend: { align: "right", verticalAlign: "top", itemStyle: { fontSize: "11px", fontWeight: "700" } },
     xAxis: {
-      categories: people,
+      categories: people.map(displayReportName),
       labels: { rotation: -60, style: { fontSize: "10px", color: "#26384f" } },
       lineColor: "#dce4ed",
       tickLength: 0,
@@ -2284,7 +2286,7 @@ function renderWeekendStatsChart() {
     credits: { enabled: false },
     legend: { align: "right", verticalAlign: "top", itemStyle: { fontSize: "11px", fontWeight: "700" } },
     xAxis: {
-      categories: people,
+      categories: people.map(displayReportName),
       labels: { rotation: -60, style: { fontSize: "10px", color: "#26384f" } },
       lineColor: "#dce4ed",
       tickLength: 0,
