@@ -125,6 +125,8 @@ const dateLabel = (dateKey) => {
 
 function personClass(person) {
   if (thirdGrade.has(person)) return "third";
+  if (groupByPerson.get(person) === "一年级") return "first-year";
+  if (groupByPerson.get(person) === "新助理") return "new-assistant";
   if (residents.has(person)) return "resident";
   if (assistants.has(person)) return "assistant";
   return "physician";
