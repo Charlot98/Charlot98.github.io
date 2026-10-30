@@ -259,6 +259,7 @@ function renderTable() {
   const dates = Object.keys(schedule).sort();
   const conflictKeys = getWhiteShiftConflictKeys();
   const tableColumns = scheduleTableColumns();
+  const dropWarningDates = occupiedDropDates(tableMoveSource);
   table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
   table.querySelector("tbody").innerHTML = dates.map((dateKey, index) => {
     const { date, day, weekday } = dateLabel(dateKey);
@@ -282,7 +283,7 @@ function renderTable() {
       const content = entries.map((entry) => entry.length > 1
         ? `<span class="supervision-pair">${entry.map(chip).join("")}</span>`
         : chip(entry[0])).join("");
-      return `<td data-date="${dateKey}" data-column="${id}" ${isCoordination ? `title="统筹${coordinationCount}人，上限${coordinationCapacity(dateKey)}人"` : ''} class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""} ${coordinationOver ? 'coordination-capacity-conflict' : ''}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
+      return `<td data-date="${dateKey}" data-column="${id}" ${isCoordination ? `title="统筹${coordinationCount}人，上限${coordinationCapacity(dateKey)}人"` : ''} class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""} ${eligible && dropWarningDates.has(dateKey) ? 'is-drop-occupied' : ''} ${coordinationOver ? 'coordination-capacity-conflict' : ''}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
     const row = `<tr class="${weekend ? "weekend" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
     return weekEnd
@@ -443,13 +444,24 @@ function reorderAssignment(source, targetPerson, placeAfter) {
   if (changed) queueSilentScheduleSave("顺序已调整，正在自动同步…");
 }
 
+function occupiedDropDates(source) {
+  if (!source) return new Set();
+  return new Set(Object.entries(schedule).filter(([dateKey, day]) => Object.entries(day).some(([columnId, names]) => (
+    columnId !== 'rest' && columnId !== 'no-night'
+    && !(dateKey === source.dateKey && columnId === source.columnId)
+    && names.includes(source.person)
+  ))).map(([dateKey]) => dateKey));
+}
+
 function updateDropHighlights(activeCell = null) {
   if (dropHighlightSource !== tableMoveSource) {
     dropHighlightSource = tableMoveSource;
     dropHighlightCells = [];
+    const dropWarningDates = occupiedDropDates(tableMoveSource);
     document.querySelectorAll("#schedule-table tbody td").forEach((cell) => {
       const eligible = Boolean(tableMoveSource && canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column));
       cell.classList.toggle("is-drop-eligible", eligible);
+      cell.classList.toggle("is-drop-occupied", eligible && dropWarningDates.has(cell.dataset.date));
       cell.classList.remove("is-drop-active");
       if (eligible) dropHighlightCells.push(cell);
     });
