@@ -1456,8 +1456,9 @@ function heatmapLabelColor(category, hasWhiteConflict) {
   return hasWhiteConflict || category === "night" ? "#ffffff" : "#27364a";
 }
 
-function mainHeatmapMarker(person, preference, shifts, restHonored) {
+function mainHeatmapMarker(person, preference, shifts, restHonored, dateKey) {
   const parsed = parsePreference(effectivePreference(preference, shifts));
+  const manualNight = parsePreference(manualPreferences[`${person}::${dateKey}`] || '').tone === 'night' && shifts.includes('night');
   if (parsed.content === "annual-leave" || shifts.includes("annual-leave")) return "年";
   if (shifts.includes("outpatient-night") || parsed.content === "outpatient-night" || (parsed.content === "outpatient" && parsed.tone === "night" && !shifts.includes("night"))) return "门夜";
   if (parsed.content === "outpatient-follow") return "跟";
@@ -1467,12 +1468,12 @@ function mainHeatmapMarker(person, preference, shifts, restHonored) {
   if (parsed.content === "rest") return restHonored ? "休" : "待";
   if (parsed.content === "no-night" && (!showShiftLabels || !shifts.length)) return "白";
   if (!showShiftLabels) {
-    return parsePreference(preference).tone === "night" && shifts.includes("night") ? "夜" : "";
+    return manualNight ? "夜" : "";
   }
   if (parsed.content === "xray" || dominantModality(shifts) === "xray") return "X";
   if (parsed.content === "ct" || dominantModality(shifts) === "ct") return "CT";
   if (parsed.content === "us" || dominantModality(shifts) === "us") return "US";
-  if (showShiftLabels && (shifts.includes("night") || parsed.tone === "night")) return "夜";
+  if (manualNight) return "夜";
   return "";
 }
 
@@ -1601,7 +1602,7 @@ function renderHeatmap() {
         dateKey,
         dateLabel: `${day} ${weekday}`,
         shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}${nightStreakDescription}${doubleWeekendNightDescription}${overCapacityDescription}`,
-        marker: mainHeatmapMarker(person, preference, shifts, restHonored),
+        marker: mainHeatmapMarker(person, preference, shifts, restHonored, dateKey),
         noNight: parsed.content === "no-night",
         conflict: hasWhiteConflict,
         category: swapCategory,
@@ -1877,7 +1878,7 @@ async function exportExcel() {
       const clear = !unmetRest && (category === "rest" || (parsed.content === "no-night" && shifts.length === 0));
       return {
         category: unmetRest ? "conflict" : category,
-        marker: mainHeatmapMarker(person, preference, shifts, restHonored),
+        marker: mainHeatmapMarker(person, preference, shifts, restHonored, dateKey),
         hasNight: shifts.includes("night") || shifts.includes("outpatient-night"),
         clear,
       };
