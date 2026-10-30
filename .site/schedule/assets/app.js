@@ -249,7 +249,7 @@ function renderTable() {
   const dates = Object.keys(schedule).sort();
   const conflictKeys = getWhiteShiftConflictKeys();
   const tableColumns = scheduleTableColumns();
-  table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}${id === coordinationColumnId ? '<br><small>工作日≤5 · 周末≤6</small>' : ''}</th>`).join("")}</tr>`;
+  table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
   table.querySelector("tbody").innerHTML = dates.map((dateKey, index) => {
     const { date, day, weekday } = dateLabel(dateKey);
     const weekend = date.getDay() === 0 || date.getDay() === 6;
