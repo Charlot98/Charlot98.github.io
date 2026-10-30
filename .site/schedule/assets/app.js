@@ -1368,13 +1368,15 @@ function handleHeatmapSwapClick(custom) {
   renderHeatmap();
 }
 
+const streakNeutralShifts = ["annual-leave", "expansion"];
 let boundaryStaffByDate = {};
+let boundaryNeutralByDate = {};
 let boundaryNightByDate = {};
 
 // 跨周期衔接取上一周期最新云端版本的最后7天。
 async function loadPeriodBoundary(periodKey) {
   const start = String(periodKey || "").split("_")[0];
-  const boundary = { staff: {}, night: {} };
+  const boundary = { staff: {}, neutral: {}, night: {} };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return boundary;
   const previousEnd = dateKeyPlusDay(start, -1);
   const previousMeta = versions
@@ -1392,8 +1394,9 @@ async function loadPeriodBoundary(periodKey) {
         if (!day) continue;
         boundary.night[dateKey] = [...(day.night || [])];
         boundary.staff[dateKey] = [...new Set(Object.entries(day)
-          .filter(([shiftId]) => shiftId !== "rest" && shiftId !== "no-night")
+          .filter(([shiftId]) => !["rest", "no-night", ...streakNeutralShifts].includes(shiftId))
           .flatMap(([, names]) => names || []))];
+        boundary.neutral[dateKey] = [...new Set(streakNeutralShifts.flatMap((shiftId) => day[shiftId] || []))];
       }
     } catch {
       // 读取失败时只按当前周期计算连续上班。
@@ -1402,13 +1405,15 @@ async function loadPeriodBoundary(periodKey) {
   return boundary;
 }
 
-function isWorkDay(person, dateKey) {
-  if (!schedule[dateKey] && boundaryStaffByDate[dateKey]) return boundaryStaffByDate[dateKey].includes(person);
-  const parsed = parsePreference(preferences[`${person}::${dateKey}`]);
-  return shiftsFor(person, dateKey).length > 0
-    || ["annual-leave", "outpatient", "expansion", "management"].includes(parsed.content)
-    || parsed.tone === "day"
-    || parsed.tone === "night";
+// 年假、拓展既不计入连续上班，也不打断连续计数。
+function streakDayKind(person, dateKey) {
+  if (!schedule[dateKey] && boundaryStaffByDate[dateKey]) {
+    if (boundaryStaffByDate[dateKey].includes(person)) return "work";
+    return (boundaryNeutralByDate[dateKey] || []).includes(person) ? "neutral" : "off";
+  }
+  const shifts = shiftsFor(person, dateKey);
+  if (shifts.some((shift) => !streakNeutralShifts.includes(shift))) return "work";
+  return shifts.length ? "neutral" : "off";
 }
 
 function getStreakSeverityByCell(currentDates) {
@@ -1430,8 +1435,9 @@ function getStreakSeverityByCell(currentDates) {
       const hasDateGap = previousDateKey
         && (new Date(`${dateKey}T00:00:00`) - new Date(`${previousDateKey}T00:00:00`)) !== 86400000;
       if (hasDateGap) flushRun();
-      if (isWorkDay(person, dateKey)) run.push(dateKey);
-      else flushRun();
+      const kind = streakDayKind(person, dateKey);
+      if (kind === "work") run.push(dateKey);
+      else if (kind === "off") flushRun();
     });
     flushRun();
   });
@@ -2478,7 +2484,7 @@ function renderRoomChart() {
 }
 
 function personWorksOnScheduleDay(person, dateKey) {
-  return isWorkDay(person, dateKey);
+  return streakDayKind(person, dateKey) === "work";
 }
 
 function weekendStatsByPerson() {
@@ -3179,6 +3185,7 @@ async function loadVersion(versionId) {
   const boundary = await loadPeriodBoundary(currentPeriodKey);
   if (revision !== versionLoadRevision) return;
   boundaryStaffByDate = boundary.staff;
+  boundaryNeutralByDate = boundary.neutral;
   boundaryNightByDate = boundary.night;
   tableMoveSource = null;
   tableStatus = canEdit ? "拖动姓名换班" : "游客账号 · 只读查看";
