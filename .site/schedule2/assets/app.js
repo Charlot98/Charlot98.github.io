@@ -1,5 +1,5 @@
 import { previousWeekStaffByDate } from "./previous-week-staff.js?v=2";
-import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid } from "./ultrasound-supervision.js?v=3";
+import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid, displayReportName, reportRosterEntryText } from "./ultrasound-supervision.js?v=5";
 const columns = [
   ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],
@@ -125,6 +125,8 @@ const dateLabel = (dateKey) => {
 
 function personClass(person) {
   if (thirdGrade.has(person)) return "third";
+  if (groupByPerson.get(person) === "一年级") return "first-year";
+  if (groupByPerson.get(person) === "新助理") return "new-assistant";
   if (residents.has(person)) return "resident";
   if (assistants.has(person)) return "assistant";
   return "physician";
@@ -257,10 +259,10 @@ function renderTable() {
       const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
       const nightLike = id === "night" || id === "outpatient-night";
       const columnOf = (name) => roster?.find((item) => item.name === name)?.columnId || id;
-      const chip = (name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${columnOf(name)}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === columnOf(name) ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${name}</span>`;
+      const chip = (name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${columnOf(name)}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === columnOf(name) ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${displayReportName(name, columnOf(name))}</span>`;
       const entries = ultrasoundSupervisionEnabled && id.startsWith("us-room-") ? roomRosterEntries(schedule[dateKey], id, names) : names.map((name) => [name]);
-      const content = entries.map((entry) => entry.length === 2
-        ? `<span class="supervision-pair">${chip(entry[0])}<span class="supervision-slash">/</span>${chip(entry[1])}</span>`
+      const content = entries.map((entry) => entry.length > 1
+        ? `<span class="supervision-pair">${entry.map(chip).join("")}</span>`
         : chip(entry[0])).join("");
       return `<td data-date="${dateKey}" data-column="${id}" class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
@@ -324,7 +326,7 @@ function canMoveAssignment(source, targetDateKey, targetColumnId) {
     if (targetColumnId === "outpatient-night") return sameWeek && canTakeNight;
     return targetColumnId === "night" && sameWeek && canTakeNight;
   }
-  if (targetColumnId === "night") return false;
+  if (targetColumnId === "night" || targetColumnId === "outpatient-night") return false;
   return true;
 }
 
@@ -474,9 +476,9 @@ function syncHeatmapPreference(person, dateKey) {
   else delete preferences[key];
 }
 
-function keepHeatmapMarksAfterImport(previousPreferences) {
+function keepHeatmapMarksAfterImport(previousPreferences, dateKeys = Object.keys(schedule)) {
   preferences = cloneData(previousPreferences || {});
-  for (const dateKey of Object.keys(schedule)) {
+  for (const dateKey of dateKeys) {
     for (const person of people) {
       const before = parsePreference(preferences[`${person}::${dateKey}`] || "");
       if (before.content === "rest" || before.content === "no-night") continue;
@@ -873,8 +875,12 @@ function describePreference(raw) {
   return labels.join("+");
 }
 
+function annotationKeyFor(periodKey) {
+  return `period:${periodKey}`.replace(/[^A-Za-z0-9._:-]/g, "-").slice(0, 100);
+}
+
 function annotationVersionKey() {
-  return `period:${currentPeriodKey}`.replace(/[^A-Za-z0-9._:-]/g, "-").slice(0, 100);
+  return annotationKeyFor(currentPeriodKey);
 }
 
 function updateAnnotationToolbar() {
@@ -1060,19 +1066,31 @@ function canReceiveNight(person, dateKey) {
     && parsePreference(preferences[`${person}::${dateKey}`]).content !== "no-night";
 }
 
+function crossModalitySwapGroup(person) {
+  const group = groupByPerson.get(person);
+  if (["高级医师", "中级医师", "三年级"].includes(group)) return "三年级及中高级医师";
+  if (group === "二年级" || group === "新助理") return group;
+  if (group === "老助理") return "非新助理";
+  return "";
+}
+
 function isHeatmapSwapCandidate(person, dateKey, category) {
   if (!canEdit || !heatmapSwapSource || !category) return false;
   const source = heatmapSwapSource;
-  if (person === source.person
-    || dateKey === source.dateKey
-    || groupByPerson.get(person) !== source.group) return false;
+  if (person === source.person || dateKey === source.dateKey) return false;
+  const sameGroup = groupByPerson.get(person) === source.group;
+  const sourceSwapGroup = crossModalitySwapGroup(source.person);
+  const crossModalityAllowed = Boolean(sourceSwapGroup)
+    && sourceSwapGroup === crossModalitySwapGroup(person);
+  if (!sameGroup && !crossModalityAllowed) return false;
   if (source.category === "night") {
-    return isNightOnlyCell(source.person, source.dateKey)
+    return sameGroup
+      && isNightOnlyCell(source.person, source.dateKey)
       && hasNightShift(person, dateKey)
       && canReceiveNight(person, source.dateKey)
       && canReceiveNight(source.person, dateKey);
   }
-  if (category !== source.category) return false;
+  if (category === "night" || (!crossModalityAllowed && category !== source.category)) return false;
   const sourceShiftIds = shiftIdsForSwapCategory(source.person, source.dateKey, source.category).sort();
   const targetShiftIds = shiftIdsForSwapCategory(person, dateKey, category).sort();
   const sourceHasOnlySelectedShift = whiteShiftIdsFor(source.person, source.dateKey).length === sourceShiftIds.length;
@@ -1084,7 +1102,7 @@ function isHeatmapSwapCandidate(person, dateKey, category) {
     && [sourceShiftIds, targetShiftIds].every((ids) => ids.every((shiftId) => shiftId.startsWith("us-room-")));
   return sourceHasOnlySelectedShift
     && targetHasOnlySelectedShift
-    && (sameConcreteShifts || crossUsRooms)
+    && ((crossModalityAllowed && sameLength) || sameConcreteShifts || crossUsRooms)
     && canReceiveSwapDay(person, source.dateKey, false)
     && canReceiveSwapDay(source.person, dateKey, false)
     && swapKeepsSupervision(source, { person, dateKey }, sourceShiftIds, targetShiftIds);
@@ -1115,7 +1133,7 @@ function swapHeatmapAssignments(target) {
   if (!source || !isHeatmapSwapCandidate(target.person, target.dateKey, target.category)) return;
   const undoSnapshot = captureScheduleSnapshot();
   const sourceShiftIds = shiftIdsForSwapCategory(source.person, source.dateKey, source.category);
-  const targetShiftIds = shiftIdsForSwapCategory(target.person, target.dateKey, source.category);
+  const targetShiftIds = shiftIdsForSwapCategory(target.person, target.dateKey, target.category);
   const affectedSlots = new Map();
   sourceShiftIds.forEach((shiftId) => affectedSlots.set(`${source.dateKey}::${shiftId}`, { dateKey: source.dateKey, shiftId }));
   targetShiftIds.forEach((shiftId) => affectedSlots.set(`${target.dateKey}::${shiftId}`, { dateKey: target.dateKey, shiftId }));
@@ -1183,12 +1201,16 @@ function handleHeatmapSwapClick(custom) {
       group: groupByPerson.get(custom.person),
     };
     const isUnmetRest = parsePreference(preferences[`${custom.person}::${custom.dateKey}`]).content === "rest";
-    const matchNote = custom.category === "us" ? "同班种（超声屋可跨屋互换）" : "同班种";
+    const crossSwapGroup = crossModalitySwapGroup(custom.person);
+    const groupNote = crossSwapGroup || "同等级";
+    const matchNote = crossSwapGroup
+      ? "X线、CT/MRI或超声班"
+      : custom.category === "us" ? "同班种（超声屋可跨屋互换）" : "同班种";
     heatmapSwapStatus = custom.category === "night"
       ? `已选择${custom.person} ${custom.dateLabel} 夜班，蓝框为同等级、当日有夜班且双方均可接夜班的人员，白班留在原日期`
       : isUnmetRest
-        ? `已选择${custom.person} ${custom.dateLabel}未满足的指定休息，蓝框为同等级、${matchNote}且双方日期均可休息的换班人员，夜班保留在原日期`
-        : `已选择${custom.person} ${custom.dateLabel} ${swapCategoryLabels[custom.category]}，蓝框为同等级、${matchNote}且双方日期均可休息的换班人员，夜班保留在原日期`;
+        ? `已选择${custom.person} ${custom.dateLabel}未满足的指定休息，蓝框为${groupNote}的${matchNote}且双方互换日期均可接班的人员，夜班保留在原日期`
+        : `已选择${custom.person} ${custom.dateLabel} ${swapCategoryLabels[custom.category]}，蓝框为${groupNote}的${matchNote}且双方互换日期均可接班的人员，夜班保留在原日期`;
     renderHeatmap();
     return;
   }
@@ -1206,22 +1228,22 @@ function handleHeatmapSwapClick(custom) {
   heatmapSwapSource = null;
   heatmapSwapStatus = wasNightSelection
     ? "所选单元格不满足同等级、当日有夜班且双方均可接夜班的互换条件，已取消选择"
-    : "所选单元格不满足同等级、同班种及双方当日空闲的互换条件，已取消选择";
+    : "所选单元格不满足人员范围、班种、接班日期或带教条件，已取消选择";
   renderHeatmap();
 }
 
 let boundaryStaffByDate = {};
 let boundaryNightByDate = {};
-const boundaryByPeriod = new Map();
 
-// 手工录入的上一周期名单优先，没有时取上一周期云端版本的最后7天。
+// 手工录入的上一周期名单优先，没有时取上一周期最新云端版本的最后7天。
 async function loadPeriodBoundary(periodKey) {
-  if (boundaryByPeriod.has(periodKey)) return boundaryByPeriod.get(periodKey);
   const start = String(periodKey || "").split("_")[0];
   const boundary = { staff: {}, night: {} };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return boundary;
   const previousEnd = dateKeyPlusDay(start, -1);
-  const previousMeta = versions.find((item) => String(item.periodKey || "").endsWith(`_${previousEnd}`));
+  const previousMeta = versions
+    .filter((item) => String(item.periodKey || "").endsWith(`_${previousEnd}`))
+    .sort((left, right) => versionNumberOf(right) - versionNumberOf(left))[0];
   if (previousMeta) {
     try {
       if (!previousMeta.payload && previousMeta.cloud && globalThis.ScheduleApi) {
@@ -1242,7 +1264,6 @@ async function loadPeriodBoundary(periodKey) {
       // 读取失败时只按当前周期计算连续上班。
     }
   }
-  boundaryByPeriod.set(periodKey, boundary);
   return boundary;
 }
 
@@ -1474,10 +1495,11 @@ function renderHeatmap() {
       ? restHonored ? "普通休息（已满足）" : `${labels.join("、")}；普通休息未满足`
       : labels.length ? labels.join("、") : "无排班";
     const preferenceDescription = describePreference(effective);
-    const pair = ultrasoundSupervisionEnabled
-      ? supervisionPairs(schedule[dateKey] || {}).find((item) => item.learner === person || item.teacher === person)
-      : null;
-    const supervisionDescription = pair ? (pair.learner === person ? `；带教：${pair.teacher}` : `；报告：${pair.learner}`) : "";
+    const pairs = ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey] || {}) : [];
+    const learnerPair = pairs.find((item) => item.learner === person);
+    const supervisedReports = pairs.filter((item) => item.teacher === person).map((item) => displayReportName(item.learner, item.room));
+    const supervisionDescription = learnerPair ? `；带教：${learnerPair.teacher}`
+      : supervisedReports.length ? `；报告：${supervisedReports.join("、")}` : "";
     const shiftDescription = (preferenceDescription
       ? `${baseShiftDescription}；标注：${preferenceDescription}`
       : baseShiftDescription) + supervisionDescription;
@@ -1507,6 +1529,7 @@ function renderHeatmap() {
       dataLabels: { color: heatmapLabelColor(category, hasWhiteConflict || overCapacityShifts.length > 0 || (parsed.content === "rest" && !restHonored)) },
       custom: {
         person,
+        personLabel: displayReportName(person, shifts.find((shift) => shift.startsWith("us-")) || ""),
         dateKey,
         dateLabel: `${day} ${weekday}`,
         shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}${nightStreakDescription}${doubleWeekendNightDescription}${overCapacityDescription}`,
@@ -1616,7 +1639,7 @@ function renderHeatmap() {
       outside: true,
       useHTML: true,
       headerFormat: "",
-      pointFormat: "<b>{point.custom.person}</b><br>{point.custom.dateLabel}<br>{point.custom.shifts}",
+      pointFormat: "<b>{point.custom.personLabel}</b><br>{point.custom.dateLabel}<br>{point.custom.shifts}",
       backgroundColor: "rgba(255, 255, 255, 0.98)",
       borderColor: "#b8c8da",
       borderRadius: 8,
@@ -1742,9 +1765,9 @@ async function exportExcel() {
       const row = totalSheet.addRow([`${day} ${weekday}`, ...exportColumns.map(([id]) => {
         const names = id === coordinationColumnId ? coordinationEntries(schedule[dateKey]).map(({ name }) => name) : (schedule[dateKey][id] || []);
         if (ultrasoundSupervisionEnabled && id.startsWith("us-room-")) {
-          return roomRosterEntries(schedule[dateKey], id, names).map((entry) => entry.join("/")).join("、");
+          return roomRosterEntries(schedule[dateKey], id, names).map(reportRosterEntryText).join("、");
         }
-        return (id === "night" ? sortNightRoster(names) : names).join("、");
+        return (id === "night" ? sortNightRoster(names) : names).map((name) => displayReportName(name, id)).join("、");
       })]);
       row.height = 31;
       row.eachCell((cell, columnNumber) => {
@@ -1897,7 +1920,59 @@ function scheduleFromWorksheet(sheet) {
     nextSchedule[dateKey] = day;
   });
   if (!dateCount) throw new Error("没有读到日期，请确认第一列是「9月28日 周一」这样的日期");
-  return { schedule: nextSchedule, unknownNames: [...unknownNames] };
+  const coveredColumns = new Set(columnIds.filter(Boolean).flatMap((columnId) => columnId === coordinationColumnId ? coordinationSourceColumns : [columnId]));
+  if ([...coveredColumns].some((columnId) => columnId.startsWith("us-room-"))) coveredColumns.add("us-report");
+  return { schedule: nextSchedule, coveredColumns: [...coveredColumns], unknownNames: [...unknownNames] };
+}
+
+// 与已有周期重叠最多的那个周期；Excel 大部分日期不在任何已有周期时，按完整周新建周期。
+function importTargetPeriod(dateKeys, periodKeys) {
+  const inPeriod = (dateKey, periodKey) => {
+    const [start, end] = periodKey.split("_");
+    return dateKey >= start && dateKey <= end;
+  };
+  let best = "";
+  let bestCount = 0;
+  periodKeys.forEach((periodKey) => {
+    const count = dateKeys.filter((dateKey) => inPeriod(dateKey, periodKey)).length;
+    if (count > bestCount) {
+      best = periodKey;
+      bestCount = count;
+    }
+  });
+  const uncovered = dateKeys.filter((dateKey) => !periodKeys.some((periodKey) => inPeriod(dateKey, periodKey)));
+  if (best && bestCount >= uncovered.length) return best;
+  let end = uncovered.at(-1);
+  while (new Date(`${end}T00:00:00`).getDay() !== 0) end = dateKeyPlusDay(end, 1);
+  const plan = nextPeriodPlan([...periodKeys].sort().at(-1));
+  if (plan && uncovered[0] >= plan.start) {
+    const planEnd = periodKeyFrom(plan.start, plan.defaultWeeks).split("_")[1];
+    return `${plan.start}_${end > planEnd ? end : planEnd}`;
+  }
+  let start = uncovered[0];
+  while (new Date(`${start}T00:00:00`).getDay() !== 1) start = dateKeyPlusDay(start, -1);
+  return `${start}_${end}`;
+}
+
+async function importBaseFor(periodKey, knownVersions) {
+  if (periodKey === currentPeriodKey) {
+    return { schedule: cloneData(schedule), preferences: cloneData(preferences), supervision: ultrasoundSupervisionEnabled };
+  }
+  const meta = knownVersions
+    .filter((item) => item.periodKey === periodKey)
+    .sort((left, right) => versionNumberOf(right) - versionNumberOf(left))[0];
+  if (!meta) return { schedule: {}, preferences: {}, supervision: ultrasoundSupervisionEnabled };
+  if (!meta.payload) meta.payload = cloneData((await ScheduleApi.getVersion(meta.id)).version.payload);
+  let basePreferences = annotationsByPeriod.get(periodKey);
+  if (!basePreferences) {
+    const annotations = await ScheduleApi.getAnnotations(annotationKeyFor(periodKey)).catch(() => null);
+    basePreferences = annotations?.found ? annotations.annotations?.preferences : meta.payload.preferences;
+  }
+  return {
+    schedule: cloneData(meta.payload.schedule || {}),
+    preferences: cloneData(basePreferences || {}),
+    supervision: Boolean(meta.payload.ultrasoundSupervision?.enabled),
+  };
 }
 
 async function importExcelFile(file) {
@@ -1905,6 +1980,7 @@ async function importExcelFile(file) {
   const originalText = button?.textContent || "导入 Excel";
   const previousSchedule = schedule;
   const previousPreferences = preferences;
+  const previousSupervision = ultrasoundSupervisionEnabled;
   try {
     if (button) {
       button.disabled = true;
@@ -1918,50 +1994,63 @@ async function importExcelFile(file) {
     const sheet = workbook.getWorksheet("排班总表") || workbook.worksheets[0];
     if (!sheet) throw new Error("Excel 里没有工作表");
     const imported = scheduleFromWorksheet(sheet);
-    schedule = imported.schedule;
-    normalizeNightRosters();
-    applyUltrasoundAllocation();
-    keepHeatmapMarksAfterImport(previousPreferences);
     let cloudVersions = [];
     try { cloudVersions = await fetchCloudVersions(); } catch { cloudVersions = []; }
-    const versionNumbers = [
-      ...versions.map((item) => versionNumberOf(item)),
-      ...cloudVersions.map((item) => versionNumberOf(item)),
-      currentVersion?.versionNumber || 0,
-    ];
-    const nextVersionNumber = Math.max(29, ...versionNumbers) + 1;
-    const label = nextScheduleLabel([...versions, ...cloudVersions], currentPeriodKey);
-    const payload = currentPayload(nextVersionNumber, label);
-    payload.status = "Excel导入";
+    const knownVersions = [...new Map([...cloudVersions, ...versions].map((item) => [item.id, item])).values()];
+    const importedDates = Object.keys(imported.schedule).sort();
+    const periodKey = importTargetPeriod(importedDates, [...new Set(knownVersions.map((item) => item.periodKey).filter(Boolean))]);
+    const [periodStart, periodEnd] = periodKey.split("_");
+    const appliedDates = importedDates.filter((dateKey) => dateKey >= periodStart && dateKey <= periodEnd);
+    const base = await importBaseFor(periodKey, knownVersions);
+    const merged = base.schedule;
+    for (let dateKey = periodStart; dateKey <= periodEnd; dateKey = dateKeyPlusDay(dateKey, 1)) merged[dateKey] ||= {};
+    appliedDates.forEach((dateKey) => {
+      const day = { ...merged[dateKey] };
+      imported.coveredColumns.forEach((columnId) => delete day[columnId]);
+      merged[dateKey] = { ...day, ...imported.schedule[dateKey] };
+    });
+    schedule = merged;
+    ultrasoundSupervisionEnabled = base.supervision;
+    normalizeNightRosters();
+    applyUltrasoundAllocation();
+    keepHeatmapMarksAfterImport(base.preferences, appliedDates);
+    const importedPreferences = cloneData(preferences);
+    const payload = {
+      version: Math.max(29, currentVersion?.versionNumber || 0, ...knownVersions.map(versionNumberOf)) + 1,
+      label: nextScheduleLabel(knownVersions, periodKey),
+      status: "Excel导入",
+      periodKey,
+      savedAt: new Date().toISOString(),
+      ...(ultrasoundSupervisionEnabled ? { ultrasoundSupervision: { enabled: true } } : {}),
+      preferences: importedPreferences,
+      schedule: cloneData(schedule),
+    };
+    schedule = previousSchedule;
+    preferences = previousPreferences;
+    ultrasoundSupervisionEnabled = previousSupervision;
     const cloudResult = await ScheduleApi.createVersion(payload);
     const cloudVersion = cloudResult.version;
-    const cloudPayload = cloudVersion.payload || payload;
-    const meta = makeCloudMeta(cloudVersion, cloudPayload);
-    versions = [meta, ...versions.filter((item) => item.id !== meta.id)];
-    currentVersion = meta;
-    currentPeriodKey = cloudPayload.periodKey || payload.periodKey;
-    schedule = cloneData(cloudPayload.schedule || imported.schedule);
-    normalizeNightRosters();
-    renderVersionOptions(meta.id);
-    updatePeriodDisplay(currentPeriodKey);
-    document.querySelector("#day-count").textContent = Object.keys(schedule).length;
+    const meta = makeCloudMeta(cloudVersion, cloudVersion.payload || payload);
+    meta.revision = Number(cloudVersion.revision || 1);
+    knownVersions.push(meta);
+    versions = [...new Map(knownVersions.map((item) => [item.id, item])).values()]
+      .sort((left, right) => versionNumberOf(right) - versionNumberOf(left));
+    annotationsByPeriod.set(periodKey, cloneData(importedPreferences));
+    await loadVersion(meta.id);
+    queueAnnotationSave();
+    const skipped = importedDates.length - appliedDates.length;
+    const skippedNote = skipped ? `，${skipped}天不在本周期已跳过` : "";
     const unknownNote = imported.unknownNames.length
       ? `，已忽略${imported.unknownNames.length}个未知名：${imported.unknownNames.slice(0, 4).join("、")}`
       : "";
-    tableStatus = `已导入并保存为${cloudVersion.label}${unknownNote}`;
+    tableStatus = `已覆盖${appliedDates.length}天并保存为${cloudVersion.label}${skippedNote}${unknownNote}`;
     annotationStatus = tableStatus;
-    heatmapSwapStatus = "点格换班";
-    rememberCollabBase(Number(cloudVersion.revision || 0), syncedAnnotationAt);
-    queueAnnotationSave();
-    clearUndoHistory();
     updateAnnotationToolbar();
     renderTable();
-    renderHeatmap();
-    renderRoomChart();
-    renderWeekendStatsChart();
   } catch (error) {
     schedule = previousSchedule;
     preferences = previousPreferences;
+    ultrasoundSupervisionEnabled = previousSupervision;
     tableStatus = error.message === "已取消设备配对"
       ? "已取消管理员登录，本次未导入"
       : `导入失败：${error.message || "请确认文件是本页导出的排班总表"}`;
@@ -2529,7 +2618,7 @@ function openNewPeriodDialog() {
   const describe = () => {
     const periodKey = periodKeyFrom(plan.start, Number(select.value));
     const [start, end] = periodKey.split("_");
-    summary.textContent = `${start} 至 ${end}，版本名称“${periodMonth(periodKey)}月第1版”。新建后为空白排班，可直接标注热力图或拖动排班。`;
+    summary.textContent = `${start} 至 ${end}`;
   };
   describe();
   select.addEventListener("change", describe);
@@ -2834,9 +2923,14 @@ async function saveAsNewVersion() {
     const cloudVersion = cloudResult.version;
     const cloudPayload = cloudVersion.payload || payload;
     const meta = makeCloudMeta(cloudVersion, cloudPayload);
-    versions = [meta, ...versions.filter((item) => item.id !== meta.id)];
+    const knownVersions = new Map([...versions, ...cloudVersions].map((item) => [item.id, item]));
+    knownVersions.set(meta.id, meta);
+    versions = [...knownVersions.values()].sort((left, right) => versionNumberOf(right) - versionNumberOf(left));
     currentVersion = meta;
     currentPeriodKey = cloudPayload.periodKey || payload.periodKey;
+    meta.revision = Number(cloudVersion.revision || 1);
+    rememberCollabBase(meta.revision, syncedAnnotationAt);
+    clearUndoHistory();
     renderVersionOptions(meta.id);
     updatePeriodDisplay(currentPeriodKey);
     tableStatus = `已另存为${cloudVersion.label}`;
@@ -3013,21 +3107,8 @@ async function init() {
       fetch("./data/schedule-refined-20261102.json?v=8").then((response) => response.ok ? response.json() : null).catch(() => null),
     ]);
     const localPeriod = localNovember?.periodKey;
-    let newerCloudNovember = null;
-    const listedNovember = cloudVersions.find((item) => item.periodKey === localPeriod);
-    if (listedNovember && localNovember?.schedule) {
-      try {
-        const result = await ScheduleApi.getVersion(listedNovember.id);
-        const revision = Number(result.version?.revision || 0);
-        if (revision > Number(localNovember.basedOnCloudRevision || 0)) {
-          newerCloudNovember = makeCloudMeta(result.version, result.version.payload);
-          newerCloudNovember.revision = revision;
-        }
-      } catch {
-        newerCloudNovember = null;
-      }
-    }
-    const localVersions = localNovember?.schedule && !newerCloudNovember ? [{
+    const hasCloudNovember = cloudVersions.some((item) => item.periodKey === localPeriod);
+    const localVersions = localNovember?.schedule && !hasCloudNovember ? [{
       id: "local-20261102",
       label: localNovember.label || "11月第1版",
       status: "本地",
@@ -3036,8 +3117,7 @@ async function init() {
       cloud: false,
       payload: localNovember,
     }] : [];
-    const visibleCloud = cloudVersions.filter((item) => item.periodKey !== localPeriod);
-    versions = [...(newerCloudNovember ? [newerCloudNovember] : []), ...localVersions, ...visibleCloud];
+    versions = [...cloudVersions, ...localVersions];
     if (!versions.length) throw new Error("云端暂无排班版本");
     renderVersionOptions();
     document.querySelector("#people-count").textContent = people.length;
