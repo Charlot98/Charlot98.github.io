@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (() => {
+        const base = document.createElement("base");
+        const root = window.location.pathname.match(/^(.*\/schedule\d*)(?:\/|$)/);
+        base.href = root ? `${root[1]}/` : "/schedule/";
+        document.head.append(base);
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="科室排班静态预览，按日期、岗位和人员查看月度排班。" />
+    <title>科室排班总览</title>
+    <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
+    <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
+    <link rel="stylesheet" href="./assets/styles.css?v=44" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="page-header">
+        <div>
+          <h1>排班总览</h1>
+        </div>
+        <div class="header-actions">
+          <div class="presence-card" id="presence-card" aria-label="正在编辑的人员">
+            <span>正在编辑</span>
+            <strong id="presence-names">—</strong>
+          </div>
+          <div class="access-card" aria-label="当前访问账号">
+            <span id="access-mode-badge">游客账号</span>
+            <button id="access-mode-button" type="button">管理员登录</button>
+          </div>
+          <div class="period-card" aria-label="排班周期切换">
+            <button class="period-nav-button" id="previous-period-button" type="button" aria-label="上一个排班周期" disabled>‹</button>
+            <div class="period-card-copy">
+              <span>排班周期</span>
+              <strong id="period-label">2026-10</strong>
+            </div>
+            <button class="period-nav-button" id="next-period-button" type="button" aria-label="下一个排班周期" disabled>›</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="toolbar" aria-label="页面工具">
+        <label class="version-field">
+          <span>排班版本</span>
+          <select id="version-select" aria-label="选择排班版本"></select>
+        </label>
+        <button class="secondary-button" id="delete-version-button" type="button" hidden>删除此版本</button>
+        <button class="secondary-button" id="recycle-bin-button" type="button" hidden>回收站</button>
+        <label class="search-field">
+          <span>查找人员</span>
+          <input id="person-search" type="search" placeholder="输入姓名" autocomplete="off" />
+        </label>
+        <button class="secondary-button history-button" id="undo-button" type="button" disabled aria-label="撤回" title="撤回（Ctrl+Z 或 ⌘Z）">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="secondary-button history-button" id="redo-button" type="button" disabled aria-label="恢复" title="恢复（Ctrl+Shift+Z、⌘Shift+Z 或 Ctrl+Y）">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="secondary-button save-button" id="save-version-button" type="button">保存为新版本</button>
+        <button class="secondary-button" id="import-button" type="button">导入 Excel</button>
+        <input id="import-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+        <button class="secondary-button export-button" id="export-button" type="button">导出 Excel</button>
+        <button class="secondary-button ics-button" id="ics-export-button" type="button">导出个人日历</button>
+        <div class="summary" aria-label="排班摘要">
+          <div><span>人员</span><strong id="people-count">44</strong></div>
+          <div><span>工种</span><strong>17</strong></div>
+          <div><span>天数</span><strong id="day-count">28</strong></div>
+        </div>
+      </section>
+
+      <section class="panel" id="table-view" aria-label="排班总表">
+        <header class="panel-header">
+          <p id="table-filter-state">拖动姓名换班</p>
+        </header>
+        <div class="table-scroll">
+          <table id="schedule-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" id="heatmap-view" aria-label="人员排班热力图">
+        <header class="panel-header heatmap-header">
+          <div class="heatmap-meta">
+            <p id="heatmap-swap-status">点格换班</p>
+            <div class="streak-legend" aria-label="连续工作提示">
+              <span><i class="streak-six"></i>连上6天</span>
+              <span><i class="streak-over"></i>连上&gt;6天</span>
+              <span><i class="night-streak"></i>连夜≥3天</span>
+              <span><i class="weekend-night"></i>双周末夜班</span>
+            </div>
+          </div>
+          <button class="shift-label-toggle" id="shift-label-toggle" type="button" aria-pressed="false">显示标签</button>
+        </header>
+        <div class="annotation-toolbar" aria-label="热力图标注工具">
+          <div class="annotation-heading">
+            <strong>标注排班</strong>
+            <span id="annotation-status" aria-live="polite"></span>
+          </div>
+          <div class="annotation-buttons" id="annotation-buttons">
+            <button type="button" class="annotation-blue" data-annotation="night">夜班</button>
+            <button type="button" class="annotation-blue" data-annotation="xray">X线</button>
+            <button type="button" class="annotation-blue" data-annotation="us">超声</button>
+            <button type="button" class="annotation-blue" data-annotation="ct">CT/MRI</button>
+            <button type="button" class="annotation-yellow" data-annotation="outpatient">门诊白班</button>
+            <button type="button" class="annotation-yellow" data-annotation="outpatient-night">门诊夜班</button>
+            <button type="button" class="annotation-yellow" data-annotation="outpatient-follow">跟诊</button>
+            <button type="button" class="annotation-yellow" data-annotation="annual-leave">年假</button>
+            <button type="button" data-annotation="rest">普休</button>
+            <button type="button" class="annotation-yellow" data-annotation="expansion">拓展</button>
+            <button type="button" data-annotation="no-night">不夜</button>
+            <button type="button" class="annotation-yellow" data-annotation="management">管理</button>
+            <button type="button" class="annotation-blank" data-annotation="blank">空白</button>
+          </div>
+        </div>
+        <div class="heatmap-scroll">
+          <div id="heatmap"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="weekend-stats-view" aria-label="双周末与周末夜班统计">
+        <header class="panel-header">
+          <div>
+            <h2>双周末 / 周末夜班次数</h2>
+          </div>
+        </header>
+        <div class="weekend-stats-scroll">
+          <div id="weekend-stats-chart"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="room-chart-view" aria-label="X线、CT/MRI与超声统计">
+        <header class="panel-header">
+          <div>
+            <h2>X线 / CT/MRI / 超声次数</h2>
+          </div>
+        </header>
+        <div class="room-chart-scroll">
+          <div id="room-chart"></div>
+        </div>
+      </section>
+
+    </main>
+    <div class="loading-screen" id="loading-screen" aria-live="polite">正在载入排班数据…</div>
+    <div class="recycle-overlay" id="recycle-overlay" hidden>
+      <section class="recycle-panel" role="dialog" aria-modal="true" aria-label="已删除的版本">
+        <p id="recycle-empty" hidden>空</p>
+        <ul id="recycle-list"></ul>
+      </section>
+    </div>
+    <script src="./assets/highcharts.js"></script>
+    <script src="./assets/heatmap.js"></script>
+    <script src="./assets/exceljs.min.js"></script>
+    <script src="./assets/supabase-config.js"></script>
+    <script src="./assets/schedule-api.js?v=9"></script>
+    <script type="module" src="./assets/app.js?v=125"></script>
+  </body>
+</html>

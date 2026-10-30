@@ -1,0 +1,69 @@
+{
+  "defaultVersion": "v73",
+  "versions": [
+    {
+      "id": "v73",
+      "label": "第73版",
+      "status": "云端修订196；含助理排班",
+      "file": "schedule-v73.json",
+      "periodKey": "2026-09-28_2026-11-01",
+      "versionNumber": 73,
+      "revision": 196,
+      "cloudVersionNumber": 73,
+      "cloudVersionId": "b3c9db5b-fdd0-4dbd-b9ec-afa8250c4070"
+    },
+    {
+      "id": "v62",
+      "label": "第62版",
+      "status": "云端保存",
+      "file": "schedule-v62.json",
+      "periodKey": "2026-09-28_2026-11-01",
+      "versionNumber": 62,
+      "cloudVersionNumber": 62,
+      "cloudVersionId": "edaf45ba-e8f5-4966-baab-c0cb6b95a2c8"
+    },
+    {
+      "id": "v53",
+      "label": "第53版 · 无助理暂存版",
+      "status": "Excel确认；中高年级、住院医已排；助理待排",
+      "file": "schedule-v53.json",
+      "periodKey": "2026-09-28_2026-11-01",
+      "versionNumber": 53,
+      "cloudVersionNumber": 53,
+      "cloudVersionId": "35dd01d4-ac28-49cd-b65f-dbbcfba217f0"
+    },
+    {
+      "id": "v30",
+      "label": "第30版",
+      "status": "中高年级、住院医已排；助理待排",
+      "file": "schedule-v30.json",
+      "periodKey": "2026-09-28_2026-11-01",
+      "versionNumber": 30,
+      "savedAt": "2026-09-22T15:34:51.065461Z",
+      "cloudVersionNumber": 51,
+      "cloudVersionId": "4fde8ec9-2d2e-4df1-ba38-5356690bbf29"
+    },
+    {
+      "id": "v29",
+      "label": "第29版",
+      "status": "已确认",
+      "file": "schedule-v29.json",
+      "periodKey": "2026-08-31_2026-09-27",
+      "versionNumber": 29
+    },
+    {
+      "id": "v28",
+      "label": "第28版",
+      "status": "Excel导入",
+      "file": "schedule-v28.json",
+      "versionNumber": 28
+    },
+    {
+      "id": "v27",
+      "label": "第27版",
+      "status": "已确认",
+      "file": "schedule-v27.json",
+      "versionNumber": 27
+    }
+  ]
+}
