@@ -250,18 +250,28 @@ function applyUltrasoundAllocation() {
   return result.moves.length;
 }
 
-function renderTable() {
+function renderTable(dateKeys = null) {
   dropHighlightSource = null;
   dropHighlightCells = [];
   activeDropCell = null;
   reorderHighlightChip = null;
   const table = document.querySelector("#schedule-table");
+  const body = table.querySelector("tbody");
   const dates = Object.keys(schedule).sort();
+  const existingRows = dateKeys ? new Map([...body.querySelectorAll('tr[data-date]')].map(row => [row.dataset.date, row])) : null;
+  const partial = existingRows?.size === dates.length && dates.every(dateKey => existingRows.has(dateKey));
+  const changedDates = new Set(dateKeys || []);
+  if (partial) {
+    table.querySelectorAll('.is-drop-eligible, .is-drop-occupied, .is-drop-active, .is-drag-source, .is-reorder-before, .is-reorder-after').forEach(node => {
+      node.classList.remove('is-drop-eligible', 'is-drop-occupied', 'is-drop-active', 'is-drag-source', 'is-reorder-before', 'is-reorder-after');
+    });
+  }
   const conflictKeys = getWhiteShiftConflictKeys();
   const tableColumns = scheduleTableColumns();
   const dropWarningDates = occupiedDropDates(tableMoveSource);
-  table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
-  table.querySelector("tbody").innerHTML = dates.map((dateKey, index) => {
+  if (!partial) table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
+  const rowsHTML = dates.map((dateKey, index) => {
+    if (partial && !changedDates.has(dateKey)) return '';
     const { date, day, weekday } = dateLabel(dateKey);
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     const weekEnd = date.getDay() === 0 && index < dates.length - 1;
@@ -285,11 +295,17 @@ function renderTable() {
         : chip(entry[0])).join("");
       return `<td data-date="${dateKey}" data-column="${id}" ${isCoordination ? `title="统筹${coordinationCount}人，上限${coordinationCapacity(dateKey)}人"` : ''} class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""} ${eligible && dropWarningDates.has(dateKey) ? 'is-drop-occupied' : ''} ${coordinationOver ? 'coordination-capacity-conflict' : ''}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
-    const row = `<tr class="${weekend ? "weekend" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
+    const rowContent = `<th><strong>${day}</strong><span>${weekday}</span></th>${cells}`;
+    if (partial) {
+      existingRows.get(dateKey).innerHTML = rowContent;
+      return '';
+    }
+    const row = `<tr data-date="${dateKey}" class="${weekend ? "weekend" : ""}">${rowContent}</tr>`;
     return weekEnd
       ? `${row}<tr class="week-gap"><td colspan="${tableColumns.length + 1}"></td></tr>`
       : row;
   }).join("");
+  if (!partial) body.innerHTML = rowsHTML;
   updateTableStatus(conflictKeys);
 }
 
@@ -386,7 +402,7 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   tableMoveSource = null;
   heatmapSwapSource = null;
   heatmapSwapStatus = "排班已调整，正在自动同步…";
-  renderTable();
+  renderTable([source.dateKey, targetDateKey]);
   queueTableChartRefresh();
   commitUndo(undoSnapshot);
   queueAnnotationSave();
@@ -439,16 +455,15 @@ function reorderAssignment(source, targetPerson, placeAfter) {
     tableStatus = `${source.person}顺序未变化`;
   }
   tableMoveSource = null;
-  renderTable();
+  renderTable([source.dateKey]);
   if (changed && ultrasoundSupervisionEnabled && source.columnId.startsWith("us-room-")) queueTableChartRefresh();
   if (changed) queueSilentScheduleSave("顺序已调整，正在自动同步…");
 }
 
 function occupiedDropDates(source) {
   if (!source) return new Set();
-  return new Set(Object.entries(schedule).filter(([dateKey, day]) => Object.entries(day).some(([columnId, names]) => (
+  return new Set(Object.entries(schedule).filter(([dateKey, day]) => dateKey !== source.dateKey && Object.entries(day).some(([columnId, names]) => (
     columnId !== 'rest' && columnId !== 'no-night'
-    && !(dateKey === source.dateKey && columnId === source.columnId)
     && names.includes(source.person)
   ))).map(([dateKey]) => dateKey));
 }
@@ -3380,7 +3395,8 @@ scheduleTable.addEventListener("click", (event) => {
     tableStatus = tableMoveSource
       ? `已选择${tableMoveSource.person}，边框处可移动；红框提示当天已有其他班次；在本格内拖到其他姓名可调整顺序`
       : "拖动姓名换班";
-    renderTable();
+    updateDropHighlights();
+    updateTableStatus();
     return;
   }
   const cell = event.target.closest("td[data-date]");
