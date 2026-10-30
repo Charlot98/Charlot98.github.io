@@ -2534,6 +2534,17 @@ function nextPeriodPlan(periodKey) {
   return { start, defaultWeeks: Math.min(5, Math.max(4, weeks)) };
 }
 
+// 同周期还有版本时取其最新版；否则取开始日期最接近的周期，距离相同取较早的周期。
+function nearestPeriodVersion(periodKey) {
+  const start = new Date(`${String(periodKey || "").slice(0, 10)}T00:00:00`).getTime();
+  const distance = (key) => new Date(`${key.slice(0, 10)}T00:00:00`).getTime() - start;
+  const target = knownPeriodKeys().includes(periodKey) ? periodKey : knownPeriodKeys()
+    .sort((left, right) => Math.abs(distance(left)) - Math.abs(distance(right)) || distance(left) - distance(right))[0];
+  return versions
+    .filter((item) => item.periodKey === target)
+    .sort((left, right) => versionNumberOf(right) - versionNumberOf(left))[0] || versions[0];
+}
+
 function periodKeyFrom(start, weeks) {
   return `${start}_${dateKeyPlusDay(start, weeks * 7 - 1)}`;
 }
@@ -3293,7 +3304,7 @@ document.querySelector("#delete-version-button").addEventListener("click", async
       ...(trashedVersionsCache || []).filter((item) => item.id !== removedId),
     ];
     versions = await fetchCloudVersions();
-    const fallback = versions.find((item) => item.periodKey === currentPeriodKey) || versions[0];
+    const fallback = nearestPeriodVersion(currentPeriodKey);
     renderVersionOptions(fallback?.id || "");
     if (fallback) await loadVersion(fallback.id);
     tableStatus = `已将${label}放入回收站`;
