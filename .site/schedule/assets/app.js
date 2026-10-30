@@ -110,6 +110,12 @@ let roomChart = null;
 let weekendStatsChart = null;
 let showShiftLabels = false;
 let tableMoveSource = null;
+let tableDragActive = false;
+let dropHighlightSource = null;
+let dropHighlightCells = [];
+let activeDropCell = null;
+let reorderHighlightChip = null;
+let tableChartRefreshPending = false;
 let tableStatus = "拖动姓名换班";
 let heatmapSwapSource = null;
 let heatmapSwapMode = "white";
@@ -245,6 +251,10 @@ function applyUltrasoundAllocation() {
 }
 
 function renderTable() {
+  dropHighlightSource = null;
+  dropHighlightCells = [];
+  activeDropCell = null;
+  reorderHighlightChip = null;
   const table = document.querySelector("#schedule-table");
   const dates = Object.keys(schedule).sort();
   const conflictKeys = getWhiteShiftConflictKeys();
@@ -254,12 +264,13 @@ function renderTable() {
     const { date, day, weekday } = dateLabel(dateKey);
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     const weekEnd = date.getDay() === 0 && index < dates.length - 1;
+    const dayPairs = ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey]) : [];
     const cells = tableColumns.map(([id]) => {
       const isCoordination = id === coordinationColumnId;
       const coordinationCount = isCoordination ? new Set(coordinationEntries(schedule[dateKey]).map(item => item.name)).size : 0;
       const coordinationOver = isCoordination && coordinationCount > coordinationCapacity(dateKey);
       const roster = isCoordination ? coordinationEntries(schedule[dateKey]).filter(({ name }) => !query || name.includes(query)) : null;
-      const pairs = !isCoordination && ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey]).filter((pair) => pair.room === id) : [];
+      const pairs = dayPairs.filter((pair) => pair.room === id);
       const rawNames = roster ? roster.map(({ name }) => name) : (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query)
         || pairs.some((pair) => (pair.teacher === name || pair.learner === name) && (pair.teacher.includes(query) || pair.learner.includes(query))));
       const names = id === "night" ? sortNightRoster(rawNames) : rawNames;
@@ -278,11 +289,28 @@ function renderTable() {
       ? `${row}<tr class="week-gap"><td colspan="${tableColumns.length + 1}"></td></tr>`
       : row;
   }).join("");
+  updateTableStatus(conflictKeys);
+}
+
+function updateTableStatus(conflictKeys = getWhiteShiftConflictKeys()) {
   const status = document.querySelector("#table-filter-state");
   const conflictMessage = conflictKeys.size ? ` · ${conflictKeys.size}处同日多白班冲突` : "";
   const supervisionMessage = supervisionWarnings.length ? ` · ${supervisionWarnings.length}名报告人员待配带教` : "";
   status.textContent = `${query ? `仅显示“${query}” · ` : ""}${tableStatus}${conflictMessage}${supervisionMessage}`;
   status.classList.toggle("has-conflicts", conflictKeys.size > 0);
+}
+
+function queueTableChartRefresh() {
+  if (tableChartRefreshPending) return;
+  tableChartRefreshPending = true;
+  window.requestAnimationFrame(() => {
+    window.setTimeout(() => {
+      tableChartRefreshPending = false;
+      renderHeatmap();
+      renderRoomChart();
+      renderWeekendStatsChart();
+    }, 0);
+  });
 }
 
 function weekNumber(dateKey) {
@@ -358,9 +386,7 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   heatmapSwapSource = null;
   heatmapSwapStatus = "排班已调整，正在自动同步…";
   renderTable();
-  renderHeatmap();
-  renderRoomChart();
-  renderWeekendStatsChart();
+  queueTableChartRefresh();
   commitUndo(undoSnapshot);
   queueAnnotationSave();
   queueSilentScheduleSave("排班已调整，正在自动同步…");
@@ -382,10 +408,14 @@ function placeAfterChip(chip, clientX) {
 }
 
 function updateReorderHighlight(chip = null, placeAfter = false) {
-  document.querySelectorAll("#schedule-table .person-chip").forEach((item) => {
-    item.classList.toggle("is-reorder-before", item === chip && !placeAfter);
-    item.classList.toggle("is-reorder-after", item === chip && placeAfter);
-  });
+  if (reorderHighlightChip && reorderHighlightChip !== chip) {
+    reorderHighlightChip.classList.remove("is-reorder-before", "is-reorder-after");
+  }
+  if (chip) {
+    chip.classList.toggle("is-reorder-before", !placeAfter);
+    chip.classList.toggle("is-reorder-after", placeAfter);
+  }
+  reorderHighlightChip = chip;
 }
 
 function reorderAssignment(source, targetPerson, placeAfter) {
@@ -409,24 +439,35 @@ function reorderAssignment(source, targetPerson, placeAfter) {
   }
   tableMoveSource = null;
   renderTable();
-  if (changed && ultrasoundSupervisionEnabled && source.columnId.startsWith("us-room-")) renderHeatmap();
+  if (changed && ultrasoundSupervisionEnabled && source.columnId.startsWith("us-room-")) queueTableChartRefresh();
   if (changed) queueSilentScheduleSave("顺序已调整，正在自动同步…");
 }
 
 function updateDropHighlights(activeCell = null) {
-  document.querySelectorAll("#schedule-table tbody td").forEach((cell) => {
-    const eligible = canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column);
-    cell.classList.toggle("is-drop-eligible", eligible);
-    cell.classList.toggle("is-drop-active", eligible && cell === activeCell);
-  });
-  document.querySelectorAll("#schedule-table .person-chip").forEach((chip) => {
-    chip.classList.toggle("is-drag-source", Boolean(
-      tableMoveSource
-      && chip.dataset.person === tableMoveSource.person
-      && chip.dataset.date === tableMoveSource.dateKey
-      && chip.dataset.column === tableMoveSource.columnId
-    ));
-  });
+  if (dropHighlightSource !== tableMoveSource) {
+    dropHighlightSource = tableMoveSource;
+    dropHighlightCells = [];
+    document.querySelectorAll("#schedule-table tbody td").forEach((cell) => {
+      const eligible = Boolean(tableMoveSource && canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column));
+      cell.classList.toggle("is-drop-eligible", eligible);
+      cell.classList.remove("is-drop-active");
+      if (eligible) dropHighlightCells.push(cell);
+    });
+    document.querySelectorAll("#schedule-table .person-chip").forEach((chip) => {
+      chip.classList.toggle("is-drag-source", Boolean(
+        tableMoveSource
+        && chip.dataset.person === tableMoveSource.person
+        && chip.dataset.date === tableMoveSource.dateKey
+        && chip.dataset.column === tableMoveSource.columnId
+      ));
+    });
+    activeDropCell = null;
+  }
+  const next = dropHighlightCells.includes(activeCell) ? activeCell : null;
+  if (activeDropCell === next) return;
+  activeDropCell?.classList.remove("is-drop-active");
+  next?.classList.add("is-drop-active");
+  activeDropCell = next;
 }
 
 function shiftsFor(person, dateKey) {
@@ -761,8 +802,8 @@ function queueSilentScheduleSave(notice = "正在同步当前版本…") {
           tableStatus = done;
           heatmapSwapStatus = done;
           updateAnnotationToolbar();
-          renderTable();
-          renderHeatmap();
+          updateTableStatus();
+          updateHeatmapSwapStatus();
         }
         return;
       }
@@ -807,8 +848,8 @@ function queueSilentScheduleSave(notice = "正在同步当前版本…") {
         tableStatus = done;
         heatmapSwapStatus = done;
         updateAnnotationToolbar();
-        renderTable();
-        renderHeatmap();
+        updateTableStatus();
+        updateHeatmapSwapStatus();
       }
     }).catch((error) => {
       if (revision === scheduleSaveRevision) {
@@ -816,7 +857,7 @@ function queueSilentScheduleSave(notice = "正在同步当前版本…") {
         annotationStatus = fail;
         tableStatus = fail;
         updateAnnotationToolbar();
-        renderTable();
+        updateTableStatus();
       }
     });
   }, 500);
@@ -1537,6 +1578,7 @@ function renderHeatmap() {
   const shiftLabels = Object.fromEntries(columns);
   Object.assign(shiftLabels, { "annual-leave": "年假", expansion: "拓展", rest: "普休", "no-night": "不夜", outpatient: "门诊白班/跟诊", "outpatient-night": "门诊夜班", management: "管理" });
   const overCapacityByDate = new Map(heatmapDates.map((dateKey) => [dateKey, overCapacityColumns(dateKey)]));
+  const supervisionPairsByDate = new Map(heatmapDates.map((dateKey) => [dateKey, ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey] || {}) : []]));
   const points = visiblePeople.flatMap((person, personIndex) => heatmapDates.map((dateKey, dateIndex) => {
     const x = dateIndex + Math.floor(dateIndex / 7);
     const shifts = shiftsFor(person, dateKey);
@@ -1562,7 +1604,7 @@ function renderHeatmap() {
       ? restHonored ? "普通休息（已满足）" : `${labels.join("、")}；普通休息未满足`
       : labels.length ? labels.join("、") : "无排班";
     const preferenceDescription = describePreference(effective);
-    const pairs = ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey] || {}) : [];
+    const pairs = supervisionPairsByDate.get(dateKey);
     const learnerPair = pairs.find((item) => item.learner === person);
     const supervisedReports = pairs.filter((item) => item.teacher === person).map((item) => displayReportName(item.learner, item.room));
     const supervisionDescription = learnerPair ? `；带教：${learnerPair.teacher}`
@@ -3154,7 +3196,7 @@ function startCollabPolling() {
 }
 
 async function syncLiveCollab() {
-  if (!currentVersion?.cloud || !currentVersion?.id || !globalThis.ScheduleApi || collabApplying) return;
+  if (!currentVersion?.cloud || !currentVersion?.id || !globalThis.ScheduleApi || collabApplying || tableDragActive) return;
   const annotationKey = annotationVersionKey();
   let snapshot;
   try {
@@ -3185,7 +3227,7 @@ async function syncLiveCollab() {
       ? (annotation.annotations?.preferences || {})
       : (result.version.payload?.preferences || {});
     const remoteManualPreferences = await fetchManualPreferences(currentPeriodKey, remotePreferences, true);
-    if (currentVersion?.id !== versionId) return;
+    if (currentVersion?.id !== versionId || tableDragActive) return;
     const keptLocal = rebaseOntoRemote(remoteSchedule, remotePreferences, remoteManualPreferences);
     syncedRevision = Number(result.version.revision || revision);
     syncedAnnotationAt = annotation?.annotations?.updatedAt || annotationAt;
@@ -3261,6 +3303,7 @@ scheduleTable.addEventListener("dragstart", (event) => {
   }
   const chip = event.target.closest(".person-chip");
   if (!chip) return;
+  tableDragActive = true;
   tableMoveSource = { person: chip.dataset.person, dateKey: chip.dataset.date, columnId: chip.dataset.column };
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("text/plain", JSON.stringify(tableMoveSource));
@@ -3287,6 +3330,7 @@ scheduleTable.addEventListener("dragleave", (event) => {
   updateDropHighlights();
 });
 scheduleTable.addEventListener("drop", (event) => {
+  tableDragActive = false;
   const chip = event.target.closest(".person-chip");
   if (canReorderWithinCell(tableMoveSource, chip)) {
     event.preventDefault();
@@ -3302,6 +3346,7 @@ scheduleTable.addEventListener("drop", (event) => {
   moveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column);
 });
 scheduleTable.addEventListener("dragend", () => {
+  tableDragActive = false;
   updateReorderHighlight();
   if (tableMoveSource) {
     tableMoveSource = null;
