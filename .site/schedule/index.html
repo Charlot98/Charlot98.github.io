@@ -95,7 +95,11 @@
               <span><i class="weekend-night"></i>双周末夜班</span>
             </div>
           </div>
-          <button class="shift-label-toggle" id="shift-label-toggle" type="button" aria-pressed="false">显示标签</button>
+          <div class="annotation-buttons" role="group" aria-label="热力图操作">
+            <button class="shift-label-toggle" type="button" data-swap-mode="white" aria-pressed="true">换白班</button>
+            <button class="shift-label-toggle" type="button" data-swap-mode="night" aria-pressed="false">换夜班</button>
+            <button class="shift-label-toggle" id="shift-label-toggle" type="button" aria-pressed="false">显示标签</button>
+          </div>
         </header>
         <div class="annotation-toolbar" aria-label="热力图标注工具">
           <div class="annotation-heading">
@@ -158,6 +162,6 @@
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
     <script src="./assets/schedule-api.js?v=10"></script>
-    <script type="module" src="./assets/app.js?v=136"></script>
+    <script type="module" src="./assets/app.js?v=137"></script>
   </body>
 </html>
