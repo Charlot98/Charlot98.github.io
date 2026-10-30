@@ -3110,15 +3110,17 @@ async function init() {
     startCollabPolling();
   } catch (error) {
     loading.classList.remove("is-hidden");
-    loading.textContent = error.message === "已取消设备配对"
+    const gate = document.createElement("div");
+    gate.className = "login-gate";
+    gate.textContent = error.message === "已取消设备配对"
       ? "排班仅限登录后查看"
       : `${error.message || "云端排班不可用"}`;
     const retry = document.createElement("button");
     retry.type = "button";
-    retry.className = "primary";
     retry.textContent = "登录";
     retry.addEventListener("click", init, { once: true });
-    loading.append(document.createElement("br"), retry);
+    gate.append(retry);
+    loading.replaceChildren(gate);
   }
 }
 

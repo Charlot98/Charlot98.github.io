@@ -190,6 +190,8 @@ body.is-guest .person-chip { cursor: default !important; user-select: text; }
 .no-results { padding: 34px; color: var(--muted); text-align: center; }
 .loading-screen { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--canvas); color: var(--navy); font-size: 14px; font-weight: 750; }
 .loading-screen.is-hidden { display: none; }
+.loading-screen .login-gate { display: grid; gap: 14px; justify-items: center; }
+.loading-screen .login-gate button { min-width: 112px; padding: 8px 20px; border: 0; border-radius: 8px; background: var(--navy); color: #fff; font-weight: 750; }
 
 body.schedule-auth-open { overflow: hidden; }
 body.calendar-dialog-open { overflow: hidden; }
