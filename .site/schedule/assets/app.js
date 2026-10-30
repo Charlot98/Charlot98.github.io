@@ -45,14 +45,21 @@ const assistantDailyCaps = {
   "xray-shooting": 2,
   "ct-scan-teaching": 1,
   "ct-scan": 2,
-  "us-coordination-teaching": 2,
 };
+
+function coordinationCapacity(dateKey) {
+  const weekday = new Date(`${dateKey}T00:00:00`).getDay();
+  return weekday === 0 || weekday === 6 ? 6 : 5;
+}
 
 function overCapacityColumns(dateKey) {
   const day = schedule[dateKey] || {};
-  return Object.entries(assistantDailyCaps)
+  const columns = Object.entries(assistantDailyCaps)
     .filter(([columnId, cap]) => (day[columnId] || []).length > cap)
     .map(([columnId]) => columnId);
+  const coordinationCount = new Set([...(day['us-coordination-teaching'] || []), ...(day['us-new-coordination'] || [])]).size;
+  if (coordinationCount > coordinationCapacity(dateKey)) columns.push('us-coordination');
+  return columns;
 }
 
 function sortNightRoster(names) {
@@ -93,6 +100,7 @@ const LEGACY_LOCAL_DATA_KEYS = [
 ];
 let schedule = {};
 let preferences = {};
+let manualPreferences = {};
 let versions = [];
 let currentVersion = null;
 let currentPeriodKey = "";
@@ -116,6 +124,8 @@ let canEdit = false;
 let ultrasoundSupervisionEnabled = false;
 let supervisionWarnings = [];
 const annotationsByPeriod = new Map();
+const manualAnnotationsByPeriod = new Map();
+const manualAnnotationSourceErrors = new Set();
 
 const dateLabel = (dateKey) => {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -239,13 +249,15 @@ function renderTable() {
   const dates = Object.keys(schedule).sort();
   const conflictKeys = getWhiteShiftConflictKeys();
   const tableColumns = scheduleTableColumns();
-  table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
+  table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}${id === coordinationColumnId ? '<br><small>工作日≤5 · 周末≤6</small>' : ''}</th>`).join("")}</tr>`;
   table.querySelector("tbody").innerHTML = dates.map((dateKey, index) => {
     const { date, day, weekday } = dateLabel(dateKey);
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     const weekEnd = date.getDay() === 0 && index < dates.length - 1;
     const cells = tableColumns.map(([id]) => {
       const isCoordination = id === coordinationColumnId;
+      const coordinationCount = isCoordination ? new Set(coordinationEntries(schedule[dateKey]).map(item => item.name)).size : 0;
+      const coordinationOver = isCoordination && coordinationCount > coordinationCapacity(dateKey);
       const roster = isCoordination ? coordinationEntries(schedule[dateKey]).filter(({ name }) => !query || name.includes(query)) : null;
       const pairs = !isCoordination && ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey]).filter((pair) => pair.room === id) : [];
       const rawNames = roster ? roster.map(({ name }) => name) : (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query)
@@ -259,7 +271,7 @@ function renderTable() {
       const content = entries.map((entry) => entry.length > 1
         ? `<span class="supervision-pair">${entry.map(chip).join("")}</span>`
         : chip(entry[0])).join("");
-      return `<td data-date="${dateKey}" data-column="${id}" class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
+      return `<td data-date="${dateKey}" data-column="${id}" ${isCoordination ? `title="统筹${coordinationCount}人，上限${coordinationCapacity(dateKey)}人"` : ''} class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""} ${coordinationOver ? 'coordination-capacity-conflict' : ''}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
     const row = `<tr class="${weekend ? "weekend" : ""}"><th><strong>${day}</strong><span>${weekday}</span></th>${cells}</tr>`;
     return weekEnd
@@ -337,6 +349,7 @@ function moveAssignment(source, targetDateKey, targetColumnId) {
   }
   syncHeatmapPreference(source.person, source.dateKey);
   syncHeatmapPreference(source.person, targetDateKey);
+  moveManualManagementAnnotation(source, targetDateKey, storedTarget);
   const targetLabel = targetColumnId === coordinationColumnId ? "超声统筹" : (columns.find(([id]) => id === storedTarget)?.[1] || storedTarget);
   tableStatus = nightMove
     ? `${source.person}${targetLabel}已单独移至${dateLabel(targetDateKey).day}，白班保持不变`
@@ -426,7 +439,8 @@ function shiftsFor(person, dateKey) {
 function effectivePreference(raw, shifts) {
   const parsed = parsePreference(raw);
   const content = parsed.content;
-  const supported = content === "rest" || content === "no-night" || content === "annual-leave" || content === "expansion" || content === "management"
+  const supported = content === "rest" || content === "no-night" || content === "annual-leave" || content === "expansion"
+    || (content === "management" && shifts.includes("management"))
     || (content === "outpatient-follow" && shifts.includes("outpatient"))
     || shifts.some((shift) => modalityOfColumn(shift) === content);
   return serializePreference({
@@ -558,7 +572,7 @@ let annotationSyncing = false;
 let collabApplying = false;
 let syncedRevision = 0;
 let syncedAnnotationAt = "";
-let collabBase = { schedule: {}, preferences: {} };
+let collabBase = { schedule: {}, preferences: {}, manualPreferences: {} };
 let collabTimer = 0;
 
 function scheduleCellMap(data) {
@@ -615,7 +629,7 @@ function applyPreferenceDiff(target, diff) {
 }
 
 function rememberCollabBase(revision = syncedRevision, annotationUpdatedAt = syncedAnnotationAt) {
-  collabBase = { schedule: cloneData(schedule), preferences: cloneData(preferences) };
+  collabBase = { schedule: cloneData(schedule), preferences: cloneData(preferences), manualPreferences: cloneData(manualPreferences) };
   syncedRevision = Number(revision || 0);
   syncedAnnotationAt = annotationUpdatedAt || "";
 }
@@ -627,20 +641,25 @@ function renderPresence(editors) {
   names.textContent = accounts.length ? accounts.join("、") : "—";
 }
 
-function rebaseOntoRemote(remoteSchedule, remotePreferences) {
+function rebaseOntoRemote(remoteSchedule, remotePreferences, remoteManualPreferences = manualPreferences) {
   const scheduleDiff = changedScheduleCells(collabBase.schedule, schedule);
   const preferenceDiff = changedPreferenceEntries(collabBase.preferences, preferences);
+  const manualDiff = changedPreferenceEntries(collabBase.manualPreferences, manualPreferences);
   schedule = cloneData(remoteSchedule || {});
   applyScheduleCellDiff(schedule, scheduleDiff);
   normalizeNightRosters();
   preferences = cloneData(remotePreferences || {});
   applyPreferenceDiff(preferences, preferenceDiff);
+  manualPreferences = cloneData(remoteManualPreferences || {});
+  applyPreferenceDiff(manualPreferences, manualDiff);
   annotationsByPeriod.set(currentPeriodKey, cloneData(preferences));
+  manualAnnotationsByPeriod.set(currentPeriodKey, cloneData(manualPreferences));
   collabBase = {
     schedule: cloneData(remoteSchedule || {}),
     preferences: cloneData(remotePreferences || {}),
+    manualPreferences: cloneData(remoteManualPreferences || {}),
   };
-  return scheduleDiff.size > 0 || preferenceDiff.size > 0;
+  return scheduleDiff.size > 0 || preferenceDiff.size > 0 || manualDiff.size > 0;
 }
 
 function ensureScheduleDay(dateKey) {
@@ -778,6 +797,7 @@ function queueSilentScheduleSave(notice = "正在同步当前版本…") {
       collabBase = {
         schedule: cloneData(cloudPayload.schedule || {}),
         preferences: cloneData(cloudPayload.preferences || {}),
+        manualPreferences: cloneData(manualPreferences),
       };
       renderVersionOptions(meta.id);
       updatePeriodDisplay(currentPeriodKey);
@@ -850,11 +870,65 @@ function annotationVersionKey() {
   return annotationKeyFor(currentPeriodKey);
 }
 
+function manualAnnotationVersionKey(periodKey = currentPeriodKey) {
+  return `manual:${annotationKeyFor(periodKey)}`;
+}
+
+function legacyManualPreferences(values) {
+  const retained = new Set(['rest', 'no-night', 'annual-leave', 'expansion', 'management', 'outpatient', 'outpatient-night', 'outpatient-follow']);
+  return Object.fromEntries(Object.entries(values || {}).flatMap(([key, value]) => {
+    const parsed = parsePreference(value);
+    return retained.has(parsed.content) ? [[key, serializePreference({ content: parsed.content })]] : [];
+  }));
+}
+
+async function fetchManualPreferences(periodKey, legacy, refresh = false) {
+  if (!refresh && !manualAnnotationSourceErrors.has(periodKey) && manualAnnotationsByPeriod.has(periodKey)) return cloneData(manualAnnotationsByPeriod.get(periodKey));
+  try {
+    const result = await ScheduleApi.getAnnotations(manualAnnotationVersionKey(periodKey));
+    manualAnnotationSourceErrors.delete(periodKey);
+    if (result.found) return cloneData(result.annotations?.preferences || {});
+  } catch {
+    manualAnnotationSourceErrors.add(periodKey);
+    if (manualAnnotationsByPeriod.has(periodKey)) return cloneData(manualAnnotationsByPeriod.get(periodKey));
+    return legacyManualPreferences(legacy);
+  }
+  return legacyManualPreferences(legacy);
+}
+
+function setManualPreference(key, value) {
+  if (value) manualPreferences[key] = value;
+  else delete manualPreferences[key];
+}
+
+function manualPreferenceForCell(person, dateKey) {
+  const parsed = parsePreference(manualPreferences[`${person}::${dateKey}`] || '');
+  if (parsed.content === 'management' && !(schedule[dateKey]?.management || []).includes(person)) parsed.content = undefined;
+  return serializePreference(parsed);
+}
+
+function moveManualManagementAnnotation(source, targetDateKey, targetColumnId) {
+  if (source.columnId !== 'management' || source.dateKey === targetDateKey && targetColumnId === 'management') return;
+  const sourceKey = `${source.person}::${source.dateKey}`;
+  if (parsePreference(manualPreferences[sourceKey] || '').content !== 'management') return;
+  setManualPreference(sourceKey, preferenceForTableToggle(manualPreferences[sourceKey], 'management', false));
+  if (targetColumnId === 'management') {
+    const targetKey = `${source.person}::${targetDateKey}`;
+    setManualPreference(targetKey, preferenceForTableToggle(manualPreferences[targetKey] || '', 'management', true));
+  }
+}
+
+function manualTooltipHTML(custom) {
+  if (!custom?.manualAnnotation) return false;
+  const escape = value => String(value || '').replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
+  return `<b>${escape(custom.personLabel)}</b><br>${escape(custom.dateLabel)}<br>手动标注：${escape(custom.manualAnnotation)}`;
+}
+
 function updateAnnotationToolbar() {
   document.querySelectorAll("#annotation-buttons [data-annotation]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.annotation === annotationMode);
     button.setAttribute("aria-pressed", String(button.dataset.annotation === annotationMode));
-    button.disabled = !canEdit;
+    button.disabled = !canEdit || manualAnnotationSourceErrors.has(currentPeriodKey);
   });
   document.body.classList.toggle("is-annotating", Boolean(annotationMode));
   if (annotationMode && heatmapChart?.tooltip) heatmapChart.tooltip.hide();
@@ -868,12 +942,15 @@ function queueAnnotationSave() {
   const versionKey = annotationVersionKey();
   const periodKey = currentPeriodKey;
   const snapshot = cloneData(preferences);
+  const manualSnapshot = cloneData(manualPreferences);
   annotationsByPeriod.set(periodKey, cloneData(snapshot));
+  manualAnnotationsByPeriod.set(periodKey, cloneData(manualSnapshot));
   annotationSyncing = true;
   annotationStatus = "正在保存标注到云端…";
   updateAnnotationToolbar();
   annotationSaveQueue = annotationSaveQueue.catch(() => {}).then(async () => {
     if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
+    if (!manualAnnotationSourceErrors.has(periodKey)) await ScheduleApi.saveAnnotations(manualAnnotationVersionKey(periodKey), periodKey, manualSnapshot);
     await ScheduleApi.saveAnnotations(versionKey, periodKey, snapshot);
     if (revision === annotationSaveRevision) {
       annotationStatus = `云端已保存 · ${new Date().toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}`;
@@ -899,7 +976,9 @@ function applyHeatmapAnnotation(person, dateKey) {
   if (mode === "blank") {
     const changed = removePersonFromColumns(dateKey, person, () => true);
     if (before) delete preferences[key];
-    if (!changed && !before) {
+    const hadManual = Boolean(manualPreferences[key]);
+    delete manualPreferences[key];
+    if (!changed && !before && !hadManual) {
       updateAnnotationToolbar();
       return;
     }
@@ -916,7 +995,13 @@ function applyHeatmapAnnotation(person, dateKey) {
     return;
   }
   if (manualAssignModes.has(mode)) {
-    const result = applyManualScheduleAssignment(person, dateKey, mode);
+    const existingManual = parsePreference(manualPreferences[key] || '');
+    const alreadyManual = mode === 'night' ? existingManual.tone === 'night' : existingManual.content === mode;
+    const existingColumn = manualColumnFor(person, mode);
+    const alreadyScheduled = existingColumn && shiftsFor(person, dateKey).some(shift => modalityOfColumn(shift) === modalityOfColumn(existingColumn));
+    const result = alreadyScheduled && !alreadyManual
+      ? { changed: false, added: true }
+      : applyManualScheduleAssignment(person, dateKey, mode);
     if (result.changed) applyUltrasoundAllocation();
     if (!result.changed && !manualColumnFor(person, mode)) {
       heatmapSwapStatus = `${person}没有对应的“${annotationLabels[mode]}”岗位`;
@@ -927,6 +1012,7 @@ function applyHeatmapAnnotation(person, dateKey) {
     const value = preferenceForTableToggle(before, mode, result.added);
     if (value) preferences[key] = value;
     else delete preferences[key];
+    setManualPreference(key, preferenceForTableToggle(manualPreferences[key] || '', mode, result.added));
     syncHeatmapPreference(person, dateKey);
     const actionLabel = result.added ? "已排入" : "已撤销";
     heatmapSwapStatus = `${person} ${dateLabel(dateKey).day}${actionLabel}“${annotationLabels[mode]}”`;
@@ -944,6 +1030,7 @@ function applyHeatmapAnnotation(person, dateKey) {
   const value = nextPreference(preferences[key], mode);
   if (value) preferences[key] = value;
   else delete preferences[key];
+  setManualPreference(key, nextPreference(manualPreferences[key] || '', mode));
   const removed = mode === "cancel" || (before && value !== before && (
     (mode === "day" || mode === "night")
       ? parsePreference(before).tone === mode
@@ -1465,7 +1552,8 @@ function renderHeatmap() {
     const nightStreakLength = nightStreakByCell.get(`${person}::${dateKey}`);
     const doubleWeekendNight = doubleWeekendNightCells.has(`${person}::${dateKey}`);
     const hasWhiteConflict = whiteShiftIdsFor(person, dateKey).length > 1;
-    const overCapacityShifts = (overCapacityByDate.get(dateKey) || []).filter((columnId) => shifts.includes(columnId));
+    const overCapacityShifts = (overCapacityByDate.get(dateKey) || []).filter((columnId) => columnId === coordinationColumnId
+      ? shifts.some(shift => coordinationSourceColumns.includes(shift)) : shifts.includes(columnId));
     const labels = shifts.map((shift) => shiftLabels[shift] || shift);
     const { day, weekday } = dateLabel(dateKey);
     const baseShiftDescription = parsed.content === "rest"
@@ -1485,7 +1573,7 @@ function renderHeatmap() {
     const nightStreakDescription = nightStreakLength ? `；连续夜班${nightStreakLength}天` : "";
     const doubleWeekendNightDescription = doubleWeekendNight ? "；双周末夜班" : "";
     const overCapacityDescription = overCapacityShifts.length
-      ? `；${overCapacityShifts.map((columnId) => `${shiftLabels[columnId] || columnId}超过${assistantDailyCaps[columnId]}人`).join("、")}`
+      ? `；${overCapacityShifts.map((columnId) => `${columnId === coordinationColumnId ? '超声统筹' : shiftLabels[columnId] || columnId}超过${columnId === coordinationColumnId ? coordinationCapacity(dateKey) : assistantDailyCaps[columnId]}人`).join("、")}`
       : "";
     const pointClassName = isSwapSelected ? "heatmap-swap-selected"
       : isSwapCandidate ? "heatmap-swap-candidate"
@@ -1507,6 +1595,7 @@ function renderHeatmap() {
       custom: {
         person,
         personLabel: displayReportName(person, shifts.find((shift) => shift.startsWith("us-")) || ""),
+        manualAnnotation: describePreference(manualPreferenceForCell(person, dateKey)),
         dateKey,
         dateLabel: `${day} ${weekday}`,
         shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}${nightStreakDescription}${doubleWeekendNightDescription}${overCapacityDescription}`,
@@ -1616,7 +1705,7 @@ function renderHeatmap() {
       outside: true,
       useHTML: true,
       headerFormat: "",
-      pointFormat: "<b>{point.custom.personLabel}</b><br>{point.custom.dateLabel}<br>{point.custom.shifts}",
+      formatter() { return manualTooltipHTML((this.point || this).custom); },
       backgroundColor: "rgba(255, 255, 255, 0.98)",
       borderColor: "#b8c8da",
       borderRadius: 8,
@@ -1941,12 +2030,12 @@ function importTargetPeriod(dateKeys, periodKeys) {
 
 async function importBaseFor(periodKey, knownVersions) {
   if (periodKey === currentPeriodKey) {
-    return { schedule: cloneData(schedule), preferences: cloneData(preferences), supervision: ultrasoundSupervisionEnabled };
+    return { schedule: cloneData(schedule), preferences: cloneData(preferences), manualPreferences: cloneData(manualPreferences), supervision: ultrasoundSupervisionEnabled };
   }
   const meta = knownVersions
     .filter((item) => item.periodKey === periodKey)
     .sort((left, right) => versionNumberOf(right) - versionNumberOf(left))[0];
-  if (!meta) return { schedule: {}, preferences: {}, supervision: ultrasoundSupervisionEnabled };
+  if (!meta) return { schedule: {}, preferences: {}, manualPreferences: {}, supervision: ultrasoundSupervisionEnabled };
   if (!meta.payload) meta.payload = cloneData((await ScheduleApi.getVersion(meta.id)).version.payload);
   let basePreferences = annotationsByPeriod.get(periodKey);
   if (!basePreferences) {
@@ -1956,6 +2045,7 @@ async function importBaseFor(periodKey, knownVersions) {
   return {
     schedule: cloneData(meta.payload.schedule || {}),
     preferences: cloneData(basePreferences || {}),
+    manualPreferences: await fetchManualPreferences(periodKey, basePreferences || {}),
     supervision: Boolean(meta.payload.ultrasoundSupervision?.enabled),
   };
 }
@@ -1965,6 +2055,7 @@ async function importExcelFile(file) {
   const originalText = button?.textContent || "导入 Excel";
   const previousSchedule = schedule;
   const previousPreferences = preferences;
+  const previousManualPreferences = manualPreferences;
   const previousSupervision = ultrasoundSupervisionEnabled;
   try {
     if (button) {
@@ -2012,6 +2103,7 @@ async function importExcelFile(file) {
     };
     schedule = previousSchedule;
     preferences = previousPreferences;
+    manualPreferences = previousManualPreferences;
     ultrasoundSupervisionEnabled = previousSupervision;
     const cloudResult = await ScheduleApi.createVersion(payload);
     const cloudVersion = cloudResult.version;
@@ -2021,6 +2113,7 @@ async function importExcelFile(file) {
     versions = [...new Map(knownVersions.map((item) => [item.id, item])).values()]
       .sort((left, right) => versionNumberOf(right) - versionNumberOf(left));
     annotationsByPeriod.set(periodKey, cloneData(importedPreferences));
+    manualAnnotationsByPeriod.set(periodKey, cloneData(base.manualPreferences || {}));
     await loadVersion(meta.id);
     queueAnnotationSave();
     const skipped = importedDates.length - appliedDates.length;
@@ -2035,6 +2128,7 @@ async function importExcelFile(file) {
   } catch (error) {
     schedule = previousSchedule;
     preferences = previousPreferences;
+    manualPreferences = previousManualPreferences;
     ultrasoundSupervisionEnabled = previousSupervision;
     tableStatus = error.message === "已取消设备配对"
       ? "已取消管理员登录，本次未导入"
@@ -2661,7 +2755,7 @@ const undoLimit = 40;
 let undoOwner = null;
 
 function captureScheduleSnapshot() {
-  return { schedule: cloneData(schedule), preferences: cloneData(preferences) };
+  return { schedule: cloneData(schedule), preferences: cloneData(preferences), manualPreferences: cloneData(manualPreferences) };
 }
 
 function updateUndoButtons() {
@@ -2687,6 +2781,7 @@ function historyDiff(fromSnapshot, toSnapshot) {
   return {
     schedule: Object.fromEntries(changedScheduleCells(fromSnapshot.schedule, toSnapshot.schedule)),
     preferences: Object.fromEntries(changedPreferenceEntries(fromSnapshot.preferences, toSnapshot.preferences)),
+    manualPreferences: Object.fromEntries(changedPreferenceEntries(fromSnapshot.manualPreferences, toSnapshot.manualPreferences)),
   };
 }
 
@@ -2694,7 +2789,7 @@ function commitUndo(beforeSnapshot) {
   if (!beforeSnapshot || !canEdit) return;
   const afterSnapshot = captureScheduleSnapshot();
   const redo = historyDiff(beforeSnapshot, afterSnapshot);
-  if (!Object.keys(redo.schedule).length && !Object.keys(redo.preferences).length) return;
+  if (!Object.keys(redo.schedule).length && !Object.keys(redo.preferences).length && !Object.keys(redo.manualPreferences).length) return;
   undoStack.push({ undo: historyDiff(afterSnapshot, beforeSnapshot), redo });
   if (undoStack.length > undoLimit) undoStack.shift();
   redoStack.length = 0;
@@ -2711,6 +2806,7 @@ function scheduleCellNow(key) {
 function applyOwnedChange(nextValues, expectedValues) {
   const scheduleDiff = new Map();
   const preferenceDiff = new Map();
+  const manualDiff = new Map();
   let applied = 0;
   let skipped = 0;
   Object.entries(nextValues.schedule || {}).forEach(([key, value]) => {
@@ -2733,11 +2829,20 @@ function applyOwnedChange(nextValues, expectedValues) {
     applyScheduleCellDiff(schedule, scheduleDiff);
     normalizeNightRosters();
   }
+  Object.entries(nextValues.manualPreferences || {}).forEach(([key, value]) => {
+    if ((manualPreferences[key] || '') !== (expectedValues.manualPreferences?.[key] ?? '')) { skipped += 1; return; }
+    manualDiff.set(key, value);
+    applied += 1;
+  });
+  if (manualDiff.size) {
+    applyPreferenceDiff(manualPreferences, manualDiff);
+    if (currentPeriodKey) manualAnnotationsByPeriod.set(currentPeriodKey, cloneData(manualPreferences));
+  }
   if (preferenceDiff.size) {
     applyPreferenceDiff(preferences, preferenceDiff);
     if (currentPeriodKey) annotationsByPeriod.set(currentPeriodKey, cloneData(preferences));
   }
-  return { applied, skipped, schedule: scheduleDiff.size > 0, preferences: preferenceDiff.size > 0 };
+  return { applied, skipped, schedule: scheduleDiff.size > 0, preferences: preferenceDiff.size > 0 || manualDiff.size > 0 };
 }
 
 function finishHistoryChange(result, notice) {
@@ -2824,6 +2929,7 @@ async function publishLocalSchedule() {
   collabBase = {
     schedule: cloneData(cloudPayload.schedule || {}),
     preferences: cloneData(cloudPayload.preferences || {}),
+    manualPreferences: cloneData(manualPreferences),
   };
   renderVersionOptions(meta.id);
   updatePeriodDisplay(currentPeriodKey);
@@ -2998,6 +3104,10 @@ async function loadVersion(versionId) {
     }
     annotationsByPeriod.set(currentPeriodKey, cloneData(preferences));
   }
+  const loadedManualPreferences = await fetchManualPreferences(currentPeriodKey, preferences);
+  if (revision !== versionLoadRevision) return;
+  manualPreferences = loadedManualPreferences;
+  manualAnnotationsByPeriod.set(currentPeriodKey, cloneData(manualPreferences));
   const boundary = await loadPeriodBoundary(currentPeriodKey);
   if (revision !== versionLoadRevision) return;
   boundaryStaffByDate = boundary.staff;
@@ -3071,13 +3181,15 @@ async function syncLiveCollab() {
     const remotePreferences = annotation?.found
       ? (annotation.annotations?.preferences || {})
       : (result.version.payload?.preferences || {});
-    const keptLocal = rebaseOntoRemote(remoteSchedule, remotePreferences);
+    const remoteManualPreferences = await fetchManualPreferences(currentPeriodKey, remotePreferences, true);
+    if (currentVersion?.id !== versionId) return;
+    const keptLocal = rebaseOntoRemote(remoteSchedule, remotePreferences, remoteManualPreferences);
     syncedRevision = Number(result.version.revision || revision);
     syncedAnnotationAt = annotation?.annotations?.updatedAt || annotationAt;
     currentVersion.payload = cloneData(result.version.payload);
     currentVersion.revision = syncedRevision;
     if (!keptLocal) {
-      collabBase = { schedule: cloneData(schedule), preferences: cloneData(preferences) };
+      collabBase = { schedule: cloneData(schedule), preferences: cloneData(preferences), manualPreferences: cloneData(manualPreferences) };
     }
     renderTable();
     renderHeatmap();

@@ -124,6 +124,7 @@ tbody tr.week-gap td { height: 22px; padding: 0; border-right: 0; background: va
 .supervision-pair .person-chip { margin: 0; }
 .supervision-slash { padding: 0 2px; color: #526477; font-weight: 700; }
 .empty-cell { color: #bac4cf; }
+tbody td.coordination-capacity-conflict { background: #ffe3e3; box-shadow: inset 0 0 0 1px #e54848; }
 tbody td.is-drop-eligible { background: #edf7ff; box-shadow: inset 0 0 0 2px rgb(0 144 242 / 58%); cursor: pointer; }
 tbody td.is-drop-active { background: #dcefff; box-shadow: inset 0 0 0 3px rgb(0 144 242 / 82%); }
 
