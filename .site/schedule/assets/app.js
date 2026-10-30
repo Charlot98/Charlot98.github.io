@@ -919,9 +919,10 @@ function moveManualManagementAnnotation(source, targetDateKey, targetColumnId) {
 }
 
 function manualTooltipHTML(custom) {
-  if (!custom?.manualAnnotation) return false;
+  if (!custom || annotationMode) return false;
   const escape = value => String(value || '').replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
-  return `<b>${escape(custom.personLabel)}</b><br>${escape(custom.dateLabel)}<br>手动标注：${escape(custom.manualAnnotation)}`;
+  const annotation = custom.manualAnnotation ? `<br>标注：${escape(custom.manualAnnotation)}` : '';
+  return `<b>${escape(custom.personLabel)}</b><br>${escape(custom.dateLabel)}<br>${escape(custom.actualShifts || '无排班')}${annotation}`;
 }
 
 function updateAnnotationToolbar() {
@@ -1596,6 +1597,7 @@ function renderHeatmap() {
         person,
         personLabel: displayReportName(person, shifts.find((shift) => shift.startsWith("us-")) || ""),
         manualAnnotation: describePreference(manualPreferenceForCell(person, dateKey)),
+        actualShifts: labels.join("、"),
         dateKey,
         dateLabel: `${day} ${weekday}`,
         shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}${nightStreakDescription}${doubleWeekendNightDescription}${overCapacityDescription}`,
