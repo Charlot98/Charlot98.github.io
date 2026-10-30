@@ -54,7 +54,7 @@
 
       const title = document.createElement('h2');
       title.id = 'scheduleAuthTitle';
-      title.textContent = '管理员登录';
+      title.textContent = '登录';
 
       const eyebrow = document.createElement('p');
       eyebrow.className = 'schedule-auth-kicker';
@@ -89,15 +89,11 @@
       confirm.type = 'submit';
       confirm.className = 'primary';
       confirm.textContent = '登录';
-      const guest = document.createElement('button');
-      guest.type = 'button';
-      guest.className = 'schedule-auth-guest';
-      guest.textContent = '游客登录';
       const cancel = document.createElement('button');
       cancel.type = 'button';
       cancel.textContent = '取消';
 
-      form.append(usernameLabel, username, passwordLabel, password, error, confirm, guest, cancel);
+      form.append(usernameLabel, username, passwordLabel, password, error, confirm, cancel);
       panel.append(eyebrow, title, form);
       overlay.appendChild(panel);
 
@@ -109,12 +105,6 @@
       const cancelPairing = () => {
         cleanup();
         reject(new Error('已取消设备配对'));
-      };
-      const continueAsGuest = () => {
-        cleanup();
-        const guestError = new Error('游客登录');
-        guestError.guest = true;
-        reject(guestError);
       };
       const handleKeydown = (event) => {
         if (event.key === 'Escape') cancelPairing();
@@ -133,7 +123,6 @@
         resolve({ username: account, password: secret });
       });
       cancel.addEventListener('click', cancelPairing);
-      guest.addEventListener('click', continueAsGuest);
       document.addEventListener('keydown', handleKeydown);
       document.body.classList.add('schedule-auth-open');
       document.body.appendChild(overlay);
@@ -230,20 +219,6 @@
     return payload;
   }
 
-  async function publicFetch(resource) {
-    let response;
-    try {
-      response = await nativeFetch(apiUrl(resource), {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        credentials: 'omit',
-      });
-    } catch {
-      throw new Error('无法连接排班云端服务');
-    }
-    return response;
-  }
-
   async function checkSession() {
     const token = readToken();
     if (!token) return { authenticated: false };
@@ -269,13 +244,18 @@
     }
   }
 
+  async function getRoster() {
+    const response = await apiFetch('roster');
+    return readJson(response, '读取云端人员名单失败');
+  }
+
   async function listVersions() {
-    const response = await publicFetch('versions');
+    const response = await apiFetch('versions');
     return readJson(response, '读取云端排班版本失败');
   }
 
   async function getVersion(id) {
-    const response = await publicFetch(`versions/${encodeURIComponent(id)}`);
+    const response = await apiFetch(`versions/${encodeURIComponent(id)}`);
     return readJson(response, '读取云端排班详情失败');
   }
 
@@ -306,7 +286,7 @@
   }
 
   async function liveStatus(id, annotationKey) {
-    const response = await publicFetch(liveQuery(id, annotationKey));
+    const response = await apiFetch(liveQuery(id, annotationKey));
     return readJson(response, '读取实时编辑状态失败');
   }
 
@@ -320,7 +300,7 @@
   }
 
   async function getAnnotations(versionKey) {
-    const response = await publicFetch(`annotations/${encodeURIComponent(versionKey)}`);
+    const response = await apiFetch(`annotations/${encodeURIComponent(versionKey)}`);
     return readJson(response, '读取云端热力图标注失败');
   }
 
@@ -358,6 +338,7 @@
     ensureAccess,
     clearAccess: clearToken,
     checkSession,
+    getRoster,
     listVersions,
     getVersion,
     createVersion,

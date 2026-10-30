@@ -1,5 +1,4 @@
-import { previousWeekStaffByDate } from "./previous-week-staff.js?v=2";
-import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid, displayReportName, reportRosterEntryText } from "./ultrasound-supervision.js?v=5";
+import { configureUltrasound, allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid, displayReportName, reportRosterEntryText } from "./ultrasound-supervision.js?v=6";
 const columns = [
   ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],
@@ -12,36 +11,38 @@ const columns = [
   ["rest", "普休"], ["no-night", "不夜"],
 ];
 
-const groups = [
-  ["高级医师", ["戴榕全", "刘蕾", "张博闻", "白璐", "张志轩", "吴璇", "邝怡", "曲艺", "陈可欣", "李铭婕"]],
-  ["中级医师", ["刘慜思", "张秋梅", "曲莹莹"]],
-  ["三年级", ["马萌", "江蓝", "王兆雪", "冯军利", "张若邈"]],
-  ["二年级", ["付诗懿", "冯芷珊", "刘亦婷", "于丛爽", "戴睿", "袁芳"]],
-  ["一年级", ["彭竻川", "张伊雯", "徐李祥瑞", "林雨睿", "梁思思", "沈烨"]],
-  ["老助理", ["张明扬", "杨思琪", "赵家慧", "刘越", "王成龙", "赵家琳", "路萌", "马析淳"]],
-  ["新助理", ["安姝嫣", "李晓阳", "杨俊杰", "苏镜秋", "闫娜", "段艺涵"]],
-];
-const people = groups.flatMap(([, names]) => names);
-const groupByPerson = new Map(groups.flatMap(([group, names]) => names.map((name) => [name, group])));
-const groupStarts = new Set(groups.slice(1).map(([, names]) => names[0]));
-const thirdGrade = new Set(groups[2][1]);
-const residents = new Set([...groups[3][1], ...groups[4][1]]);
-const assistants = new Set([...groups[5][1], ...groups[6][1]]);
+// 人员名单属于敏感信息，只保存在云端，登录后由 applyRoster 载入。
+let groups = [];
+let people = [];
+let groupByPerson = new Map();
+let groupStarts = new Set();
+let thirdGrade = new Set();
+let residents = new Set();
+let assistants = new Set();
 /** 夜班展示/落库顺序：高年级A→B→中年级→三年级→二年级→一年级→高级助理→中级助理→新人助理 */
-const nightOrderTiers = [
-  ["戴榕全", "刘蕾", "张博闻", "白璐", "张志轩"],
-  ["吴璇", "邝怡", "曲艺", "陈可欣", "李铭婕"],
-  ["刘慜思", "张秋梅", "曲莹莹"],
-  ["马萌", "江蓝", "王兆雪", "冯军利", "张若邈"],
-  ["付诗懿", "冯芷珊", "刘亦婷", "于丛爽", "戴睿", "袁芳"],
-  ["彭竻川", "张伊雯", "徐李祥瑞", "林雨睿", "梁思思", "沈烨"],
-  ["张明扬", "赵家琳", "杨思琪", "赵家慧"],
-  ["刘越", "王成龙", "路萌", "马析淳"],
-  ["安姝嫣", "李晓阳", "杨俊杰", "苏镜秋", "闫娜", "段艺涵"],
-];
-const nightOrderRankByPerson = new Map(nightOrderTiers.flatMap((names, tierIndex) => (
-  names.map((name, nameIndex) => [name, tierIndex * 100 + nameIndex])
-)));
+let nightOrderRankByPerson = new Map();
+/** 助理热力图标签对应总表列，依据助理待排班人员名单。 */
+let assistantManualColumns = {};
+let xrayTeachingFirstYear = new Set();
+let previousWeekStaffByDate = {};
+
+function applyRoster(roster) {
+  groups = roster.groups || [];
+  const namesOf = (...groupNames) => groups.filter(([group]) => groupNames.includes(group)).flatMap(([, names]) => names);
+  people = groups.flatMap(([, names]) => names);
+  groupByPerson = new Map(groups.flatMap(([group, names]) => names.map((name) => [name, group])));
+  groupStarts = new Set(groups.slice(1).map(([, names]) => names[0]));
+  thirdGrade = new Set(namesOf("三年级"));
+  residents = new Set(namesOf("二年级", "一年级"));
+  assistants = new Set(namesOf("老助理", "新助理"));
+  nightOrderRankByPerson = new Map((roster.nightOrderTiers || []).flatMap((names, tierIndex) => (
+    names.map((name, nameIndex) => [name, tierIndex * 100 + nameIndex])
+  )));
+  assistantManualColumns = roster.assistantManualColumns || {};
+  xrayTeachingFirstYear = new Set(roster.xrayTeachingFirstYear || []);
+  previousWeekStaffByDate = roster.previousWeekStaffByDate || {};
+  configureUltrasound(roster.ultrasound || {});
+}
 const assistantDailyCaps = {
   "xray-teaching": 2,
   "xray-shooting": 2,
@@ -139,12 +140,13 @@ function updateAccessModeUI() {
   const account = canEdit ? (globalThis.ScheduleApi?.currentAccount?.() || "") : "";
   badge.textContent = canEdit ? (account ? `账号 ${account}` : "管理账号") : "游客账号 · 只读";
   badge.classList.toggle("is-editor", canEdit);
-  accessButton.textContent = canEdit ? "退出管理" : "管理员登录";
+  accessButton.textContent = canEdit ? "退出登录" : "登录";
   const saveButton = document.querySelector("#save-version-button");
   if (saveButton) {
     saveButton.disabled = false;
     saveButton.title = canEdit ? "另存为新的云端版本号" : "点击后登录管理员账号并另存为新版本";
   }
+  updatePeriodNav();
   document.querySelectorAll("#annotation-buttons button").forEach((button) => {
     button.disabled = !canEdit;
   });
@@ -176,12 +178,7 @@ async function initializeAccessMode() {
 async function enterEditorMode() {
   if (canEdit) return true;
   if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
-  try {
-    await globalThis.ScheduleApi.ensureAccess();
-  } catch (error) {
-    if (error?.guest) return false;
-    throw error;
-  }
+  await globalThis.ScheduleApi.ensureAccess();
   const session = await globalThis.ScheduleApi.checkSession();
   if (!session?.authenticated) throw new Error("管理员登录失败");
   canEdit = true;
@@ -198,7 +195,8 @@ async function toggleAccessMode() {
     button.disabled = true;
     if (canEdit) {
       globalThis.ScheduleApi?.clearAccess();
-      canEdit = false;
+      window.location.reload();
+      return;
     } else {
       button.textContent = "登录中…";
       await enterEditorMode();
@@ -475,9 +473,9 @@ function syncHeatmapPreference(person, dateKey) {
   else delete preferences[key];
 }
 
-function keepHeatmapMarksAfterImport(previousPreferences) {
+function keepHeatmapMarksAfterImport(previousPreferences, dateKeys = Object.keys(schedule)) {
   preferences = cloneData(previousPreferences || {});
-  for (const dateKey of Object.keys(schedule)) {
+  for (const dateKey of dateKeys) {
     for (const person of people) {
       const before = parsePreference(preferences[`${person}::${dateKey}`] || "");
       if (before.content === "rest" || before.content === "no-night") continue;
@@ -525,24 +523,6 @@ const annotationLabels = {
 };
 
 const manualAssignModes = new Set(["night", "xray", "ct", "us", "outpatient", "outpatient-night", "outpatient-follow", "annual-leave", "management", "expansion"]);
-/** 助理热力图标签对应总表列，依据助理待排班人员名单。 */
-const assistantManualColumns = {
-  张明扬: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
-  杨思琪: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
-  赵家慧: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
-  赵家琳: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
-  刘越: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
-  王成龙: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
-  路萌: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
-  马析淳: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
-  安姝嫣: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  李晓阳: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  杨俊杰: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  苏镜秋: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  闫娜: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  段艺涵: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-};
-
 function assistantManualColumn(person, mode) {
   return assistantManualColumns[person]?.[mode] || "";
 }
@@ -567,7 +547,7 @@ function manualColumnFor(person, mode) {
   if (assistantManualColumns[person]) return assistantManualColumn(person, mode);
   const group = groupByPerson.get(person) || "";
   if (mode === "xray") {
-    if (person === "彭竻川") return "xray-teaching";
+    if (xrayTeachingFirstYear.has(person)) return "xray-teaching";
     if (group === "一年级") return "xray-shooting";
     return "xray-report";
   }
@@ -578,7 +558,7 @@ function manualColumnFor(person, mode) {
     return "ct-report";
   }
   if (mode === "us") {
-    if (group === "一年级" && person !== "彭竻川") return "us-report";
+    if (group === "一年级" && !xrayTeachingFirstYear.has(person)) return "us-report";
     return "us-room-1";
   }
   return "";
@@ -874,8 +854,12 @@ function describePreference(raw) {
   return labels.join("+");
 }
 
+function annotationKeyFor(periodKey) {
+  return `period:${periodKey}`.replace(/[^A-Za-z0-9._:-]/g, "-").slice(0, 100);
+}
+
 function annotationVersionKey() {
-  return `period:${currentPeriodKey}`.replace(/[^A-Za-z0-9._:-]/g, "-").slice(0, 100);
+  return annotationKeyFor(currentPeriodKey);
 }
 
 function updateAnnotationToolbar() {
@@ -1227,8 +1211,44 @@ function handleHeatmapSwapClick(custom) {
   renderHeatmap();
 }
 
+let boundaryStaffByDate = {};
+let boundaryNightByDate = {};
+
+// 手工录入的上一周期名单优先，没有时取上一周期最新云端版本的最后7天。
+async function loadPeriodBoundary(periodKey) {
+  const start = String(periodKey || "").split("_")[0];
+  const boundary = { staff: {}, night: {} };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return boundary;
+  const previousEnd = dateKeyPlusDay(start, -1);
+  const previousMeta = versions
+    .filter((item) => String(item.periodKey || "").endsWith(`_${previousEnd}`))
+    .sort((left, right) => versionNumberOf(right) - versionNumberOf(left))[0];
+  if (previousMeta) {
+    try {
+      if (!previousMeta.payload && previousMeta.cloud && globalThis.ScheduleApi) {
+        const result = await ScheduleApi.getVersion(previousMeta.id);
+        previousMeta.payload = cloneData(result.version.payload);
+      }
+      for (let offset = 7; offset >= 1; offset -= 1) {
+        const dateKey = dateKeyPlusDay(start, -offset);
+        const day = previousMeta.payload?.schedule?.[dateKey];
+        if (!day) continue;
+        boundary.night[dateKey] = [...(day.night || [])];
+        if (previousWeekStaffByDate[dateKey]) continue;
+        boundary.staff[dateKey] = [...new Set(Object.entries(day)
+          .filter(([shiftId]) => shiftId !== "rest" && shiftId !== "no-night")
+          .flatMap(([, names]) => names || []))];
+      }
+    } catch {
+      // 读取失败时只按当前周期计算连续上班。
+    }
+  }
+  return boundary;
+}
+
 function isWorkDay(person, dateKey) {
   if (!schedule[dateKey] && previousWeekStaffByDate[dateKey]) return previousWeekStaffByDate[dateKey].includes(person);
+  if (!schedule[dateKey] && boundaryStaffByDate[dateKey]) return boundaryStaffByDate[dateKey].includes(person);
   const parsed = parsePreference(preferences[`${person}::${dateKey}`]);
   return shiftsFor(person, dateKey).length > 0
     || ["annual-leave", "outpatient", "expansion", "management"].includes(parsed.content)
@@ -1237,7 +1257,7 @@ function isWorkDay(person, dateKey) {
 }
 
 function getStreakSeverityByCell(currentDates) {
-  const allDates = [...new Set([...Object.keys(previousWeekStaffByDate), ...currentDates])].sort();
+  const allDates = [...new Set([...Object.keys(previousWeekStaffByDate), ...Object.keys(boundaryStaffByDate), ...currentDates])].sort();
   const currentDateSet = new Set(currentDates);
   const severity = new Map();
   people.forEach((person) => {
@@ -1265,18 +1285,24 @@ function getStreakSeverityByCell(currentDates) {
 
 function getNightStreakByCell(currentDates) {
   const streaks = new Map();
+  const currentDateSet = new Set(currentDates);
+  const allDates = [...new Set([...Object.keys(boundaryNightByDate), ...currentDates])].sort();
   people.forEach((person) => {
     let run = [];
     const flushRun = () => {
-      if (run.length >= 3) run.forEach((dateKey) => streaks.set(`${person}::${dateKey}`, run.length));
+      if (run.length >= 3) {
+        run.filter((dateKey) => currentDateSet.has(dateKey))
+          .forEach((dateKey) => streaks.set(`${person}::${dateKey}`, run.length));
+      }
       run = [];
     };
-    currentDates.forEach((dateKey, index) => {
-      const previousDateKey = currentDates[index - 1];
+    allDates.forEach((dateKey, index) => {
+      const previousDateKey = allDates[index - 1];
       const hasDateGap = previousDateKey
         && (new Date(`${dateKey}T00:00:00`) - new Date(`${previousDateKey}T00:00:00`)) !== 86400000;
       if (hasDateGap) flushRun();
-      if (hasNightShift(person, dateKey)) run.push(dateKey);
+      const onNight = schedule[dateKey] ? hasNightShift(person, dateKey) : (boundaryNightByDate[dateKey] || []).includes(person);
+      if (onNight) run.push(dateKey);
       else flushRun();
     });
     flushRun();
@@ -1722,7 +1748,6 @@ async function exportExcel() {
         }
         return (id === "night" ? sortNightRoster(names) : names).map((name) => displayReportName(name, id)).join("、");
       })]);
-      row.height = 31;
       row.eachCell((cell, columnNumber) => {
         const text = String(cell.value ?? "").trim();
         cell.alignment = { vertical: "middle", wrapText: true };
@@ -1734,7 +1759,7 @@ async function exportExcel() {
       });
       if (date.getDay() === 0 && index < dates.length - 1) totalSheet.addRow([]).height = 7;
     });
-    fitWorksheetColumns(totalSheet);
+    fitWorksheetColumns(totalSheet, { min: 10, max: 90, padding: 6 });
 
     const heatmapSheet = workbook.addWorksheet("人员热力图", { views: [{ state: "frozen", xSplit: 1, ySplit: 1 }] });
     heatmapSheet.addRow(["姓名", ...dates.map((dateKey) => new Date(`${dateKey}T00:00:00`).getDate())]);
@@ -1821,11 +1846,28 @@ function dateKeyFromExcelValue(value) {
   const month = Number(match[1]);
   const day = Number(match[2]);
   const periodStart = (currentPeriodKey || "").slice(0, 10);
-  const start = periodStart ? new Date(`${periodStart}T00:00:00`) : new Date();
-  let year = start.getFullYear();
-  const candidate = new Date(year, month - 1, day);
-  if (periodStart && candidate < new Date(year, start.getMonth() - 1, 1)) year += 1;
+  const reference = periodStart ? new Date(`${periodStart}T00:00:00`) : new Date();
+  const year = [-1, 0, 1]
+    .map((offset) => reference.getFullYear() + offset)
+    .sort((left, right) => Math.abs(new Date(left, month - 1, day) - reference) - Math.abs(new Date(right, month - 1, day) - reference))[0];
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+// 忽略☆、#、ん等标记和括号备注；姓名后紧跟“半”等备注字时按姓名前缀识别。
+function namesFromExcelCell(text, knownPeople, unknownNames) {
+  const longestFirst = [...knownPeople].sort((left, right) => right.length - left.length);
+  const kept = [];
+  String(text ?? "")
+    .replace(/[（(][^）)]*[）)]/g, " ")
+    .split(/[、,，/／\s]+/)
+    .map((token) => token.replace(/[^\u4e00-\u9fff]/g, ""))
+    .filter(Boolean)
+    .forEach((token) => {
+      const name = knownPeople.has(token) ? token : longestFirst.find((person) => token.startsWith(person));
+      if (!name) unknownNames.add(token);
+      else if (!kept.includes(name)) kept.push(name);
+    });
+  return kept;
 }
 
 function scheduleFromWorksheet(sheet) {
@@ -1833,7 +1875,7 @@ function scheduleFromWorksheet(sheet) {
   const columnIds = [];
   header.eachCell((cell, columnNumber) => {
     if (columnNumber === 1) return;
-    const label = String(cell.value ?? "").trim();
+    const label = String(cell.text ?? cell.value ?? "").trim();
     const columnId = label === "超声统筹" ? coordinationColumnId : columns.find(([, columnLabel]) => columnLabel === label)?.[0];
     if (columnId) columnIds[columnNumber] = columnId;
   });
@@ -1850,16 +1892,8 @@ function scheduleFromWorksheet(sheet) {
     const day = {};
     columnIds.forEach((columnId, columnNumber) => {
       if (!columnId) return;
-      const names = String(row.getCell(columnNumber).value ?? "")
-        .split(/[、,，/\n]+/)
-        .map((name) => name.trim())
-        .filter(Boolean);
-      const kept = [];
-      names.forEach((name) => {
-        if (knownPeople.has(name)) {
-          if (!kept.includes(name)) kept.push(name);
-        } else unknownNames.add(name);
-      });
+      const cell = row.getCell(columnNumber);
+      const kept = namesFromExcelCell(cell.text ?? cell.value, knownPeople, unknownNames);
       if (!kept.length) return;
       if (columnId === coordinationColumnId) {
         kept.forEach((name) => {
@@ -1873,7 +1907,59 @@ function scheduleFromWorksheet(sheet) {
     nextSchedule[dateKey] = day;
   });
   if (!dateCount) throw new Error("没有读到日期，请确认第一列是「9月28日 周一」这样的日期");
-  return { schedule: nextSchedule, unknownNames: [...unknownNames] };
+  const coveredColumns = new Set(columnIds.filter(Boolean).flatMap((columnId) => columnId === coordinationColumnId ? coordinationSourceColumns : [columnId]));
+  if ([...coveredColumns].some((columnId) => columnId.startsWith("us-room-"))) coveredColumns.add("us-report");
+  return { schedule: nextSchedule, coveredColumns: [...coveredColumns], unknownNames: [...unknownNames] };
+}
+
+// 与已有周期重叠最多的那个周期；Excel 大部分日期不在任何已有周期时，按完整周新建周期。
+function importTargetPeriod(dateKeys, periodKeys) {
+  const inPeriod = (dateKey, periodKey) => {
+    const [start, end] = periodKey.split("_");
+    return dateKey >= start && dateKey <= end;
+  };
+  let best = "";
+  let bestCount = 0;
+  periodKeys.forEach((periodKey) => {
+    const count = dateKeys.filter((dateKey) => inPeriod(dateKey, periodKey)).length;
+    if (count > bestCount) {
+      best = periodKey;
+      bestCount = count;
+    }
+  });
+  const uncovered = dateKeys.filter((dateKey) => !periodKeys.some((periodKey) => inPeriod(dateKey, periodKey)));
+  if (best && bestCount >= uncovered.length) return best;
+  let end = uncovered.at(-1);
+  while (new Date(`${end}T00:00:00`).getDay() !== 0) end = dateKeyPlusDay(end, 1);
+  const plan = nextPeriodPlan([...periodKeys].sort().at(-1));
+  if (plan && uncovered[0] >= plan.start) {
+    const planEnd = periodKeyFrom(plan.start, plan.defaultWeeks).split("_")[1];
+    return `${plan.start}_${end > planEnd ? end : planEnd}`;
+  }
+  let start = uncovered[0];
+  while (new Date(`${start}T00:00:00`).getDay() !== 1) start = dateKeyPlusDay(start, -1);
+  return `${start}_${end}`;
+}
+
+async function importBaseFor(periodKey, knownVersions) {
+  if (periodKey === currentPeriodKey) {
+    return { schedule: cloneData(schedule), preferences: cloneData(preferences), supervision: ultrasoundSupervisionEnabled };
+  }
+  const meta = knownVersions
+    .filter((item) => item.periodKey === periodKey)
+    .sort((left, right) => versionNumberOf(right) - versionNumberOf(left))[0];
+  if (!meta) return { schedule: {}, preferences: {}, supervision: ultrasoundSupervisionEnabled };
+  if (!meta.payload) meta.payload = cloneData((await ScheduleApi.getVersion(meta.id)).version.payload);
+  let basePreferences = annotationsByPeriod.get(periodKey);
+  if (!basePreferences) {
+    const annotations = await ScheduleApi.getAnnotations(annotationKeyFor(periodKey)).catch(() => null);
+    basePreferences = annotations?.found ? annotations.annotations?.preferences : meta.payload.preferences;
+  }
+  return {
+    schedule: cloneData(meta.payload.schedule || {}),
+    preferences: cloneData(basePreferences || {}),
+    supervision: Boolean(meta.payload.ultrasoundSupervision?.enabled),
+  };
 }
 
 async function importExcelFile(file) {
@@ -1881,6 +1967,7 @@ async function importExcelFile(file) {
   const originalText = button?.textContent || "导入 Excel";
   const previousSchedule = schedule;
   const previousPreferences = preferences;
+  const previousSupervision = ultrasoundSupervisionEnabled;
   try {
     if (button) {
       button.disabled = true;
@@ -1894,50 +1981,63 @@ async function importExcelFile(file) {
     const sheet = workbook.getWorksheet("排班总表") || workbook.worksheets[0];
     if (!sheet) throw new Error("Excel 里没有工作表");
     const imported = scheduleFromWorksheet(sheet);
-    schedule = imported.schedule;
-    normalizeNightRosters();
-    applyUltrasoundAllocation();
-    keepHeatmapMarksAfterImport(previousPreferences);
     let cloudVersions = [];
     try { cloudVersions = await fetchCloudVersions(); } catch { cloudVersions = []; }
-    const versionNumbers = [
-      ...versions.map((item) => versionNumberOf(item)),
-      ...cloudVersions.map((item) => versionNumberOf(item)),
-      currentVersion?.versionNumber || 0,
-    ];
-    const nextVersionNumber = Math.max(29, ...versionNumbers) + 1;
-    const label = nextScheduleLabel([...versions, ...cloudVersions], currentPeriodKey);
-    const payload = currentPayload(nextVersionNumber, label);
-    payload.status = "Excel导入";
+    const knownVersions = [...new Map([...cloudVersions, ...versions].map((item) => [item.id, item])).values()];
+    const importedDates = Object.keys(imported.schedule).sort();
+    const periodKey = importTargetPeriod(importedDates, [...new Set(knownVersions.map((item) => item.periodKey).filter(Boolean))]);
+    const [periodStart, periodEnd] = periodKey.split("_");
+    const appliedDates = importedDates.filter((dateKey) => dateKey >= periodStart && dateKey <= periodEnd);
+    const base = await importBaseFor(periodKey, knownVersions);
+    const merged = base.schedule;
+    for (let dateKey = periodStart; dateKey <= periodEnd; dateKey = dateKeyPlusDay(dateKey, 1)) merged[dateKey] ||= {};
+    appliedDates.forEach((dateKey) => {
+      const day = { ...merged[dateKey] };
+      imported.coveredColumns.forEach((columnId) => delete day[columnId]);
+      merged[dateKey] = { ...day, ...imported.schedule[dateKey] };
+    });
+    schedule = merged;
+    ultrasoundSupervisionEnabled = base.supervision;
+    normalizeNightRosters();
+    applyUltrasoundAllocation();
+    keepHeatmapMarksAfterImport(base.preferences, appliedDates);
+    const importedPreferences = cloneData(preferences);
+    const payload = {
+      version: Math.max(29, currentVersion?.versionNumber || 0, ...knownVersions.map(versionNumberOf)) + 1,
+      label: nextScheduleLabel(knownVersions, periodKey),
+      status: "Excel导入",
+      periodKey,
+      savedAt: new Date().toISOString(),
+      ...(ultrasoundSupervisionEnabled ? { ultrasoundSupervision: { enabled: true } } : {}),
+      preferences: importedPreferences,
+      schedule: cloneData(schedule),
+    };
+    schedule = previousSchedule;
+    preferences = previousPreferences;
+    ultrasoundSupervisionEnabled = previousSupervision;
     const cloudResult = await ScheduleApi.createVersion(payload);
     const cloudVersion = cloudResult.version;
-    const cloudPayload = cloudVersion.payload || payload;
-    const meta = makeCloudMeta(cloudVersion, cloudPayload);
-    versions = [meta, ...versions.filter((item) => item.id !== meta.id)];
-    currentVersion = meta;
-    currentPeriodKey = cloudPayload.periodKey || payload.periodKey;
-    schedule = cloneData(cloudPayload.schedule || imported.schedule);
-    normalizeNightRosters();
-    renderVersionOptions(meta.id);
-    updatePeriodDisplay(currentPeriodKey);
-    document.querySelector("#day-count").textContent = Object.keys(schedule).length;
+    const meta = makeCloudMeta(cloudVersion, cloudVersion.payload || payload);
+    meta.revision = Number(cloudVersion.revision || 1);
+    knownVersions.push(meta);
+    versions = [...new Map(knownVersions.map((item) => [item.id, item])).values()]
+      .sort((left, right) => versionNumberOf(right) - versionNumberOf(left));
+    annotationsByPeriod.set(periodKey, cloneData(importedPreferences));
+    await loadVersion(meta.id);
+    queueAnnotationSave();
+    const skipped = importedDates.length - appliedDates.length;
+    const skippedNote = skipped ? `，${skipped}天不在本周期已跳过` : "";
     const unknownNote = imported.unknownNames.length
       ? `，已忽略${imported.unknownNames.length}个未知名：${imported.unknownNames.slice(0, 4).join("、")}`
       : "";
-    tableStatus = `已导入并保存为${cloudVersion.label}${unknownNote}`;
+    tableStatus = `已覆盖${appliedDates.length}天并保存为${cloudVersion.label}${skippedNote}${unknownNote}`;
     annotationStatus = tableStatus;
-    heatmapSwapStatus = "点格换班";
-    rememberCollabBase(Number(cloudVersion.revision || 0), syncedAnnotationAt);
-    queueAnnotationSave();
-    clearUndoHistory();
     updateAnnotationToolbar();
     renderTable();
-    renderHeatmap();
-    renderRoomChart();
-    renderWeekendStatsChart();
   } catch (error) {
     schedule = previousSchedule;
     preferences = previousPreferences;
+    ultrasoundSupervisionEnabled = previousSupervision;
     tableStatus = error.message === "已取消设备配对"
       ? "已取消管理员登录，本次未导入"
       : `导入失败：${error.message || "请确认文件是本页导出的排班总表"}`;
@@ -2359,8 +2459,15 @@ function updatePeriodNav(periodKey = currentPeriodKey) {
   const index = keys.indexOf(periodKey);
   const previous = document.querySelector("#previous-period-button");
   const next = document.querySelector("#next-period-button");
+  const canCreateNext = canEdit && index >= 0 && index === keys.length - 1;
   if (previous) previous.disabled = index <= 0;
-  if (next) next.disabled = index < 0 || index >= keys.length - 1;
+  if (next) {
+    next.disabled = index < 0 || (index >= keys.length - 1 && !canCreateNext);
+    next.classList.toggle("is-create", canCreateNext);
+    next.textContent = canCreateNext ? "+" : "›";
+    next.title = canCreateNext ? "新建下一周期" : "";
+    next.setAttribute("aria-label", canCreateNext ? "新建下一周期" : "下一个排班周期");
+  }
 }
 
 function periodMonth(periodKey) {
@@ -2381,7 +2488,7 @@ function periodMonth(periodKey) {
 function requestedPeriodToken() {
   const query = new URLSearchParams(window.location.search).get("period");
   if (query) return query;
-  const match = window.location.pathname.match(/\/schedule\/(0?[1-9]|1[0-2])\/?$/);
+  const match = window.location.pathname.match(/\/schedule\d*\/(0?[1-9]|1[0-2])\/?$/);
   return match ? String(Number(match[1])) : "";
 }
 
@@ -2394,7 +2501,7 @@ function versionMatchesRequest(item, token) {
 function rememberPeriodInUrl(periodKey) {
   const month = periodMonth(periodKey);
   if (!month) return;
-  const path = `/schedule/${month}`;
+  const path = `${new URL(document.baseURI).pathname}${month}`;
   if (window.location.pathname === path && !window.location.search) return;
   window.history.replaceState(null, "", path);
 }
@@ -2402,6 +2509,10 @@ function rememberPeriodInUrl(periodKey) {
 async function switchPeriod(step) {
   const keys = knownPeriodKeys();
   const target = keys[keys.indexOf(currentPeriodKey) + step];
+  if (!target && step > 0 && canEdit && currentPeriodKey === keys.at(-1)) {
+    openNewPeriodDialog();
+    return;
+  }
   const meta = target && versions.find((item) => item.periodKey === target);
   if (!meta) return;
   try {
@@ -2409,6 +2520,126 @@ async function switchPeriod(step) {
   } catch (error) {
     document.querySelector("#loading-screen").textContent = error.message;
   }
+}
+
+// 每周按周四所在月份归属；从上一周期结束后的周一开始，默认取同一月份的连续周数。
+function nextPeriodPlan(periodKey) {
+  const end = String(periodKey || "").split("_")[1];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(end)) return null;
+  let start = dateKeyPlusDay(end, 1);
+  while (new Date(`${start}T00:00:00`).getDay() !== 1) start = dateKeyPlusDay(start, 1);
+  const thursdayMonth = (week) => dateKeyPlusDay(start, week * 7 + 3).slice(0, 7);
+  let weeks = 0;
+  while (weeks < 5 && thursdayMonth(weeks) === thursdayMonth(0)) weeks += 1;
+  return { start, defaultWeeks: Math.min(5, Math.max(4, weeks)) };
+}
+
+function periodKeyFrom(start, weeks) {
+  return `${start}_${dateKeyPlusDay(start, weeks * 7 - 1)}`;
+}
+
+async function createNextPeriod(periodKey) {
+  if (!canEdit && !(await enterEditorMode())) return false;
+  await ScheduleApi.ensureAccess();
+  const cloudVersions = await fetchCloudVersions().catch(() => []);
+  const existing = cloudVersions.find((item) => item.periodKey === periodKey);
+  if (existing) {
+    if (!versions.some((item) => item.id === existing.id)) versions = [existing, ...versions];
+    await loadVersion(existing.id);
+    return true;
+  }
+  const [start, end] = periodKey.split("_");
+  const blank = {};
+  for (let dateKey = start; dateKey <= end; dateKey = dateKeyPlusDay(dateKey, 1)) blank[dateKey] = {};
+  const payload = {
+    version: Math.max(29, ...[...versions, ...cloudVersions].map(versionNumberOf)) + 1,
+    label: `${periodMonth(periodKey)}月第1版`,
+    status: "云端保存",
+    periodKey,
+    savedAt: new Date().toISOString(),
+    ...(ultrasoundSupervisionEnabled ? { ultrasoundSupervision: { enabled: true } } : {}),
+    preferences: {},
+    schedule: blank,
+  };
+  const result = await ScheduleApi.createVersion(payload);
+  const meta = makeCloudMeta(result.version, result.version.payload || payload);
+  meta.revision = Number(result.version.revision || 0);
+  versions = [meta, ...versions];
+  await loadVersion(meta.id);
+  tableStatus = `已新建${meta.label}（空白排班）`;
+  renderTable();
+  return true;
+}
+
+function openNewPeriodDialog() {
+  const plan = nextPeriodPlan(currentPeriodKey);
+  if (!plan) return;
+  const overlay = document.createElement("div");
+  overlay.className = "calendar-dialog-overlay";
+  const panel = document.createElement("section");
+  panel.className = "calendar-dialog";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "newPeriodDialogTitle");
+  panel.innerHTML = `
+    <h2 id="newPeriodDialogTitle">新建下一周期</h2>
+    <form>
+      <label for="new-period-weeks">周期长度</label>
+      <select id="new-period-weeks">
+        <option value="4">4周</option>
+        <option value="5">5周</option>
+      </select>
+      <p class="dialog-note" data-new-period-summary></p>
+      <div class="calendar-dialog-actions">
+        <button type="button" data-new-period-cancel>取消</button>
+        <button type="submit" class="primary">新建空白排班</button>
+      </div>
+    </form>`;
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+  document.body.classList.add("calendar-dialog-open");
+  const select = panel.querySelector("select");
+  const summary = panel.querySelector("[data-new-period-summary]");
+  const submit = panel.querySelector("button[type=submit]");
+  select.value = String(plan.defaultWeeks);
+  const describe = () => {
+    const periodKey = periodKeyFrom(plan.start, Number(select.value));
+    const [start, end] = periodKey.split("_");
+    summary.textContent = `${start} 至 ${end}`;
+  };
+  describe();
+  select.addEventListener("change", describe);
+  const cleanup = () => {
+    document.removeEventListener("keydown", handleKeydown);
+    document.body.classList.remove("calendar-dialog-open");
+    overlay.remove();
+  };
+  const handleKeydown = (event) => {
+    if (event.key === "Escape" && !submit.disabled) cleanup();
+  };
+  panel.querySelector("form").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submit.disabled = true;
+    submit.textContent = "新建中…";
+    try {
+      if (await createNextPeriod(periodKeyFrom(plan.start, Number(select.value)))) cleanup();
+      else {
+        submit.disabled = false;
+        submit.textContent = "新建空白排班";
+      }
+    } catch (error) {
+      summary.textContent = `新建失败：${error.message || "云端不可用"}`;
+      submit.disabled = false;
+      submit.textContent = "新建空白排班";
+    }
+  });
+  panel.querySelector("[data-new-period-cancel]").addEventListener("click", () => {
+    if (!submit.disabled) cleanup();
+  });
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay && !submit.disabled) cleanup();
+  });
+  document.addEventListener("keydown", handleKeydown);
 }
 
 function cloneData(value) {
@@ -2758,7 +2989,10 @@ async function loadVersion(versionId) {
     }
     annotationsByPeriod.set(currentPeriodKey, cloneData(preferences));
   }
+  const boundary = await loadPeriodBoundary(currentPeriodKey);
   if (revision !== versionLoadRevision) return;
+  boundaryStaffByDate = boundary.staff;
+  boundaryNightByDate = boundary.night;
   tableMoveSource = null;
   tableStatus = canEdit ? "拖动姓名换班" : "游客账号 · 只读查看";
   heatmapSwapSource = null;
@@ -2855,36 +3089,38 @@ async function init() {
     loading.textContent = "正在从云端载入排班…";
     loading.classList.remove("is-hidden");
     if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
-    const [cloudVersions, localNovember] = await Promise.all([
-      fetchCloudVersions().catch(() => []),
-      fetch("./data/schedule-refined-20261102.json?v=8").then((response) => response.ok ? response.json() : null).catch(() => null),
+    if (!(await enterEditorMode())) throw new Error("已取消设备配对");
+    loading.textContent = "正在从云端载入排班…";
+    const [rosterResult, cloudVersions] = await Promise.all([
+      ScheduleApi.getRoster(),
+      fetchCloudVersions(),
     ]);
-    const localPeriod = localNovember?.periodKey;
-    const hasCloudNovember = cloudVersions.some((item) => item.periodKey === localPeriod);
-    const localVersions = localNovember?.schedule && !hasCloudNovember ? [{
-      id: "local-20261102",
-      label: localNovember.label || "11月第1版",
-      status: "本地",
-      versionNumber: localNovember.version || 0,
-      periodKey: localNovember.periodKey,
-      cloud: false,
-      payload: localNovember,
-    }] : [];
-    versions = [...cloudVersions, ...localVersions];
+    applyRoster(rosterResult.roster);
+    versions = cloudVersions;
     if (!versions.length) throw new Error("云端暂无排班版本");
     renderVersionOptions();
     document.querySelector("#people-count").textContent = people.length;
     const requestedPeriod = requestedPeriodToken();
+    const latestPeriod = knownPeriodKeys().at(-1);
     const preferred = versions.find((item) => versionMatchesRequest(item, requestedPeriod))
-      || versions.find((item) => item.periodKey === "2026-11-02_2026-12-06")
-      || versions.find((item) => item.periodKey === "2026-09-28_2026-11-01")
+      || versions.find((item) => item.periodKey === latestPeriod)
       || versions[0];
     await loadVersion(preferred.id);
     scheduleCloudVersionPrefetch();
     startCollabPolling();
   } catch (error) {
-    loading.textContent = `${error.message || "云端排班不可用"}`;
     loading.classList.remove("is-hidden");
+    const gate = document.createElement("div");
+    gate.className = "login-gate";
+    gate.textContent = error.message === "已取消设备配对"
+      ? "排班仅限登录后查看"
+      : `${error.message || "云端排班不可用"}`;
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.textContent = "登录";
+    retry.addEventListener("click", init, { once: true });
+    gate.append(retry);
+    loading.replaceChildren(gate);
   }
 }
 

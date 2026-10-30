@@ -55,6 +55,7 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(27px, 3vw, 39px); letter-sp
 .period-nav-button { display: inline-grid; width: 30px; height: 30px; flex: 0 0 30px; place-items: center; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--blue); font-size: 22px; line-height: 1; }
 .period-nav-button:hover:not(:disabled) { border-color: var(--blue); background: var(--blue-soft); }
 .period-nav-button:disabled { cursor: not-allowed; opacity: .35; }
+.period-nav-button.is-create { border-color: var(--blue); background: var(--blue-soft); font-size: 20px; }
 
 .toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); box-shadow: 0 6px 20px rgb(16 51 94 / 5%); }
 .search-field, .version-field { display: grid; gap: 5px; }
@@ -189,6 +190,8 @@ body.is-guest .person-chip { cursor: default !important; user-select: text; }
 .no-results { padding: 34px; color: var(--muted); text-align: center; }
 .loading-screen { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--canvas); color: var(--navy); font-size: 14px; font-weight: 750; }
 .loading-screen.is-hidden { display: none; }
+.loading-screen .login-gate { display: grid; gap: 14px; justify-items: center; }
+.loading-screen .login-gate button { min-width: 112px; padding: 8px 20px; border: 0; border-radius: 8px; background: var(--navy); color: #fff; font-weight: 750; }
 
 body.schedule-auth-open { overflow: hidden; }
 body.calendar-dialog-open { overflow: hidden; }
@@ -215,6 +218,7 @@ body.calendar-dialog-open { overflow: hidden; }
 .calendar-dialog label { color: var(--muted); font-size: 11px; font-weight: 700; }
 .calendar-dialog select { width: 100%; height: 42px; padding: 0 11px; border: 1px solid #cbd8e7; border-radius: 8px; background: #fff; color: var(--ink); outline: 0; }
 .calendar-dialog select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb(23 102 170 / 12%); }
+.calendar-dialog .dialog-note { margin: 6px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .calendar-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 13px; }
 .calendar-dialog-actions button { min-width: 76px; height: 35px; padding: 0 14px; border: 0; border-radius: 8px; background: #eef3f7; color: #526477; }
 .calendar-dialog-actions button.primary { background: var(--navy); color: #fff; }
@@ -415,4 +419,3 @@ body.calendar-dialog-open { overflow: hidden; }
   60% { transform: translateX(-1px); }
   80% { transform: translateX(1px); }
 }
-

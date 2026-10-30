@@ -2,13 +2,20 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <base href="/schedule/" />
+    <script>
+      (() => {
+        const base = document.createElement("base");
+        const root = window.location.pathname.match(/^(.*\/schedule\d*)(?:\/|$)/);
+        base.href = root ? `${root[1]}/` : "/schedule/";
+        document.head.append(base);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="科室排班静态预览，按日期、岗位和人员查看月度排班。" />
     <title>科室排班总览</title>
     <link rel="icon" type="image/png" href="./assets/VetVault-Logo.png?v=1" />
     <link rel="apple-touch-icon" href="./assets/VetVault-Logo.png" />
-    <link rel="stylesheet" href="./assets/styles.css?v=45" />
+    <link rel="stylesheet" href="./assets/styles.css?v=47" />
   </head>
   <body>
     <main class="app-shell">
@@ -22,8 +29,8 @@
             <strong id="presence-names">—</strong>
           </div>
           <div class="access-card" aria-label="当前访问账号">
-            <span id="access-mode-badge">游客账号</span>
-            <button id="access-mode-button" type="button">管理员登录</button>
+            <span id="access-mode-badge">未登录</span>
+            <button id="access-mode-button" type="button">登录</button>
           </div>
           <div class="period-card" aria-label="排班周期切换">
             <button class="period-nav-button" id="previous-period-button" type="button" aria-label="上一个排班周期" disabled>‹</button>
@@ -150,7 +157,7 @@
     <script src="./assets/heatmap.js"></script>
     <script src="./assets/exceljs.min.js"></script>
     <script src="./assets/supabase-config.js"></script>
-    <script src="./assets/schedule-api.js?v=9"></script>
-    <script type="module" src="./assets/app.js?v=131"></script>
+    <script src="./assets/schedule-api.js?v=10"></script>
+    <script type="module" src="./assets/app.js?v=134"></script>
   </body>
 </html>
