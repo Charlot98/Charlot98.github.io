@@ -990,7 +990,8 @@ function manualTooltipHTML(custom) {
   if (!custom || annotationMode) return false;
   const escape = value => String(value || '').replace(/[&<>"']/g, character => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[character]));
   const annotation = custom.manualAnnotation ? `<br>标注：${escape(custom.manualAnnotation)}` : '';
-  return `<b>${escape(custom.personLabel)}</b><br>${escape(custom.dateLabel)}<br>${escape(custom.actualShifts || '无排班')}${annotation}`;
+  const issues = (custom.issues || []).map(issue => `<div class="heatmap-tip-issue is-${issue.level}">${escape(issue.text)}</div>`).join('');
+  return `<b>${escape(custom.personLabel)}</b><br>${escape(custom.dateLabel)}<br>${escape(custom.actualShifts || '无排班')}${annotation}${issues ? `<div class="heatmap-tip-issues">${issues}</div>` : ''}`;
 }
 
 function updateAnnotationToolbar() {
@@ -1420,7 +1421,7 @@ function getStreakSeverityByCell(currentDates) {
       if (run.length >= 6) {
         const level = run.length > 6 ? "streak-over" : "streak-six";
         run.filter((dateKey) => currentDateSet.has(dateKey))
-          .forEach((dateKey) => severity.set(`${person}::${dateKey}`, level));
+          .forEach((dateKey) => severity.set(`${person}::${dateKey}`, { level, length: run.length }));
       }
       run = [];
     };
@@ -1605,7 +1606,6 @@ function renderHeatmap() {
   const shiftLabels = Object.fromEntries(columns);
   Object.assign(shiftLabels, { "annual-leave": "年假", expansion: "拓展", rest: "普休", "no-night": "不夜", outpatient: "门诊白班/跟诊", "outpatient-night": "门诊夜班", management: "管理" });
   const overCapacityByDate = new Map(heatmapDates.map((dateKey) => [dateKey, overCapacityColumns(dateKey)]));
-  const supervisionPairsByDate = new Map(heatmapDates.map((dateKey) => [dateKey, ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey] || {}) : []]));
   const points = visiblePeople.flatMap((person, personIndex) => heatmapDates.map((dateKey, dateIndex) => {
     const x = dateIndex + Math.floor(dateIndex / 7);
     const shifts = shiftsFor(person, dateKey);
@@ -1619,7 +1619,8 @@ function renderHeatmap() {
       && person === heatmapSwapSource.person
       && dateKey === heatmapSwapSource.dateKey);
     const isSwapCandidate = isHeatmapSwapCandidate(person, dateKey, swapCategory);
-    const streakSeverity = streakSeverityByCell.get(`${person}::${dateKey}`);
+    const streak = streakSeverityByCell.get(`${person}::${dateKey}`);
+    const streakSeverity = streak?.level;
     const nightStreakLength = nightStreakByCell.get(`${person}::${dateKey}`);
     const doubleWeekendNight = doubleWeekendNightCells.has(`${person}::${dateKey}`);
     const hasWhiteConflict = whiteShiftIdsFor(person, dateKey).length > 1;
@@ -1627,25 +1628,20 @@ function renderHeatmap() {
       ? shifts.some(shift => coordinationSourceColumns.includes(shift)) : shifts.includes(columnId));
     const labels = shifts.map((shift) => shiftLabels[shift] || shift);
     const { day, weekday } = dateLabel(dateKey);
-    const baseShiftDescription = parsed.content === "rest"
-      ? restHonored ? "普通休息（已满足）" : `${labels.join("、")}；普通休息未满足`
-      : labels.length ? labels.join("、") : "无排班";
-    const preferenceDescription = describePreference(effective);
-    const pairs = supervisionPairsByDate.get(dateKey);
-    const learnerPair = pairs.find((item) => item.learner === person);
-    const supervisedReports = pairs.filter((item) => item.teacher === person).map((item) => displayReportName(item.learner, item.room));
-    const supervisionDescription = learnerPair ? `；带教：${learnerPair.teacher}`
-      : supervisedReports.length ? `；报告：${supervisedReports.join("、")}` : "";
-    const shiftDescription = (preferenceDescription
-      ? `${baseShiftDescription}；标注：${preferenceDescription}`
-      : baseShiftDescription) + supervisionDescription;
-    const streakDescription = streakSeverity === "streak-six" ? "；连续工作6天"
-      : streakSeverity === "streak-over" ? "；连续工作超过6天" : "";
-    const nightStreakDescription = nightStreakLength ? `；连续夜班${nightStreakLength}天` : "";
-    const doubleWeekendNightDescription = doubleWeekendNight ? "；双周末夜班" : "";
-    const overCapacityDescription = overCapacityShifts.length
-      ? `；${overCapacityShifts.map((columnId) => `${columnId === coordinationColumnId ? '超声统筹' : shiftLabels[columnId] || columnId}超过${columnId === coordinationColumnId ? coordinationCapacity(dateKey) : assistantDailyCaps[columnId]}人`).join("、")}`
-      : "";
+    const issues = [
+      hasWhiteConflict && { level: "danger", text: "同日多白班" },
+      parsed.content === "rest" && !restHonored && { level: "danger", text: "普休未满足" },
+      ...overCapacityShifts.map((columnId) => ({
+        level: "danger",
+        text: `${columnId === coordinationColumnId ? "超声统筹" : shiftLabels[columnId] || columnId}超过${columnId === coordinationColumnId ? coordinationCapacity(dateKey) : assistantDailyCaps[columnId]}人`,
+      })),
+      streak && {
+        level: streak.level === "streak-over" ? "danger" : "warn",
+        text: streak.level === "streak-over" ? `连续工作${streak.length}天，超过6天` : "连续工作6天",
+      },
+      nightStreakLength && { level: "danger", text: `连续夜班${nightStreakLength}天` },
+      doubleWeekendNight && { level: "danger", text: "双周末夜班" },
+    ].filter(Boolean);
     const pointClassName = isSwapSelected ? "heatmap-swap-selected"
       : isSwapCandidate ? "heatmap-swap-candidate"
         : [
@@ -1670,7 +1666,7 @@ function renderHeatmap() {
         actualShifts: labels.join("、"),
         dateKey,
         dateLabel: `${day} ${weekday}`,
-        shifts: `${hasWhiteConflict ? `${shiftDescription}；同日多白班冲突` : shiftDescription}${streakDescription}${nightStreakDescription}${doubleWeekendNightDescription}${overCapacityDescription}`,
+        issues,
         marker: mainHeatmapMarker(person, preference, shifts, restHonored, dateKey),
         noNight: parsed.content === "no-night",
         conflict: hasWhiteConflict,

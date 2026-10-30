@@ -184,6 +184,10 @@ body.is-guest .person-chip { cursor: default !important; user-select: text; }
 .heatmap-frozen-y span { position: absolute; left: 0; width: 80px; transform: translateY(-50%); color: #26384f; font-size: 12px; font-weight: 600; text-align: right; white-space: nowrap; }
 .highcharts-container { font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif !important; }
 .highcharts-tooltip-container { z-index: 30 !important; }
+.heatmap-tip-issues { display: grid; gap: 3px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+.heatmap-tip-issue { padding: 2px 6px; border-left: 3px solid; border-radius: 3px; font-weight: 750; }
+.heatmap-tip-issue.is-danger { border-color: rgb(var(--state-danger)); background: #ffe3e3; color: #a51010; }
+.heatmap-tip-issue.is-warn { border-color: rgb(var(--state-warn)); background: #fff3df; color: #8a4b00; }
 .highcharts-data-label text { pointer-events: none; }
 .highcharts-point.heatmap-swap-ready { cursor: pointer; }
 .highcharts-point.heatmap-clear-fill { fill: transparent !important; }
