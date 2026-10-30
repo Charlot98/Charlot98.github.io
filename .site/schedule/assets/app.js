@@ -3378,7 +3378,7 @@ scheduleTable.addEventListener("click", (event) => {
       ? null
       : nextSource;
     tableStatus = tableMoveSource
-      ? `已选择${tableMoveSource.person}，蓝框为可移动位置；在本格内拖到其他姓名可调整顺序`
+      ? `已选择${tableMoveSource.person}，边框处可移动；红框提示当天已有其他班次；在本格内拖到其他姓名可调整顺序`
       : "拖动姓名换班";
     renderTable();
     return;
