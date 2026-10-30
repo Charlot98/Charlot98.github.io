@@ -24,8 +24,6 @@ let nightOrderRankByPerson = new Map();
 /** 助理热力图标签对应总表列，依据助理待排班人员名单。 */
 let assistantManualColumns = {};
 let xrayTeachingFirstYear = new Set();
-let previousWeekStaffByDate = {};
-
 function applyRoster(roster) {
   groups = roster.groups || [];
   const namesOf = (...groupNames) => groups.filter(([group]) => groupNames.includes(group)).flatMap(([, names]) => names);
@@ -40,7 +38,6 @@ function applyRoster(roster) {
   )));
   assistantManualColumns = roster.assistantManualColumns || {};
   xrayTeachingFirstYear = new Set(roster.xrayTeachingFirstYear || []);
-  previousWeekStaffByDate = roster.previousWeekStaffByDate || {};
   configureUltrasound(roster.ultrasound || {});
 }
 const assistantDailyCaps = {
@@ -1214,7 +1211,7 @@ function handleHeatmapSwapClick(custom) {
 let boundaryStaffByDate = {};
 let boundaryNightByDate = {};
 
-// 手工录入的上一周期名单优先，没有时取上一周期最新云端版本的最后7天。
+// 跨周期衔接取上一周期最新云端版本的最后7天。
 async function loadPeriodBoundary(periodKey) {
   const start = String(periodKey || "").split("_")[0];
   const boundary = { staff: {}, night: {} };
@@ -1234,7 +1231,6 @@ async function loadPeriodBoundary(periodKey) {
         const day = previousMeta.payload?.schedule?.[dateKey];
         if (!day) continue;
         boundary.night[dateKey] = [...(day.night || [])];
-        if (previousWeekStaffByDate[dateKey]) continue;
         boundary.staff[dateKey] = [...new Set(Object.entries(day)
           .filter(([shiftId]) => shiftId !== "rest" && shiftId !== "no-night")
           .flatMap(([, names]) => names || []))];
@@ -1247,7 +1243,6 @@ async function loadPeriodBoundary(periodKey) {
 }
 
 function isWorkDay(person, dateKey) {
-  if (!schedule[dateKey] && previousWeekStaffByDate[dateKey]) return previousWeekStaffByDate[dateKey].includes(person);
   if (!schedule[dateKey] && boundaryStaffByDate[dateKey]) return boundaryStaffByDate[dateKey].includes(person);
   const parsed = parsePreference(preferences[`${person}::${dateKey}`]);
   return shiftsFor(person, dateKey).length > 0
@@ -1257,7 +1252,7 @@ function isWorkDay(person, dateKey) {
 }
 
 function getStreakSeverityByCell(currentDates) {
-  const allDates = [...new Set([...Object.keys(previousWeekStaffByDate), ...Object.keys(boundaryStaffByDate), ...currentDates])].sort();
+  const allDates = [...new Set([...Object.keys(boundaryStaffByDate), ...currentDates])].sort();
   const currentDateSet = new Set(currentDates);
   const severity = new Map();
   people.forEach((person) => {
