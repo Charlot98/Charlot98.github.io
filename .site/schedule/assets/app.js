@@ -3393,7 +3393,7 @@ scheduleTable.addEventListener("click", (event) => {
       ? null
       : nextSource;
     tableStatus = tableMoveSource
-      ? `已选择${tableMoveSource.person}，边框处可移动；红框提示当天已有其他班次；在本格内拖到其他姓名可调整顺序`
+      ? `已选择${tableMoveSource.person}，蓝框处可移动；橙框也可移动，但当天已有其他班次；在本格内拖到其他姓名可调整顺序`
       : "拖动姓名换班";
     updateDropHighlights();
     updateTableStatus();
