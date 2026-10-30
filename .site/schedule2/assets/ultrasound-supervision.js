@@ -1,9 +1,16 @@
-export const reportLearners = ['张伊雯','徐李祥瑞','林雨睿','梁思思','沈烨'];
-export const preferredTeachers = {
-  '沈烨':'李铭婕','梁思思':'张秋梅','张伊雯':'江蓝',
-  '林雨睿':'刘慜思','徐李祥瑞':'马萌','彭竻川':'曲莹莹',
-};
-const teachers = new Set(['戴榕全','刘蕾','张博闻','白璐','张志轩','吴璇','邝怡','曲艺','陈可欣','李铭婕','刘慜思','张秋梅','曲莹莹','马萌','江蓝','王兆雪','冯军利','张若邈']);
+// 名单与带教关系由云端人员配置注入。
+let reportLearners = [];
+let preferredTeachers = {};
+let teachers = new Set();
+let colocate = null;
+
+export function configureUltrasound(config = {}) {
+  reportLearners = config.reportLearners || [];
+  preferredTeachers = config.preferredTeachers || {};
+  teachers = new Set(config.teachers || []);
+  colocate = config.colocate?.person && config.colocate?.partner ? config.colocate : null;
+}
+
 const roomPriority = ['us-room-3','us-room-1','us-room-2','us-room-4'];
 const rooms = ['us-room-1','us-room-2','us-room-3','us-room-4'];
 const isLearner = person => reportLearners.includes(person);
@@ -55,14 +62,16 @@ export function supervisionLayoutValid() {
 }
 
 function colocatePeng(day, moves) {
-  const source = roomOf(day,'彭竻川'), target = roomOf(day,'曲莹莹');
+  if (!colocate) return;
+  const { person: mover, partner } = colocate;
+  const source = roomOf(day,mover), target = roomOf(day,partner);
   if (!source || !target || source === target || target === 'us-room-4') return;
-  const candidates = (day[target] || []).filter(person => person !== '曲莹莹' && !isLearner(person));
+  const candidates = (day[target] || []).filter(person => person !== partner && !isLearner(person));
   const replacement = candidates.find(person => !teachers.has(person)) || candidates[0];
   if (!replacement) return;
-  day[source] = day[source].map(person => person === '彭竻川' ? replacement : person);
-  day[target] = day[target].map(person => person === replacement ? '彭竻川' : person);
-  moves.push({person:'彭竻川',from:source,to:target,reason:'优先与曲莹莹同屋'});
+  day[source] = day[source].map(person => person === mover ? replacement : person);
+  day[target] = day[target].map(person => person === replacement ? mover : person);
+  moves.push({person:mover,from:source,to:target,reason:`优先与${partner}同屋`});
   moves.push({person:replacement,from:target,to:source,reason:'同日超声屋位互换'});
 }
 

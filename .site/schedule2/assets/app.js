@@ -1,5 +1,4 @@
-import { previousWeekStaffByDate } from "./previous-week-staff.js?v=2";
-import { allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid, displayReportName, reportRosterEntryText } from "./ultrasound-supervision.js?v=5";
+import { configureUltrasound, allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid, displayReportName, reportRosterEntryText } from "./ultrasound-supervision.js?v=6";
 const columns = [
   ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],
@@ -12,36 +11,38 @@ const columns = [
   ["rest", "普休"], ["no-night", "不夜"],
 ];
 
-const groups = [
-  ["高级医师", ["戴榕全", "刘蕾", "张博闻", "白璐", "张志轩", "吴璇", "邝怡", "曲艺", "陈可欣", "李铭婕"]],
-  ["中级医师", ["刘慜思", "张秋梅", "曲莹莹"]],
-  ["三年级", ["马萌", "江蓝", "王兆雪", "冯军利", "张若邈"]],
-  ["二年级", ["付诗懿", "冯芷珊", "刘亦婷", "于丛爽", "戴睿", "袁芳"]],
-  ["一年级", ["彭竻川", "张伊雯", "徐李祥瑞", "林雨睿", "梁思思", "沈烨"]],
-  ["老助理", ["张明扬", "杨思琪", "赵家慧", "刘越", "王成龙", "赵家琳", "路萌", "马析淳"]],
-  ["新助理", ["安姝嫣", "李晓阳", "杨俊杰", "苏镜秋", "闫娜", "段艺涵"]],
-];
-const people = groups.flatMap(([, names]) => names);
-const groupByPerson = new Map(groups.flatMap(([group, names]) => names.map((name) => [name, group])));
-const groupStarts = new Set(groups.slice(1).map(([, names]) => names[0]));
-const thirdGrade = new Set(groups[2][1]);
-const residents = new Set([...groups[3][1], ...groups[4][1]]);
-const assistants = new Set([...groups[5][1], ...groups[6][1]]);
+// 人员名单属于敏感信息，只保存在云端，登录后由 applyRoster 载入。
+let groups = [];
+let people = [];
+let groupByPerson = new Map();
+let groupStarts = new Set();
+let thirdGrade = new Set();
+let residents = new Set();
+let assistants = new Set();
 /** 夜班展示/落库顺序：高年级A→B→中年级→三年级→二年级→一年级→高级助理→中级助理→新人助理 */
-const nightOrderTiers = [
-  ["戴榕全", "刘蕾", "张博闻", "白璐", "张志轩"],
-  ["吴璇", "邝怡", "曲艺", "陈可欣", "李铭婕"],
-  ["刘慜思", "张秋梅", "曲莹莹"],
-  ["马萌", "江蓝", "王兆雪", "冯军利", "张若邈"],
-  ["付诗懿", "冯芷珊", "刘亦婷", "于丛爽", "戴睿", "袁芳"],
-  ["彭竻川", "张伊雯", "徐李祥瑞", "林雨睿", "梁思思", "沈烨"],
-  ["张明扬", "赵家琳", "杨思琪", "赵家慧"],
-  ["刘越", "王成龙", "路萌", "马析淳"],
-  ["安姝嫣", "李晓阳", "杨俊杰", "苏镜秋", "闫娜", "段艺涵"],
-];
-const nightOrderRankByPerson = new Map(nightOrderTiers.flatMap((names, tierIndex) => (
-  names.map((name, nameIndex) => [name, tierIndex * 100 + nameIndex])
-)));
+let nightOrderRankByPerson = new Map();
+/** 助理热力图标签对应总表列，依据助理待排班人员名单。 */
+let assistantManualColumns = {};
+let xrayTeachingFirstYear = new Set();
+let previousWeekStaffByDate = {};
+
+function applyRoster(roster) {
+  groups = roster.groups || [];
+  const namesOf = (...groupNames) => groups.filter(([group]) => groupNames.includes(group)).flatMap(([, names]) => names);
+  people = groups.flatMap(([, names]) => names);
+  groupByPerson = new Map(groups.flatMap(([group, names]) => names.map((name) => [name, group])));
+  groupStarts = new Set(groups.slice(1).map(([, names]) => names[0]));
+  thirdGrade = new Set(namesOf("三年级"));
+  residents = new Set(namesOf("二年级", "一年级"));
+  assistants = new Set(namesOf("老助理", "新助理"));
+  nightOrderRankByPerson = new Map((roster.nightOrderTiers || []).flatMap((names, tierIndex) => (
+    names.map((name, nameIndex) => [name, tierIndex * 100 + nameIndex])
+  )));
+  assistantManualColumns = roster.assistantManualColumns || {};
+  xrayTeachingFirstYear = new Set(roster.xrayTeachingFirstYear || []);
+  previousWeekStaffByDate = roster.previousWeekStaffByDate || {};
+  configureUltrasound(roster.ultrasound || {});
+}
 const assistantDailyCaps = {
   "xray-teaching": 2,
   "xray-shooting": 2,
@@ -139,7 +140,7 @@ function updateAccessModeUI() {
   const account = canEdit ? (globalThis.ScheduleApi?.currentAccount?.() || "") : "";
   badge.textContent = canEdit ? (account ? `账号 ${account}` : "管理账号") : "游客账号 · 只读";
   badge.classList.toggle("is-editor", canEdit);
-  accessButton.textContent = canEdit ? "退出管理" : "管理员登录";
+  accessButton.textContent = canEdit ? "退出登录" : "登录";
   const saveButton = document.querySelector("#save-version-button");
   if (saveButton) {
     saveButton.disabled = false;
@@ -177,12 +178,7 @@ async function initializeAccessMode() {
 async function enterEditorMode() {
   if (canEdit) return true;
   if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
-  try {
-    await globalThis.ScheduleApi.ensureAccess();
-  } catch (error) {
-    if (error?.guest) return false;
-    throw error;
-  }
+  await globalThis.ScheduleApi.ensureAccess();
   const session = await globalThis.ScheduleApi.checkSession();
   if (!session?.authenticated) throw new Error("管理员登录失败");
   canEdit = true;
@@ -199,7 +195,8 @@ async function toggleAccessMode() {
     button.disabled = true;
     if (canEdit) {
       globalThis.ScheduleApi?.clearAccess();
-      canEdit = false;
+      window.location.reload();
+      return;
     } else {
       button.textContent = "登录中…";
       await enterEditorMode();
@@ -526,24 +523,6 @@ const annotationLabels = {
 };
 
 const manualAssignModes = new Set(["night", "xray", "ct", "us", "outpatient", "outpatient-night", "outpatient-follow", "annual-leave", "management", "expansion"]);
-/** 助理热力图标签对应总表列，依据助理待排班人员名单。 */
-const assistantManualColumns = {
-  张明扬: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
-  杨思琪: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
-  赵家慧: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
-  赵家琳: { xray: "xray-teaching", ct: "ct-scan-teaching", us: "us-coordination-teaching" },
-  刘越: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
-  王成龙: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
-  路萌: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
-  马析淳: { xray: "xray-teaching", ct: "ct-scan", us: "us-coordination-teaching" },
-  安姝嫣: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  李晓阳: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  杨俊杰: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  苏镜秋: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  闫娜: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-  段艺涵: { xray: "xray-shooting", ct: "ct-scan", us: "us-new-coordination" },
-};
-
 function assistantManualColumn(person, mode) {
   return assistantManualColumns[person]?.[mode] || "";
 }
@@ -568,7 +547,7 @@ function manualColumnFor(person, mode) {
   if (assistantManualColumns[person]) return assistantManualColumn(person, mode);
   const group = groupByPerson.get(person) || "";
   if (mode === "xray") {
-    if (person === "彭竻川") return "xray-teaching";
+    if (xrayTeachingFirstYear.has(person)) return "xray-teaching";
     if (group === "一年级") return "xray-shooting";
     return "xray-report";
   }
@@ -579,7 +558,7 @@ function manualColumnFor(person, mode) {
     return "ct-report";
   }
   if (mode === "us") {
-    if (group === "一年级" && person !== "彭竻川") return "us-report";
+    if (group === "一年级" && !xrayTeachingFirstYear.has(person)) return "us-report";
     return "us-room-1";
   }
   return "";
@@ -1769,7 +1748,6 @@ async function exportExcel() {
         }
         return (id === "night" ? sortNightRoster(names) : names).map((name) => displayReportName(name, id)).join("、");
       })]);
-      row.height = 31;
       row.eachCell((cell, columnNumber) => {
         const text = String(cell.value ?? "").trim();
         cell.alignment = { vertical: "middle", wrapText: true };
@@ -1781,7 +1759,7 @@ async function exportExcel() {
       });
       if (date.getDay() === 0 && index < dates.length - 1) totalSheet.addRow([]).height = 7;
     });
-    fitWorksheetColumns(totalSheet);
+    fitWorksheetColumns(totalSheet, { min: 10, max: 90, padding: 6 });
 
     const heatmapSheet = workbook.addWorksheet("人员热力图", { views: [{ state: "frozen", xSplit: 1, ySplit: 1 }] });
     heatmapSheet.addRow(["姓名", ...dates.map((dateKey) => new Date(`${dateKey}T00:00:00`).getDate())]);
@@ -1868,11 +1846,28 @@ function dateKeyFromExcelValue(value) {
   const month = Number(match[1]);
   const day = Number(match[2]);
   const periodStart = (currentPeriodKey || "").slice(0, 10);
-  const start = periodStart ? new Date(`${periodStart}T00:00:00`) : new Date();
-  let year = start.getFullYear();
-  const candidate = new Date(year, month - 1, day);
-  if (periodStart && candidate < new Date(year, start.getMonth() - 1, 1)) year += 1;
+  const reference = periodStart ? new Date(`${periodStart}T00:00:00`) : new Date();
+  const year = [-1, 0, 1]
+    .map((offset) => reference.getFullYear() + offset)
+    .sort((left, right) => Math.abs(new Date(left, month - 1, day) - reference) - Math.abs(new Date(right, month - 1, day) - reference))[0];
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+// 忽略☆、#、ん等标记和括号备注；姓名后紧跟“半”等备注字时按姓名前缀识别。
+function namesFromExcelCell(text, knownPeople, unknownNames) {
+  const longestFirst = [...knownPeople].sort((left, right) => right.length - left.length);
+  const kept = [];
+  String(text ?? "")
+    .replace(/[（(][^）)]*[）)]/g, " ")
+    .split(/[、,，/／\s]+/)
+    .map((token) => token.replace(/[^\u4e00-\u9fff]/g, ""))
+    .filter(Boolean)
+    .forEach((token) => {
+      const name = knownPeople.has(token) ? token : longestFirst.find((person) => token.startsWith(person));
+      if (!name) unknownNames.add(token);
+      else if (!kept.includes(name)) kept.push(name);
+    });
+  return kept;
 }
 
 function scheduleFromWorksheet(sheet) {
@@ -1880,7 +1875,7 @@ function scheduleFromWorksheet(sheet) {
   const columnIds = [];
   header.eachCell((cell, columnNumber) => {
     if (columnNumber === 1) return;
-    const label = String(cell.value ?? "").trim();
+    const label = String(cell.text ?? cell.value ?? "").trim();
     const columnId = label === "超声统筹" ? coordinationColumnId : columns.find(([, columnLabel]) => columnLabel === label)?.[0];
     if (columnId) columnIds[columnNumber] = columnId;
   });
@@ -1897,16 +1892,8 @@ function scheduleFromWorksheet(sheet) {
     const day = {};
     columnIds.forEach((columnId, columnNumber) => {
       if (!columnId) return;
-      const names = String(row.getCell(columnNumber).value ?? "")
-        .split(/[、,，/\n]+/)
-        .map((name) => name.trim())
-        .filter(Boolean);
-      const kept = [];
-      names.forEach((name) => {
-        if (knownPeople.has(name)) {
-          if (!kept.includes(name)) kept.push(name);
-        } else unknownNames.add(name);
-      });
+      const cell = row.getCell(columnNumber);
+      const kept = namesFromExcelCell(cell.text ?? cell.value, knownPeople, unknownNames);
       if (!kept.length) return;
       if (columnId === coordinationColumnId) {
         kept.forEach((name) => {
@@ -3102,22 +3089,14 @@ async function init() {
     loading.textContent = "正在从云端载入排班…";
     loading.classList.remove("is-hidden");
     if (!globalThis.ScheduleApi) throw new Error("排班云端接口未加载");
-    const [cloudVersions, localNovember] = await Promise.all([
-      fetchCloudVersions().catch(() => []),
-      fetch("./data/schedule-refined-20261102.json?v=8").then((response) => response.ok ? response.json() : null).catch(() => null),
+    if (!(await enterEditorMode())) throw new Error("已取消设备配对");
+    loading.textContent = "正在从云端载入排班…";
+    const [rosterResult, cloudVersions] = await Promise.all([
+      ScheduleApi.getRoster(),
+      fetchCloudVersions(),
     ]);
-    const localPeriod = localNovember?.periodKey;
-    const hasCloudNovember = cloudVersions.some((item) => item.periodKey === localPeriod);
-    const localVersions = localNovember?.schedule && !hasCloudNovember ? [{
-      id: "local-20261102",
-      label: localNovember.label || "11月第1版",
-      status: "本地",
-      versionNumber: localNovember.version || 0,
-      periodKey: localNovember.periodKey,
-      cloud: false,
-      payload: localNovember,
-    }] : [];
-    versions = [...cloudVersions, ...localVersions];
+    applyRoster(rosterResult.roster);
+    versions = cloudVersions;
     if (!versions.length) throw new Error("云端暂无排班版本");
     renderVersionOptions();
     document.querySelector("#people-count").textContent = people.length;
@@ -3130,8 +3109,16 @@ async function init() {
     scheduleCloudVersionPrefetch();
     startCollabPolling();
   } catch (error) {
-    loading.textContent = `${error.message || "云端排班不可用"}`;
     loading.classList.remove("is-hidden");
+    loading.textContent = error.message === "已取消设备配对"
+      ? "排班仅限登录后查看"
+      : `${error.message || "云端排班不可用"}`;
+    const retry = document.createElement("button");
+    retry.type = "button";
+    retry.className = "primary";
+    retry.textContent = "登录";
+    retry.addEventListener("click", init, { once: true });
+    loading.append(document.createElement("br"), retry);
   }
 }
 
