@@ -99,6 +99,8 @@ const LEGACY_LOCAL_DATA_KEYS = [
   "department-schedule.local-draft.v1",
 ];
 let schedule = {};
+/** 东西区测试版写入的院区标记；正式版只透传，不展示双行。 */
+let personCampusByDate = {};
 let preferences = {};
 let manualPreferences = {};
 let versions = [];
@@ -3061,6 +3063,7 @@ function currentPayload(versionNumber, label) {
     ...(ultrasoundSupervisionEnabled ? { ultrasoundSupervision: { enabled: true } } : {}),
     preferences: cloneData(preferences),
     schedule: cloneData(schedule),
+    ...(Object.keys(personCampusByDate).length ? { campuses: cloneData(personCampusByDate) } : {}),
   };
 }
 
@@ -3152,6 +3155,7 @@ async function loadVersion(versionId) {
   }
   if (revision !== versionLoadRevision) return;
   schedule = cloneData(payload.schedule);
+  personCampusByDate = cloneData(payload.campuses || {});
   normalizeNightRosters();
   ultrasoundSupervisionEnabled = Boolean(payload.ultrasoundSupervision?.enabled);
   applyUltrasoundAllocation();
