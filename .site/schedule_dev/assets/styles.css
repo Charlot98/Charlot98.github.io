@@ -115,6 +115,15 @@ tbody th, tbody td { background: var(--row-bg); }
 tbody tr.week-gap td { height: 22px; padding: 0; border-right: 0; background: var(--canvas); }
 tbody tr.campus-west th strong { color: var(--navy); }
 tbody tr.campus-east th strong { color: #3f6b2f; }
+tbody td.campus-unavailable {
+  background: #e8ecef !important;
+  color: #9aa3ad;
+  box-shadow: none !important;
+  cursor: default;
+  opacity: 0.72;
+}
+tbody td.campus-unavailable .empty-cell { color: #c0c6cc; }
+tbody tr.weekend td.campus-unavailable { background: #e2e7eb !important; }
 .person-chip { display: inline-block; margin: 1px 2px 1px 0; padding: 1px 4px; border: 1px solid rgb(15 45 80 / 10%); border-radius: 5px; background: #edf3f8; color: #23374c; line-height: 1.35; white-space: nowrap; }
 .person-chip[draggable="true"] { cursor: grab; user-select: none; }
 .person-chip[draggable="true"]:active { cursor: grabbing; }

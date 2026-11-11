@@ -89,6 +89,20 @@ const campusOptions = [
 ];
 const defaultCampus = "west";
 const campusLabel = Object.fromEntries(campusOptions);
+/** 东区不设这些岗位：表格标灰且不可放入。 */
+const eastUnavailableColumns = new Set([
+  "xray-report",
+  "ct-review",
+  "ct-report",
+  "us-room-2",
+  "us-room-3",
+]);
+
+function campusSupportsColumn(campus, columnId) {
+  if (campus !== "east") return true;
+  const id = columnId === "us-coordination" ? "us-coordination-teaching" : columnId;
+  return !eastUnavailableColumns.has(id);
+}
 const workloadChartSeries = [
   ["xray", "X线", "rgba(242, 194, 0, 0.92)", (columnId) => columnId.startsWith("xray-")],
   ["ct", "CT/MRI", "rgba(15, 66, 148, 0.82)", (columnId) => columnId.startsWith("ct-")],
@@ -316,6 +330,10 @@ function renderTable(dateKeys = null) {
     const dayPairs = ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey]) : [];
     const campusRows = campusOptions.map(([campus, campusName]) => {
       const cells = tableColumns.map(([id]) => {
+        const unavailable = !campusSupportsColumn(campus, id);
+        if (unavailable) {
+          return `<td data-date="${dateKey}" data-campus="${campus}" data-column="${id}" data-unavailable="true" title="东区无此岗位" class="campus-unavailable"><span class="empty-cell">—</span></td>`;
+        }
         const isCoordination = id === coordinationColumnId;
         const coordinationCount = isCoordination
           ? new Set(namesForCampus(dateKey, id, campus, coordinationEntries(schedule[dateKey]).map((item) => item.name))).size
@@ -418,6 +436,7 @@ function getWhiteShiftConflictKeys() {
 function canMoveAssignment(source, targetDateKey, targetColumnId, targetCampus = defaultCampus) {
   const storedTarget = storedColumnId(targetColumnId, source?.person);
   if (!canEdit || !source || !schedule[targetDateKey]) return false;
+  if (!campusSupportsColumn(targetCampus, targetColumnId) || !campusSupportsColumn(targetCampus, storedTarget)) return false;
   const alreadyThere = (schedule[targetDateKey][storedTarget] || []).includes(source.person);
   if (alreadyThere) {
     return source.dateKey === targetDateKey
