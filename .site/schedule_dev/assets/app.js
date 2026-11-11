@@ -156,11 +156,11 @@ const dateLabel = (dateKey) => {
   return { date, day: `${date.getMonth() + 1}月${date.getDate()}日`, weekday: `周${weekdays[date.getDay()]}` };
 };
 
-/** 把旧版 campuses 标记拆进东区独立列；拆完后清空标记。 */
-function migrateEastColumnsFromCampuses() {
-  if (!personCampusByDate || !Object.keys(personCampusByDate).length) return;
-  Object.keys(schedule).forEach((dateKey) => {
-    const day = schedule[dateKey];
+/** 把旧版 campuses 标记拆进东区独立列；云端读取的每条路径都要经过这里。 */
+function migrateEastColumns(scheduleData, campuses) {
+  if (!campuses || !Object.keys(campuses).length) return scheduleData;
+  Object.keys(scheduleData).forEach((dateKey) => {
+    const day = scheduleData[dateKey];
     if (!day) return;
     Object.entries(legacyEastColumnMap).forEach(([westId, eastId]) => {
       const westNames = day[westId] || [];
@@ -168,7 +168,7 @@ function migrateEastColumnsFromCampuses() {
       const stay = [];
       const move = [];
       westNames.forEach((name) => {
-        if (personCampusByDate[`${dateKey}::${name}`] === "east") move.push(name);
+        if (campuses[`${dateKey}::${name}`] === "east") move.push(name);
         else stay.push(name);
       });
       if (!move.length) return;
@@ -176,7 +176,7 @@ function migrateEastColumnsFromCampuses() {
       day[eastId] = [...new Set([...(day[eastId] || []), ...move])];
     });
   });
-  personCampusByDate = {};
+  return scheduleData;
 }
 
 function personClass(person) {
@@ -916,7 +916,10 @@ function queueSilentScheduleSave(notice = "正在同步当前版本…") {
         } catch (error) {
           if (error.status !== 409 || !error.version?.payload || attempt === 2) throw error;
           syncedRevision = Number(error.version.revision || syncedRevision);
-          rebaseOntoRemote(error.version.payload.schedule, error.version.payload.preferences);
+          rebaseOntoRemote(
+            migrateEastColumns(cloneData(error.version.payload.schedule || {}), error.version.payload.campuses),
+            error.version.payload.preferences,
+          );
           renderTable();
           renderHeatmap();
         }
@@ -2195,8 +2198,8 @@ async function importBaseFor(periodKey, knownVersions) {
     basePreferences = annotations?.found ? annotations.annotations?.preferences : meta.payload.preferences;
   }
   return {
-    schedule: cloneData(meta.payload.schedule || {}),
-    campuses: cloneData(meta.payload.campuses || {}),
+    schedule: migrateEastColumns(cloneData(meta.payload.schedule || {}), meta.payload.campuses),
+    campuses: {},
     preferences: cloneData(basePreferences || {}),
     manualPreferences: await fetchManualPreferences(periodKey, basePreferences || {}),
     supervision: Boolean(meta.payload.ultrasoundSupervision?.enabled),
@@ -3191,7 +3194,6 @@ function currentPayload(versionNumber, label) {
     ...(ultrasoundSupervisionEnabled ? { ultrasoundSupervision: { enabled: true } } : {}),
     preferences: cloneData(preferences),
     schedule: cloneData(schedule),
-    campuses: cloneData(personCampusByDate),
   };
 }
 
@@ -3282,9 +3284,8 @@ async function loadVersion(versionId) {
     meta.revision = Number(result.version.revision || 0);
   }
   if (revision !== versionLoadRevision) return;
-  schedule = cloneData(payload.schedule);
-  personCampusByDate = cloneData(payload.campuses || {});
-  migrateEastColumnsFromCampuses();
+  schedule = migrateEastColumns(cloneData(payload.schedule), payload.campuses);
+  personCampusByDate = {};
   normalizeNightRosters();
   ultrasoundSupervisionEnabled = Boolean(payload.ultrasoundSupervision?.enabled);
   applyUltrasoundAllocation();
@@ -3385,7 +3386,7 @@ async function syncLiveCollab() {
     const result = await ScheduleApi.getVersion(versionId);
     if (currentVersion?.id !== versionId) return;
     const annotation = await ScheduleApi.getAnnotations(annotationKey).catch(() => null);
-    const remoteSchedule = result.version.payload?.schedule || {};
+    const remoteSchedule = migrateEastColumns(cloneData(result.version.payload?.schedule || {}), result.version.payload?.campuses);
     const remotePreferences = annotation?.found
       ? (annotation.annotations?.preferences || {})
       : (result.version.payload?.preferences || {});
