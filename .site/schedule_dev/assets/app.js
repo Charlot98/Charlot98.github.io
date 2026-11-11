@@ -1,15 +1,31 @@
 import { configureUltrasound, allocateUltrasoundReports, roomRosterEntries, supervisionPairs, canMoveSupervisedAssignment, supervisionLayoutValid, displayReportName, reportRosterEntryText } from "./ultrasound-supervision.js?v=6";
 const columns = [
-  ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
+  ["xray-report", "X线报告"], ["xray-teaching", "X线带教"],
+  ["xray-shooting", "X线拍摄"], ["xray-shooting-east", "X线拍摄（东区）"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],
-  ["ct-scan-teaching", "客服/带教"], ["ct-scan", "CT/MRI扫查"],
-  ["us-room-1", "超声1号屋"], ["us-room-2", "超声2号屋"],
-  ["us-room-3", "超声3号屋"], ["us-room-4", "心超屋"],
-  ["us-report", "超声报告"], ["us-coordination-teaching", "超声统筹带教"],
+  ["ct-scan-teaching", "客服/带教"],
+  ["ct-scan", "CT/MRI扫查"], ["ct-scan-east", "CT/MRI扫查（东区）"],
+  ["us-room-1", "超声1号屋"], ["us-room-1-east", "超声1号屋（东区）"],
+  ["us-room-2", "超声2号屋"], ["us-room-3", "超声3号屋"],
+  ["us-room-4", "超声4号屋"], ["us-echo-east", "心超屋（东区）"],
+  ["us-report", "超声报告"],
+  ["us-coordination-teaching", "超声统筹带教"], ["us-coordination-east", "超声统筹（东区）"],
   ["us-new-coordination", "超声新人统筹"], ["night", "夜班"],
   ["outpatient", "门诊白班/跟诊"], ["outpatient-night", "门诊夜班"], ["management", "管理"], ["annual-leave", "年假"], ["expansion", "拓展"],
   ["rest", "普休"], ["no-night", "不夜"],
 ];
+const eastColumnIds = new Set([
+  "xray-shooting-east", "ct-scan-east", "us-room-1-east", "us-echo-east", "us-coordination-east",
+]);
+/** 旧版「同列+院区标记」→ 东区独立列 */
+const legacyEastColumnMap = {
+  "xray-shooting": "xray-shooting-east",
+  "ct-scan": "ct-scan-east",
+  "us-room-1": "us-room-1-east",
+  "us-room-4": "us-echo-east",
+  "us-coordination-teaching": "us-coordination-east",
+  "us-new-coordination": "us-coordination-east",
+};
 
 // 人员名单属于敏感信息，只保存在云端，登录后由 applyRoster 载入。
 let groups = [];
@@ -42,7 +58,9 @@ function applyRoster(roster) {
 }
 const assistantDailyCaps = {
   "xray-shooting": 2,
+  "xray-shooting-east": 2,
   "ct-scan": 2,
+  "ct-scan-east": 1,
 };
 
 function coordinationCapacity(dateKey) {
@@ -83,34 +101,14 @@ function normalizeNightRosters(scheduleData = schedule) {
   return changed;
 }
 const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
-const campusOptions = [
-  ["west", "西区"],
-  ["east", "东区"],
-];
-const defaultCampus = "west";
-const campusLabel = Object.fromEntries(campusOptions);
-/** 东区不设这些岗位：表格标灰且不可放入。 */
-const eastUnavailableColumns = new Set([
-  "xray-report",
-  "ct-review",
-  "ct-report",
-  "us-room-2",
-  "us-room-3",
-]);
-
-function campusSupportsColumn(campus, columnId) {
-  if (campus !== "east") return true;
-  const id = columnId === "us-coordination" ? "us-coordination-teaching" : columnId;
-  return !eastUnavailableColumns.has(id);
-}
 const workloadChartSeries = [
   ["xray", "X线", "rgba(242, 194, 0, 0.92)", (columnId) => columnId.startsWith("xray-")],
   ["ct", "CT/MRI", "rgba(15, 66, 148, 0.82)", (columnId) => columnId.startsWith("ct-")],
-  ["us-room-1", "超声1号屋", "rgba(34, 160, 120, 0.75)", (columnId) => columnId === "us-room-1"],
+  ["us-room-1", "超声1号屋", "rgba(34, 160, 120, 0.75)", (columnId) => columnId === "us-room-1" || columnId === "us-room-1-east"],
   ["us-room-2", "超声2号屋", "rgba(215, 175, 0, 0.78)", (columnId) => columnId === "us-room-2"],
   ["us-room-3", "超声3号屋", "rgba(0, 144, 242, 0.78)", (columnId) => columnId === "us-room-3"],
-  ["us-room-4", "心超屋", "rgba(221, 40, 122, 0.7)", (columnId) => columnId === "us-room-4"],
-  ["us-coordination", "超声统筹", "rgba(124, 92, 191, 0.82)", (columnId) => columnId === "us-coordination-teaching" || columnId === "us-new-coordination"],
+  ["us-room-4", "超声4号屋/心超", "rgba(221, 40, 122, 0.7)", (columnId) => columnId === "us-room-4" || columnId === "us-echo-east"],
+  ["us-coordination", "超声统筹", "rgba(124, 92, 191, 0.82)", (columnId) => columnId === "us-coordination-teaching" || columnId === "us-new-coordination" || columnId === "us-coordination-east"],
 ];
 const LEGACY_LOCAL_DATA_KEYS = [
   "department-schedule.local-versions.v1",
@@ -158,31 +156,27 @@ const dateLabel = (dateKey) => {
   return { date, day: `${date.getMonth() + 1}月${date.getDate()}日`, weekday: `周${weekdays[date.getDay()]}` };
 };
 
-function personCampus(dateKey, person) {
-  return personCampusByDate[`${dateKey}::${person}`] || defaultCampus;
-}
-
-function setPersonCampus(dateKey, person, campus) {
-  const key = `${dateKey}::${person}`;
-  if (!campus || campus === defaultCampus) delete personCampusByDate[key];
-  else personCampusByDate[key] = campus;
-}
-
-function pruneCampusesForDate(dateKey) {
-  const present = new Set(
-    Object.entries(schedule[dateKey] || {})
-      .filter(([shiftId]) => shiftId !== "rest" && shiftId !== "no-night")
-      .flatMap(([, names]) => names || []),
-  );
-  Object.keys(personCampusByDate).forEach((key) => {
-    if (!key.startsWith(`${dateKey}::`)) return;
-    const person = key.slice(dateKey.length + 2);
-    if (!present.has(person)) delete personCampusByDate[key];
+/** 把旧版 campuses 标记拆进东区独立列；拆完后清空标记。 */
+function migrateEastColumnsFromCampuses() {
+  if (!personCampusByDate || !Object.keys(personCampusByDate).length) return;
+  Object.keys(schedule).forEach((dateKey) => {
+    const day = schedule[dateKey];
+    if (!day) return;
+    Object.entries(legacyEastColumnMap).forEach(([westId, eastId]) => {
+      const westNames = day[westId] || [];
+      if (!westNames.length) return;
+      const stay = [];
+      const move = [];
+      westNames.forEach((name) => {
+        if (personCampusByDate[`${dateKey}::${name}`] === "east") move.push(name);
+        else stay.push(name);
+      });
+      if (!move.length) return;
+      day[westId] = stay;
+      day[eastId] = [...new Set([...(day[eastId] || []), ...move])];
+    });
   });
-}
-
-function namesForCampus(dateKey, columnId, campus, names) {
-  return (names || []).filter((name) => personCampus(dateKey, name) === campus);
+  personCampusByDate = {};
 }
 
 function personClass(person) {
@@ -285,7 +279,10 @@ function scheduleTableColumns() {
   return columns
     .filter(([id]) => id !== "rest" && id !== "no-night" && id !== "us-new-coordination" && id !== "us-report"
       && id !== "xray-teaching" && id !== "ct-scan-teaching")
-    .map(([id, label]) => id === "us-coordination-teaching" ? [coordinationColumnId, "超声统筹"] : [id, label]);
+    .map(([id, label]) => {
+      if (id === "us-coordination-teaching") return [coordinationColumnId, "超声统筹"];
+      return [id, label];
+    });
 }
 
 function applyUltrasoundAllocation() {
@@ -306,71 +303,72 @@ function renderTable(dateKeys = null) {
   const table = document.querySelector("#schedule-table");
   const body = table.querySelector("tbody");
   const dates = Object.keys(schedule).sort();
-  const rowKey = (dateKey, campus) => `${dateKey}::${campus}`;
-  const expectedKeys = dates.flatMap((dateKey) => campusOptions.map(([campus]) => rowKey(dateKey, campus)));
-  const existingRows = dateKeys
-    ? new Map([...body.querySelectorAll("tr[data-date][data-campus]")].map((row) => [rowKey(row.dataset.date, row.dataset.campus), row]))
-    : null;
-  const partial = existingRows?.size === expectedKeys.length && expectedKeys.every((key) => existingRows.has(key));
+  const existingRows = dateKeys ? new Map([...body.querySelectorAll("tr[data-date]")].map((row) => [row.dataset.date, row])) : null;
+  const partial = existingRows?.size === dates.length && dates.every((dateKey) => existingRows.has(dateKey));
   const changedDates = new Set(dateKeys || []);
   if (partial) {
-    table.querySelectorAll('.is-drop-eligible, .is-drop-occupied, .is-drop-active, .is-drag-source, .is-reorder-before, .is-reorder-after').forEach(node => {
-      node.classList.remove('is-drop-eligible', 'is-drop-occupied', 'is-drop-active', 'is-drag-source', 'is-reorder-before', 'is-reorder-after');
+    table.querySelectorAll(".is-drop-eligible, .is-drop-occupied, .is-drop-active, .is-drag-source, .is-reorder-before, .is-reorder-after").forEach((node) => {
+      node.classList.remove("is-drop-eligible", "is-drop-occupied", "is-drop-active", "is-drag-source", "is-reorder-before", "is-reorder-after");
     });
   }
   const conflictKeys = getWhiteShiftConflictKeys();
   const tableColumns = scheduleTableColumns();
   const dropWarningDates = occupiedDropDates(tableMoveSource);
-  if (!partial) table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => `<th class="${id === "night" || id === "outpatient-night" ? "night-head" : ""}">${label}</th>`).join("")}</tr>`;
+  if (!partial) {
+    table.querySelector("thead").innerHTML = `<tr><th class="date-head">日期</th>${tableColumns.map(([id, label]) => {
+      const classes = [
+        id === "night" || id === "outpatient-night" ? "night-head" : "",
+        eastColumnIds.has(id) ? "east-head" : "",
+      ].filter(Boolean).join(" ");
+      return `<th class="${classes}">${label}</th>`;
+    }).join("")}</tr>`;
+  }
   const rowsHTML = dates.map((dateKey, index) => {
     if (partial && !changedDates.has(dateKey)) return "";
     const { date, day, weekday } = dateLabel(dateKey);
     const weekend = date.getDay() === 0 || date.getDay() === 6;
     const weekEnd = date.getDay() === 0 && index < dates.length - 1;
     const dayPairs = ultrasoundSupervisionEnabled ? supervisionPairs(schedule[dateKey]) : [];
-    const campusRows = campusOptions.map(([campus, campusName]) => {
-      const cells = tableColumns.map(([id]) => {
-        const unavailable = !campusSupportsColumn(campus, id);
-        if (unavailable) {
-          return `<td data-date="${dateKey}" data-campus="${campus}" data-column="${id}" data-unavailable="true" title="东区无此岗位" class="campus-unavailable"><span class="empty-cell">—</span></td>`;
-        }
-        const isCoordination = id === coordinationColumnId;
-        const coordinationCount = isCoordination
-          ? new Set(namesForCampus(dateKey, id, campus, coordinationEntries(schedule[dateKey]).map((item) => item.name))).size
-          : 0;
-        const coordinationOver = isCoordination && new Set(coordinationEntries(schedule[dateKey]).map((item) => item.name)).size > coordinationCapacity(dateKey);
-        const roster = isCoordination
-          ? coordinationEntries(schedule[dateKey]).filter(({ name }) => personCampus(dateKey, name) === campus && (!query || name.includes(query)))
-          : null;
-        const pairs = dayPairs.filter((pair) => pair.room === id);
-        const rawNames = roster
-          ? roster.map(({ name }) => name)
-          : namesForCampus(dateKey, id, campus, schedule[dateKey][id] || []).filter((name) => !query || name.includes(query)
-            || pairs.some((pair) => (pair.teacher === name || pair.learner === name) && (pair.teacher.includes(query) || pair.learner.includes(query))));
-        const names = id === "night" ? sortNightRoster(rawNames) : rawNames;
-        const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id, campus);
-        const nightLike = id === "night" || id === "outpatient-night";
-        const columnOf = (name) => roster?.find((item) => item.name === name)?.columnId || id;
-        const chip = (name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-campus="${campus}" data-column="${columnOf(name)}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === columnOf(name) ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${displayReportName(name, columnOf(name))}</span>`;
-        const entries = ultrasoundSupervisionEnabled && id.startsWith("us-room-")
-          ? roomRosterEntries(schedule[dateKey], id, names)
-          : names.map((name) => [name]);
-        const content = entries.map((entry) => entry.length > 1
-          ? `<span class="supervision-pair">${entry.map(chip).join("")}</span>`
-          : chip(entry[0])).join("");
-        return `<td data-date="${dateKey}" data-campus="${campus}" data-column="${id}" ${isCoordination ? `title="统筹${coordinationCount}人，上限${coordinationCapacity(dateKey)}人"` : ""} class="${nightLike ? "night-cell" : ""} ${eligible ? "is-drop-eligible" : ""} ${eligible && dropWarningDates.has(dateKey) ? "is-drop-occupied" : ""} ${coordinationOver ? "coordination-capacity-conflict" : ""}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
-      }).join("");
-      const rowContent = `<th><strong>${day}（${campusName}）</strong><span>${weekday}</span></th>${cells}`;
-      if (partial) {
-        existingRows.get(rowKey(dateKey, campus)).innerHTML = rowContent;
-        return "";
-      }
-      return `<tr data-date="${dateKey}" data-campus="${campus}" class="${weekend ? "weekend" : ""} campus-${campus}">${rowContent}</tr>`;
+    const cells = tableColumns.map(([id]) => {
+      const isWestCoordination = id === coordinationColumnId;
+      const isEastCoordination = id === "us-coordination-east";
+      const coordinationCount = isWestCoordination
+        ? new Set(coordinationEntries(schedule[dateKey]).map((item) => item.name)).size
+        : isEastCoordination ? (schedule[dateKey][id] || []).length : 0;
+      const coordinationOver = isWestCoordination && coordinationCount > coordinationCapacity(dateKey);
+      const roster = isWestCoordination
+        ? coordinationEntries(schedule[dateKey]).filter(({ name }) => !query || name.includes(query))
+        : null;
+      const pairs = dayPairs.filter((pair) => pair.room === id);
+      const rawNames = roster
+        ? roster.map(({ name }) => name)
+        : (schedule[dateKey][id] || []).filter((name) => !query || name.includes(query)
+          || pairs.some((pair) => (pair.teacher === name || pair.learner === name) && (pair.teacher.includes(query) || pair.learner.includes(query))));
+      const names = id === "night" ? sortNightRoster(rawNames) : rawNames;
+      const eligible = tableMoveSource && canMoveAssignment(tableMoveSource, dateKey, id);
+      const nightLike = id === "night" || id === "outpatient-night";
+      const columnOf = (name) => roster?.find((item) => item.name === name)?.columnId || id;
+      const chip = (name) => `<span draggable="${canEdit ? "true" : "false"}" data-person="${name}" data-date="${dateKey}" data-column="${columnOf(name)}" class="person-chip ${personClass(name)} ${query && name.includes(query) ? "match" : ""} ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? "is-conflict" : ""} ${tableMoveSource?.person === name && tableMoveSource?.dateKey === dateKey && tableMoveSource?.columnId === columnOf(name) ? "is-drag-source" : ""}" ${!nightLike && conflictKeys.has(`${dateKey}::${name}`) ? `title="${name}当日存在多个白班"` : ""}>${displayReportName(name, columnOf(name))}</span>`;
+      const entries = ultrasoundSupervisionEnabled && (id.startsWith("us-room-") && !id.endsWith("-east"))
+        ? roomRosterEntries(schedule[dateKey], id, names)
+        : names.map((name) => [name]);
+      const content = entries.map((entry) => entry.length > 1
+        ? `<span class="supervision-pair">${entry.map(chip).join("")}</span>`
+        : chip(entry[0])).join("");
+      const title = isWestCoordination || isEastCoordination
+        ? `title="统筹${coordinationCount}人${isWestCoordination ? `，上限${coordinationCapacity(dateKey)}人` : ""}"`
+        : "";
+      return `<td data-date="${dateKey}" data-column="${id}" ${title} class="${nightLike ? "night-cell" : ""} ${eastColumnIds.has(id) ? "east-cell" : ""} ${eligible ? "is-drop-eligible" : ""} ${eligible && dropWarningDates.has(dateKey) ? "is-drop-occupied" : ""} ${coordinationOver ? "coordination-capacity-conflict" : ""}">${names.length ? content : `<span class="empty-cell">—</span>`}</td>`;
     }).join("");
-    if (partial) return "";
+    const rowContent = `<th><strong>${day}</strong><span>${weekday}</span></th>${cells}`;
+    if (partial) {
+      existingRows.get(dateKey).innerHTML = rowContent;
+      return "";
+    }
+    const row = `<tr data-date="${dateKey}" class="${weekend ? "weekend" : ""}">${rowContent}</tr>`;
     return weekEnd
-      ? `${campusRows}<tr class="week-gap"><td colspan="${tableColumns.length + 1}"></td></tr>`
-      : campusRows;
+      ? `${row}<tr class="week-gap"><td colspan="${tableColumns.length + 1}"></td></tr>`
+      : row;
   }).join("");
   if (!partial) body.innerHTML = rowsHTML;
   updateTableStatus(conflictKeys);
@@ -433,17 +431,12 @@ function getWhiteShiftConflictKeys() {
   return conflicts;
 }
 
-function canMoveAssignment(source, targetDateKey, targetColumnId, targetCampus = defaultCampus) {
+function canMoveAssignment(source, targetDateKey, targetColumnId) {
   const storedTarget = storedColumnId(targetColumnId, source?.person);
   if (!canEdit || !source || !schedule[targetDateKey]) return false;
-  if (!campusSupportsColumn(targetCampus, targetColumnId) || !campusSupportsColumn(targetCampus, storedTarget)) return false;
-  const alreadyThere = (schedule[targetDateKey][storedTarget] || []).includes(source.person);
-  if (alreadyThere) {
-    return source.dateKey === targetDateKey
-      && source.columnId === storedTarget
-      && personCampus(source.dateKey, source.person) !== targetCampus;
-  }
-  if (ultrasoundSupervisionEnabled && !canMoveSupervisedAssignment(schedule, source, targetDateKey, storedTarget)) return false;
+  if ((schedule[targetDateKey][storedTarget] || []).includes(source.person)) return false;
+  if (ultrasoundSupervisionEnabled && !eastColumnIds.has(storedTarget)
+    && !canMoveSupervisedAssignment(schedule, source, targetDateKey, storedTarget)) return false;
   if (source.columnId === "night" || source.columnId === "outpatient-night") {
     const sameWeek = weekNumber(source.dateKey) === weekNumber(targetDateKey);
     const canTakeNight = hasWhiteShift(source.person, targetDateKey)
@@ -454,31 +447,24 @@ function canMoveAssignment(source, targetDateKey, targetColumnId, targetCampus =
   return true;
 }
 
-function moveAssignment(source, targetDateKey, targetColumnId, targetCampus = defaultCampus) {
+function moveAssignment(source, targetDateKey, targetColumnId) {
   const storedTarget = storedColumnId(targetColumnId, source?.person);
-  if (!canMoveAssignment(source, targetDateKey, targetColumnId, targetCampus)) return;
+  if (!canMoveAssignment(source, targetDateKey, targetColumnId)) return;
   const undoSnapshot = captureScheduleSnapshot();
-  const alreadyThere = (schedule[targetDateKey][storedTarget] || []).includes(source.person);
-  const campusName = campusLabel[targetCampus] || targetCampus;
-  if (alreadyThere) {
-    setPersonCampus(targetDateKey, source.person, targetCampus);
-    tableStatus = `${source.person}已调整至${dateLabel(targetDateKey).day}（${campusName}）`;
-  } else {
-    schedule[source.dateKey][source.columnId] = (schedule[source.dateKey][source.columnId] || [])
-      .filter((person) => person !== source.person);
-    schedule[targetDateKey][storedTarget] = [...new Set([...(schedule[targetDateKey][storedTarget] || []), source.person])];
-    setPersonCampus(targetDateKey, source.person, targetCampus);
-    pruneCampusesForDate(source.dateKey);
-    const nightMove = source.columnId === "night" || source.columnId === "outpatient-night";
-    if (nightMove) normalizeNightRosters();
-    syncHeatmapPreference(source.person, source.dateKey);
-    syncHeatmapPreference(source.person, targetDateKey);
-    moveManualManagementAnnotation(source, targetDateKey, storedTarget);
-    const targetLabel = targetColumnId === coordinationColumnId ? "超声统筹" : (columns.find(([id]) => id === storedTarget)?.[1] || storedTarget);
-    tableStatus = nightMove
-      ? `${source.person}${targetLabel}已单独移至${dateLabel(targetDateKey).day}（${campusName}），白班保持不变`
-      : `${source.person}白班已移至${dateLabel(targetDateKey).day}（${campusName}）${targetLabel}，夜班保留原位置；如需调整请单独换夜班`;
-  }
+  schedule[source.dateKey][source.columnId] = (schedule[source.dateKey][source.columnId] || [])
+    .filter((person) => person !== source.person);
+  schedule[targetDateKey][storedTarget] = [...new Set([...(schedule[targetDateKey][storedTarget] || []), source.person])];
+  const nightMove = source.columnId === "night" || source.columnId === "outpatient-night";
+  if (nightMove) normalizeNightRosters();
+  syncHeatmapPreference(source.person, source.dateKey);
+  syncHeatmapPreference(source.person, targetDateKey);
+  moveManualManagementAnnotation(source, targetDateKey, storedTarget);
+  const targetLabel = targetColumnId === coordinationColumnId
+    ? "超声统筹"
+    : (columns.find(([id]) => id === storedTarget || id === targetColumnId)?.[1] || storedTarget);
+  tableStatus = nightMove
+    ? `${source.person}${targetLabel}已单独移至${dateLabel(targetDateKey).day}，白班保持不变`
+    : `${source.person}白班已移至${dateLabel(targetDateKey).day}${targetLabel}，夜班保留原位置；如需调整请单独换夜班`;
   tableMoveSource = null;
   heatmapSwapSource = null;
   heatmapSwapStatus = "排班已调整，正在自动同步…";
@@ -496,7 +482,6 @@ function canReorderWithinCell(source, chip) {
     && chip
     && chip.dataset.date === source.dateKey
     && chip.dataset.column === source.columnId
-    && chip.dataset.campus === (source.campus || personCampus(source.dateKey, source.person))
     && chip.dataset.person !== source.person);
 }
 
@@ -519,21 +504,17 @@ function updateReorderHighlight(chip = null, placeAfter = false) {
 function reorderAssignment(source, targetPerson, placeAfter) {
   const names = schedule[source.dateKey]?.[source.columnId];
   if (!names || !names.includes(source.person)) return;
-  const campus = source.campus || personCampus(source.dateKey, source.person);
-  const campusNames = names.filter((person) => personCampus(source.dateKey, person) === campus);
-  const otherNames = names.filter((person) => personCampus(source.dateKey, person) !== campus);
-  const rest = campusNames.filter((person) => person !== source.person);
+  const rest = names.filter((person) => person !== source.person);
   const anchor = rest.indexOf(targetPerson);
   if (anchor < 0) return;
-  const nextCampus = [...rest];
-  nextCampus.splice(placeAfter ? anchor + 1 : anchor, 0, source.person);
-  const next = campus === "west" ? [...nextCampus, ...otherNames] : [...otherNames, ...nextCampus];
+  const next = [...rest];
+  next.splice(placeAfter ? anchor + 1 : anchor, 0, source.person);
   const columnLabel = columns.find(([id]) => id === source.columnId)?.[1] || source.columnId;
   let changed = false;
   if (next.join("\u0000") !== names.join("\u0000")) {
     const undoSnapshot = captureScheduleSnapshot();
     schedule[source.dateKey][source.columnId] = next;
-    tableStatus = `${dateLabel(source.dateKey).day}（${campusLabel[campus]}）${columnLabel}已调整${source.person}的顺序`;
+    tableStatus = `${dateLabel(source.dateKey).day}${columnLabel}已调整${source.person}的顺序`;
     changed = true;
     commitUndo(undoSnapshot);
   } else {
@@ -559,7 +540,7 @@ function updateDropHighlights(activeCell = null) {
     dropHighlightCells = [];
     const dropWarningDates = occupiedDropDates(tableMoveSource);
     document.querySelectorAll("#schedule-table tbody td").forEach((cell) => {
-      const eligible = Boolean(tableMoveSource && canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column, cell.dataset.campus || defaultCampus));
+      const eligible = Boolean(tableMoveSource && canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column));
       cell.classList.toggle("is-drop-eligible", eligible);
       cell.classList.toggle("is-drop-occupied", eligible && dropWarningDates.has(cell.dataset.date));
       cell.classList.remove("is-drop-active");
@@ -1987,26 +1968,23 @@ async function exportExcel() {
     const dates = Object.keys(schedule).sort();
     dates.forEach((dateKey, index) => {
       const { day, weekday, date } = dateLabel(dateKey);
-      campusOptions.forEach(([campus, campusName]) => {
-        const row = totalSheet.addRow([`${day}（${campusName}） ${weekday}`, ...exportColumns.map(([id]) => {
-          const allNames = id === coordinationColumnId
-            ? coordinationEntries(schedule[dateKey]).map(({ name }) => name)
-            : (schedule[dateKey][id] || []);
-          const names = namesForCampus(dateKey, id, campus, allNames);
-          if (ultrasoundSupervisionEnabled && id.startsWith("us-room-")) {
-            return roomRosterEntries(schedule[dateKey], id, names).map(reportRosterEntryText).join("、");
-          }
-          return (id === "night" ? sortNightRoster(names) : names).map((name) => displayReportName(name, id)).join("、");
-        })]);
-        row.eachCell((cell, columnNumber) => {
-          const text = String(cell.value ?? "").trim();
-          cell.alignment = { vertical: "middle", wrapText: true };
-          cell.border = borderFor(columnNumber, date.getDay() === 0 && campus === "east");
-          if (!text) return;
-          const columnId = columnNumber === 1 ? "" : exportColumns[columnNumber - 2]?.[0];
-          const fill = exportColumnFills[columnId];
-          if (fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
-        });
+      const row = totalSheet.addRow([`${day} ${weekday}`, ...exportColumns.map(([id]) => {
+        const names = id === coordinationColumnId
+          ? coordinationEntries(schedule[dateKey]).map(({ name }) => name)
+          : (schedule[dateKey][id] || []);
+        if (ultrasoundSupervisionEnabled && id.startsWith("us-room-") && !id.endsWith("-east")) {
+          return roomRosterEntries(schedule[dateKey], id, names).map(reportRosterEntryText).join("、");
+        }
+        return (id === "night" ? sortNightRoster(names) : names).map((name) => displayReportName(name, id)).join("、");
+      })]);
+      row.eachCell((cell, columnNumber) => {
+        const text = String(cell.value ?? "").trim();
+        cell.alignment = { vertical: "middle", wrapText: true };
+        cell.border = borderFor(columnNumber, date.getDay() === 0);
+        if (!text) return;
+        const columnId = columnNumber === 1 ? "" : exportColumns[columnNumber - 2]?.[0];
+        const fill = exportColumnFills[columnId];
+        if (fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
       });
       if (date.getDay() === 0 && index < dates.length - 1) totalSheet.addRow([]).height = 7;
     });
@@ -2083,13 +2061,6 @@ async function exportExcel() {
   }
 }
 
-function campusFromExcelValue(value) {
-  const text = String(value ?? "");
-  if (text.includes("东区")) return "east";
-  if (text.includes("西区")) return "west";
-  return defaultCampus;
-}
-
 function dateKeyFromExcelValue(value) {
   if (value instanceof Date && !Number.isNaN(value.getTime())) {
     return [
@@ -2134,22 +2105,21 @@ function scheduleFromWorksheet(sheet) {
   header.eachCell((cell, columnNumber) => {
     if (columnNumber === 1) return;
     const label = String(cell.text ?? cell.value ?? "").trim();
-    const columnId = label === "超声统筹" ? coordinationColumnId : columns.find(([, columnLabel]) => columnLabel === label)?.[0];
+    const columnId = label === "超声统筹" ? coordinationColumnId
+      : label === "超声统筹（东区）" ? "us-coordination-east"
+        : columns.find(([, columnLabel]) => columnLabel === label)?.[0];
     if (columnId) columnIds[columnNumber] = columnId;
   });
   if (!columnIds.some(Boolean)) throw new Error("未识别岗位列，请使用本页导出的「排班总表」");
   const knownPeople = new Set(people);
   const nextSchedule = {};
-  const nextCampuses = {};
   const unknownNames = new Set();
   let dateCount = 0;
   sheet.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
-    const dateCell = row.getCell(1).value;
-    const dateKey = dateKeyFromExcelValue(dateCell);
+    const dateKey = dateKeyFromExcelValue(row.getCell(1).value);
     if (!dateKey) return;
     dateCount += 1;
-    const campus = campusFromExcelValue(dateCell);
     const day = nextSchedule[dateKey] || {};
     columnIds.forEach((columnId, columnNumber) => {
       if (!columnId) return;
@@ -2160,25 +2130,19 @@ function scheduleFromWorksheet(sheet) {
         kept.forEach((name) => {
           const target = coordinationColumnFor(name);
           day[target] = [...new Set([...(day[target] || []), name])];
-          if (campus !== defaultCampus) nextCampuses[`${dateKey}::${name}`] = campus;
-          else delete nextCampuses[`${dateKey}::${name}`];
         });
         return;
       }
       day[columnId] = columnId === "night"
         ? sortNightRoster([...new Set([...(day[columnId] || []), ...kept])])
         : [...new Set([...(day[columnId] || []), ...kept])];
-      kept.forEach((name) => {
-        if (campus !== defaultCampus) nextCampuses[`${dateKey}::${name}`] = campus;
-        else delete nextCampuses[`${dateKey}::${name}`];
-      });
     });
     nextSchedule[dateKey] = day;
   });
-  if (!dateCount) throw new Error("没有读到日期，请确认第一列是「9月28日（西区） 周一」这样的日期");
+  if (!dateCount) throw new Error("没有读到日期，请确认第一列是「9月28日 周一」这样的日期");
   const coveredColumns = new Set(columnIds.filter(Boolean).flatMap((columnId) => columnId === coordinationColumnId ? coordinationSourceColumns : [columnId]));
   if ([...coveredColumns].some((columnId) => columnId.startsWith("us-room-"))) coveredColumns.add("us-report");
-  return { schedule: nextSchedule, campuses: nextCampuses, coveredColumns: [...coveredColumns], unknownNames: [...unknownNames] };
+  return { schedule: nextSchedule, campuses: {}, coveredColumns: [...coveredColumns], unknownNames: [...unknownNames] };
 }
 
 // 与已有周期重叠最多的那个周期；Excel 大部分日期不在任何已有周期时，按完整周新建周期。
@@ -3320,7 +3284,7 @@ async function loadVersion(versionId) {
   if (revision !== versionLoadRevision) return;
   schedule = cloneData(payload.schedule);
   personCampusByDate = cloneData(payload.campuses || {});
-  Object.keys(schedule).forEach(pruneCampusesForDate);
+  migrateEastColumnsFromCampuses();
   normalizeNightRosters();
   ultrasoundSupervisionEnabled = Boolean(payload.ultrasoundSupervision?.enabled);
   applyUltrasoundAllocation();
@@ -3503,12 +3467,7 @@ scheduleTable.addEventListener("dragstart", (event) => {
   const chip = event.target.closest(".person-chip");
   if (!chip) return;
   tableDragActive = true;
-  tableMoveSource = {
-    person: chip.dataset.person,
-    dateKey: chip.dataset.date,
-    columnId: chip.dataset.column,
-    campus: chip.dataset.campus || personCampus(chip.dataset.date, chip.dataset.person),
-  };
+  tableMoveSource = { person: chip.dataset.person, dateKey: chip.dataset.date, columnId: chip.dataset.column };
   event.dataTransfer.effectAllowed = "move";
   event.dataTransfer.setData("text/plain", JSON.stringify(tableMoveSource));
   requestAnimationFrame(() => updateDropHighlights());
@@ -3523,7 +3482,7 @@ scheduleTable.addEventListener("dragover", (event) => {
   }
   updateReorderHighlight();
   const cell = event.target.closest("td[data-date]");
-  if (!cell || !canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column, cell.dataset.campus || defaultCampus)) return;
+  if (!cell || !canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column)) return;
   event.preventDefault();
   event.dataTransfer.dropEffect = "move";
   updateDropHighlights(cell);
@@ -3547,7 +3506,7 @@ scheduleTable.addEventListener("drop", (event) => {
   const cell = event.target.closest("td[data-date]");
   if (!cell) return;
   event.preventDefault();
-  moveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column, cell.dataset.campus || defaultCampus);
+  moveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column);
 });
 scheduleTable.addEventListener("dragend", () => {
   tableDragActive = false;
@@ -3562,29 +3521,23 @@ scheduleTable.addEventListener("click", (event) => {
   const chip = event.target.closest(".person-chip");
   if (chip) {
     event.stopPropagation();
-    const nextSource = {
-      person: chip.dataset.person,
-      dateKey: chip.dataset.date,
-      columnId: chip.dataset.column,
-      campus: chip.dataset.campus || personCampus(chip.dataset.date, chip.dataset.person),
-    };
+    const nextSource = { person: chip.dataset.person, dateKey: chip.dataset.date, columnId: chip.dataset.column };
     tableMoveSource = tableMoveSource
       && tableMoveSource.person === nextSource.person
       && tableMoveSource.dateKey === nextSource.dateKey
       && tableMoveSource.columnId === nextSource.columnId
-      && tableMoveSource.campus === nextSource.campus
       ? null
       : nextSource;
     tableStatus = tableMoveSource
-      ? `已选择${tableMoveSource.person}（${campusLabel[tableMoveSource.campus]}），蓝框处可移动；橙框也可移动，但当天已有其他班次；拖到另一院区可调整院区；在本格内拖到其他姓名可调整顺序`
+      ? `已选择${tableMoveSource.person}，蓝框处可移动；橙框也可移动，但当天已有其他班次；在本格内拖到其他姓名可调整顺序`
       : "拖动姓名换班";
     updateDropHighlights();
     updateTableStatus();
     return;
   }
   const cell = event.target.closest("td[data-date]");
-  if (cell && canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column, cell.dataset.campus || defaultCampus)) {
-    moveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column, cell.dataset.campus || defaultCampus);
+  if (cell && canMoveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column)) {
+    moveAssignment(tableMoveSource, cell.dataset.date, cell.dataset.column);
   }
 });
 document.querySelector("#export-button").addEventListener("click", exportExcel);
