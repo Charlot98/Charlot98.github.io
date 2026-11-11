@@ -3,8 +3,8 @@ const columns = [
   ["xray-report", "X线报告"], ["xray-teaching", "X线带教"], ["xray-shooting", "X线拍摄"],
   ["ct-review", "CT/MRI审核"], ["ct-report", "CT/MRI报告"],
   ["ct-scan-teaching", "客服/带教"], ["ct-scan", "CT/MRI扫查"],
-  ["us-room-1", "超声一号屋"], ["us-room-2", "超声二号屋"],
-  ["us-room-3", "超声三号屋"], ["us-room-4", "超声四号屋"],
+  ["us-room-1", "超声1号屋"], ["us-room-2", "超声2号屋"],
+  ["us-room-3", "超声3号屋"], ["us-room-4", "心超屋"],
   ["us-report", "超声报告"], ["us-coordination-teaching", "超声统筹带教"],
   ["us-new-coordination", "超声新人统筹"], ["night", "夜班"],
   ["outpatient", "门诊白班/跟诊"], ["outpatient-night", "门诊夜班"], ["management", "管理"], ["annual-leave", "年假"], ["expansion", "拓展"],
@@ -94,10 +94,10 @@ const campusLabel = Object.fromEntries(campusOptions);
 const workloadChartSeries = [
   ["xray", "X线", "rgba(242, 194, 0, 0.92)", (columnId) => columnId.startsWith("xray-")],
   ["ct", "CT/MRI", "rgba(15, 66, 148, 0.82)", (columnId) => columnId.startsWith("ct-")],
-  ["us-room-1", "超声一号屋", "rgba(34, 160, 120, 0.75)", (columnId) => columnId === "us-room-1"],
-  ["us-room-2", "超声二号屋", "rgba(215, 175, 0, 0.78)", (columnId) => columnId === "us-room-2"],
-  ["us-room-3", "超声三号屋", "rgba(0, 144, 242, 0.78)", (columnId) => columnId === "us-room-3"],
-  ["us-room-4", "超声四号屋", "rgba(221, 40, 122, 0.7)", (columnId) => columnId === "us-room-4"],
+  ["us-room-1", "超声1号屋", "rgba(34, 160, 120, 0.75)", (columnId) => columnId === "us-room-1"],
+  ["us-room-2", "超声2号屋", "rgba(215, 175, 0, 0.78)", (columnId) => columnId === "us-room-2"],
+  ["us-room-3", "超声3号屋", "rgba(0, 144, 242, 0.78)", (columnId) => columnId === "us-room-3"],
+  ["us-room-4", "心超屋", "rgba(221, 40, 122, 0.7)", (columnId) => columnId === "us-room-4"],
   ["us-coordination", "超声统筹", "rgba(124, 92, 191, 0.82)", (columnId) => columnId === "us-coordination-teaching" || columnId === "us-new-coordination"],
 ];
 const LEGACY_LOCAL_DATA_KEYS = [
