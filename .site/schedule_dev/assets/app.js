@@ -41,9 +41,7 @@ function applyRoster(roster) {
   configureUltrasound(roster.ultrasound || {});
 }
 const assistantDailyCaps = {
-  "xray-teaching": 2,
   "xray-shooting": 2,
-  "ct-scan-teaching": 1,
   "ct-scan": 2,
 };
 
@@ -271,7 +269,8 @@ const storedColumnId = (columnId, person) => columnId === coordinationColumnId ?
 // 总表与导出不单列超声报告。超声统筹带教与新人统筹合并显示。
 function scheduleTableColumns() {
   return columns
-    .filter(([id]) => id !== "rest" && id !== "no-night" && id !== "us-new-coordination" && id !== "us-report")
+    .filter(([id]) => id !== "rest" && id !== "no-night" && id !== "us-new-coordination" && id !== "us-report"
+      && id !== "xray-teaching" && id !== "ct-scan-teaching")
     .map(([id, label]) => id === "us-coordination-teaching" ? [coordinationColumnId, "超声统筹"] : [id, label]);
 }
 
