@@ -8,20 +8,6 @@
 
 </note>
 
-<style>
-
-table thead th:first-child,
-table tbody td:first-child {
-  width: 30%;
-}
-
-table thead th:last-child,
-table tbody td:last-child {
-  width: auto;
-}
-
-</style>
-
 ## 基础术语
 
 <table>
@@ -1497,7 +1483,7 @@ table tbody td:last-child {
     
     <td align="left">
       <strong>
-        天际线位
+        切线位
       </strong>
       
       （待确认）
@@ -1919,6 +1905,34 @@ table tbody td:last-child {
       
     </td>
   </tr>
+  
+  <tr>
+    <td align="left">
+      systolic anterior motion (SAM)
+    </td>
+    
+    <td align="left">
+      收缩期前移
+    </td>
+    
+    <td align="left">
+      
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      Left ventricular outflow tract obstruction (LVOTO)
+    </td>
+    
+    <td align="left">
+      左心室流出道梗阻
+    </td>
+    
+    <td align="left">
+      
+    </td>
+  </tr>
 </tbody>
 </table>
 
@@ -2083,3 +2097,935 @@ table tbody td:last-child {
   </tr>
 </tbody>
 </table>
+
+## 超声造影
+
+<table>
+<thead>
+  <tr>
+    <th align="left">
+      英文（缩写）
+    </th>
+    
+    <th align="left">
+      中文
+    </th>
+  </tr>
+</thead>
+
+<tbody>
+  <tr>
+    <td align="left">
+      contrast-enhanced ultrasound, CEUS
+    </td>
+    
+    <td align="left">
+      超声造影
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      micro bublle contrast，MDC
+    </td>
+    
+    <td align="left">
+      微泡造影剂
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      wash-in
+    </td>
+    
+    <td align="left">
+      洗进
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      wash-out
+    </td>
+    
+    <td align="left">
+      洗出
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      arrival time, AT
+    </td>
+    
+    <td align="left">
+      到达时间
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      time to peak，TTP
+    </td>
+    
+    <td align="left">
+      达峰时间
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      AS
+    </td>
+    
+    <td align="left">
+      上升斜率
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      DS，decreasing slope
+    </td>
+    
+    <td align="left">
+      下降斜率
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      AUC
+    </td>
+    
+    <td align="left">
+      曲线下面积
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      EFSUMB
+    </td>
+    
+    <td align="left">
+      欧洲医学生物学超声联合会
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      arterial phase
+    </td>
+    
+    <td align="left">
+      动脉期 10-15s
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      portal phase
+    </td>
+    
+    <td align="left">
+      门脉期 30-45s
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      sinusoidal phase(late)
+    </td>
+    
+    <td align="left">
+      血窦期（后期） 1min后
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      rim enhancement
+    </td>
+    
+    <td align="left">
+      外周增强
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      inhomogeneous
+    </td>
+    
+    <td align="left">
+      不均匀增强
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      homogeneous
+    </td>
+    
+    <td align="left">
+      均匀增强
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      centrifugal
+    </td>
+    
+    <td align="left">
+      离心性
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      wagon wheel
+    </td>
+    
+    <td align="left">
+      车轮征
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      centripetal
+    </td>
+    
+    <td align="left">
+      向心性
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hyperenhancement
+    </td>
+    
+    <td align="left">
+      高增强
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      isoenhancenment
+    </td>
+    
+    <td align="left">
+      等增强
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      septal enhancement
+    </td>
+    
+    <td align="left">
+      隔膜增强
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      inhomogeneous
+    </td>
+    
+    <td align="left">
+      不均匀强化
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      homogeneous
+    </td>
+    
+    <td align="left">
+      均匀强化
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      non-enhancement
+    </td>
+    
+    <td align="left">
+      不增强
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      small lesion
+    </td>
+    
+    <td align="left">
+      小病灶
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      anechoic
+    </td>
+    
+    <td align="left">
+      无回声
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hypoechoic
+    </td>
+    
+    <td align="left">
+      低回声
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      isoechoic
+    </td>
+    
+    <td align="left">
+      等回声
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      mixed echogenicity
+    </td>
+    
+    <td align="left">
+      混杂回声
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hyperechoic
+    </td>
+    
+    <td align="left">
+      高回声
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      ascesso
+    </td>
+    
+    <td align="left">
+      脓肿
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      ematoma
+    </td>
+    
+    <td align="left">
+      血肿
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      neoplasia cistica
+    </td>
+    
+    <td align="left">
+      囊性肿瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      cisti
+    </td>
+    
+    <td align="left">
+      囊肿
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      necrosi
+    </td>
+    
+    <td align="left">
+      坏死
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      granuloma
+    </td>
+    
+    <td align="left">
+      肉芽肿
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      fibeosis
+    </td>
+    
+    <td align="left">
+      纤维化
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      lymphma
+    </td>
+    
+    <td align="left">
+      淋巴瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      Nodular hyperplasia
+    </td>
+    
+    <td align="left">
+      结节性增生
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      primary neoplasm
+    </td>
+    
+    <td align="left">
+      原发性肿瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      focal
+    </td>
+    
+    <td align="left">
+      局灶性
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      metastasis
+    </td>
+    
+    <td align="left">
+      肿瘤转移
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      colelitiasi/mineralizzazioni
+    </td>
+    
+    <td align="left">
+      结石/矿化
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      milelolipoma
+    </td>
+    
+    <td align="left">
+      髓脂瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      gas/corpo metallico
+    </td>
+    
+    <td align="left">
+      气体/金属物体
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hemangioma
+    </td>
+    
+    <td align="left">
+      血管瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hepatocellular carcinoma, HCC
+    </td>
+    
+    <td align="left">
+      肝细胞癌
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      focal fatty infiltration
+    </td>
+    
+    <td align="left">
+      局灶性脂肪浸润
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      focal fatty sparing
+    </td>
+    
+    <td align="left">
+      局灶性脂肪缺失
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      simple cyst
+    </td>
+    
+    <td align="left">
+      单纯囊肿
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      well-differentiated tumor
+    </td>
+    
+    <td align="left">
+      高分化肿瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      collagenization
+    </td>
+    
+    <td align="left">
+      胶原蛋白化
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      
+    </td>
+    
+    <td align="left">
+      犬肝脏肿瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hepatocellular carcinoma, HCC
+    </td>
+    
+    <td align="left">
+      肝细胞癌
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      cholangiocarcinoma, ICC
+    </td>
+    
+    <td align="left">
+      胆管腺癌
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      sarcomi
+    </td>
+    
+    <td align="left">
+      肉瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      Carcinoid
+    </td>
+    
+    <td align="left">
+      类癌，一种缓慢生长、起源于神经内分泌细胞的恶性肿瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hepatoma
+    </td>
+    
+    <td align="left">
+      肝细胞瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      
+    </td>
+    
+    <td align="left">
+      猫恶性肿瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      biliary adenonoma,BDA
+    </td>
+    
+    <td align="left">
+      胆管腺瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      biliary carcinoma,BDC
+    </td>
+    
+    <td align="left">
+      胆管癌
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hepatocellular cacinoma，HCC
+    </td>
+    
+    <td align="left">
+      肝细胞癌
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      cholangiocarcinoma，ICC
+    </td>
+    
+    <td align="left">
+      胆管癌
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      histopathology
+    </td>
+    
+    <td align="left">
+      组织病理学
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hepatocytes
+    </td>
+    
+    <td align="left">
+      肝细胞
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hepatocellular adenomas
+    </td>
+    
+    <td align="left">
+      肝细胞腺瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hepatocellular carcinomas，HCC
+    </td>
+    
+    <td align="left">
+      肝细胞癌
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      bile duct epithelium
+    </td>
+    
+    <td align="left">
+      胆管上皮
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      neuroendocrine carcinomas
+    </td>
+    
+    <td align="left">
+      神经内分泌癌
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      stromal cells
+    </td>
+    
+    <td align="left">
+      间质细胞
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hemangiosarcoma
+    </td>
+    
+    <td align="left">
+      血管肉瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hypovascular
+    </td>
+    
+    <td align="left">
+      低血供的
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hypervascular
+    </td>
+    
+    <td align="left">
+      高血供的
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      metastases
+    </td>
+    
+    <td align="left">
+      转移性肿瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      contrast medium
+    </td>
+    
+    <td align="left">
+      造影剂
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      SonoVue
+    </td>
+    
+    <td align="left">
+      声诺维
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      Sulfur hexafluoride（SF6）
+    </td>
+    
+    <td align="left">
+      六氟化硫（SF6）
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      Phospholipids
+    </td>
+    
+    <td align="left">
+      磷脂
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      microwave ablation
+    </td>
+    
+    <td align="left">
+      微波消融术
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      vacuolar degeneration
+    </td>
+    
+    <td align="left">
+      空泡性退化
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hyperplasia
+    </td>
+    
+    <td align="left">
+      增生
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      WD-HCC
+    </td>
+    
+    <td align="left">
+      高分化肝细胞癌
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hemangiosarcoma
+    </td>
+    
+    <td align="left">
+      血管肉瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hemangiom
+    </td>
+    
+    <td align="left">
+      血管瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      steatosi、Lipoma
+    </td>
+    
+    <td align="left">
+      脂肪瘤
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      cysts
+    </td>
+    
+    <td align="left">
+      囊肿
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hyperplastic/regenerative nodules
+    </td>
+    
+    <td align="left">
+      增生/再生结节
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      hematomas
+    </td>
+    
+    <td align="left">
+      血肿
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      abscesses
+    </td>
+    
+    <td align="left">
+      脓肿
+    </td>
+  </tr>
+  
+  <tr>
+    <td align="left">
+      dysplasia
+    </td>
+    
+    <td align="left">
+      发育不良
+    </td>
+  </tr>
+</tbody>
+</table>
+
+## 牙科
+
+| taurodontism | 牛状齿 | 指牙髓腔扩大，根分叉区向牙根尖方向移位|

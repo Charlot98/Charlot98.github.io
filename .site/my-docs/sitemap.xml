@@ -4,13 +4,94 @@
     <loc>/getting-started/structure</loc>
   </url>
   <url>
-    <loc>/imaging/echo_basic</loc>
+    <loc>/getting-started/guideline</loc>
   </url>
   <url>
-    <loc>/imaging/echo</loc>
+    <loc>/imaging/head/dental</loc>
+  </url>
+  <url>
+    <loc>/imaging/head/brain</loc>
+  </url>
+  <url>
+    <loc>/imaging/thorax/echo_basic</loc>
+  </url>
+  <url>
+    <loc>/imaging/thorax/echo_advanced</loc>
+  </url>
+  <url>
+    <loc>/imaging/thorax/tei</loc>
+  </url>
+  <url>
+    <loc>/imaging/abdomen/liver</loc>
+  </url>
+  <url>
+    <loc>/imaging/abdomen/gb</loc>
+  </url>
+  <url>
+    <loc>/imaging/abdomen/lymphnodes</loc>
+  </url>
+  <url>
+    <loc>/imaging/abdomen/pancreatitis</loc>
+  </url>
+  <url>
+    <loc>/imaging/xray/abdomen</loc>
+  </url>
+  <url>
+    <loc>/imaging/xray/terms</loc>
+  </url>
+  <url>
+    <loc>/cardiology/physiology</loc>
+  </url>
+  <url>
+    <loc>/cardiology/2</loc>
+  </url>
+  <url>
+    <loc>/cardiology/acquired/dcm</loc>
+  </url>
+  <url>
+    <loc>/cardiology/acquired/lvoto</loc>
+  </url>
+  <url>
+    <loc>/cardiology/acquired/mavacamten</loc>
+  </url>
+  <url>
+    <loc>/cardiology/congenital/congenital_heart_disease</loc>
+  </url>
+  <url>
+    <loc>/cardiology/congenital/transposition-of-the-great-arteries</loc>
+  </url>
+  <url>
+    <loc>/cardiology/congenital/mapcas</loc>
+  </url>
+  <url>
+    <loc>/cardiology/teer</loc>
+  </url>
+  <url>
+    <loc>/cardiology/tee</loc>
+  </url>
+  <url>
+    <loc>/exotic-pet/squirrel</loc>
+  </url>
+  <url>
+    <loc>/exotic-pet/rabbit</loc>
   </url>
   <url>
     <loc>/tools/terminology</loc>
+  </url>
+  <url>
+    <loc>/tools/label/itk-snap_3d-slicer</loc>
+  </url>
+  <url>
+    <loc>/tools/websites</loc>
+  </url>
+  <url>
+    <loc>/tools/notes/markdown</loc>
+  </url>
+  <url>
+    <loc>/tools/notes/nuxt</loc>
+  </url>
+  <url>
+    <loc>/tools/practice</loc>
   </url>
   <url>
     <loc>/</loc>

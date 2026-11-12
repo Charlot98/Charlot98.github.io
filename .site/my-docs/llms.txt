@@ -6,11 +6,40 @@
 
 ## Docs
 
-- [使用手册](http://localhost:3000/raw/getting-started/structure.md)
-- [超声基础](http://localhost:3000/raw/imaging/echo_basic.md)
-- [超声进阶](http://localhost:3000/raw/imaging/echo.md)
+- [文档框架](http://localhost:3000/raw/getting-started/structure.md)
+- [编者指引](http://localhost:3000/raw/getting-started/guideline.md)
+- [牙齿](http://localhost:3000/raw/imaging/head/dental.md)
+- [侧脑室](http://localhost:3000/raw/imaging/head/brain.md)
+- [心超基础](http://localhost:3000/raw/imaging/thorax/echo_basic.md)
+- [超声进阶](http://localhost:3000/raw/imaging/thorax/echo_advanced.md)
+- [Tei指数](http://localhost:3000/raw/imaging/thorax/tei.md): 原文链接: 犬猫心脏超声中的Tei 指数（MPI）
+- [肝脏](http://localhost:3000/raw/imaging/abdomen/liver.md)
+- [先天性胆管板异常](http://localhost:3000/raw/imaging/abdomen/gb.md): 大内翻译
+- [腹部淋巴结](http://localhost:3000/raw/imaging/abdomen/lymphnodes.md)
+- [胰腺炎](http://localhost:3000/raw/imaging/abdomen/pancreatitis.md): 《ACVIM关于猫胰腺炎的共识声明》
+- [腹部X线](http://localhost:3000/raw/imaging/xray/abdomen.md)
+- [放射术语](http://localhost:3000/raw/imaging/xray/terms.md)
+- [心脏生理](http://localhost:3000/raw/cardiology/physiology.md): 心输出量
+- [心脏相关链接](http://localhost:3000/raw/cardiology/2.md): 收藏夹
+- [DCM 扩张型心肌病](http://localhost:3000/raw/cardiology/acquired/dcm.md)
+- [LVOTO](http://localhost:3000/raw/cardiology/acquired/lvoto.md): 左心室流出道梗阻
+- [Mavacamten](http://localhost:3000/raw/cardiology/acquired/mavacamten.md)
+- [先天性心脏病](http://localhost:3000/raw/cardiology/congenital/congenital_heart_disease.md)
+- [大动脉转位](http://localhost:3000/raw/cardiology/congenital/transposition-of-the-great-arteries.md): 大动脉转位，Transposition of the great arteries
+- [MAPCAS](http://localhost:3000/raw/cardiology/congenital/mapcas.md): 时间 2026-05-25
+翟知临 小小
+多发先心病 肺动脉发育不良/肺动脉狭窄、卵圆孔未闭、MAPCAS
+- [TEER](http://localhost:3000/raw/cardiology/teer.md)
+- [经食道超声三维解剖](http://localhost:3000/raw/cardiology/tee.md): 使用 TresJS 交互查看犬心三维模型。
+- [松鼠](http://localhost:3000/raw/exotic-pet/squirrel.md)
+- [兔](http://localhost:3000/raw/exotic-pet/rabbit.md)
 - [术语](http://localhost:3000/raw/tools/terminology.md)
+- [图像分割工具ITK-SNAP与3D slicer在医学图像分割中的比较](http://localhost:3000/raw/tools/label/itk-snap_3d-slicer.md): 比较 ITK-SNAP 与 3D Slicer 的手动和半自动分割工具。
+- [Websites](http://localhost:3000/raw/tools/websites.md)
+- [Markdown CheatSheet](http://localhost:3000/raw/tools/notes/markdown.md)
+- [Nuxt/Vue CheatSheet](http://localhost:3000/raw/tools/notes/nuxt.md)
+- [日常练习](http://localhost:3000/raw/tools/practice.md)
 
 ## Landing
 
-- [兽医知识库](http://localhost:3000/raw/index.md): Ship fast, flexible, and SEO-optimized documentation with beautiful design out of the box. Docus brings together the best of the Nuxt ecosystem. Powered by Nuxt UI.
+- [兽医知识库](http://localhost:3000/raw/index.md): 按最近编辑时间浏览影像诊断、心脏病、异宠和工具文档。
